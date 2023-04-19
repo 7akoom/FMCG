@@ -44,19 +44,5 @@ class ItemDefController extends Controller
             'data' => $category,
         ], 200);
     }
-    // public function test (Request $request)
-    // {
-    //     $category = $request->header("category");
-    //     $test = DB::table('lg_325_specodes as cat')
-    //     ->join('lg_325_specodes as sub','cat.logicalref','=','sub.logicalref')
-    //     ->select('cat.logicalref','cat.definition_','sub.logicalref','sub.definition_')
-    //     ->where('cat.logicalref',$category)
-    //     ->orwhere('sub.codetype' , $category)
-    //     ->get();
-    //     return response()->json([
-    //         'status' => 'success',
-    //         'message' => 'categories list',
-    //         'data' => $test,
-    //     ], 200);
-    // }
+   
 }
