@@ -16,6 +16,7 @@ use DB;
 
 class OrderController extends Controller
 {
+    // retrieve orders list
     public function index(Request $request)
     {
         $code = $request->header('citycode');
@@ -33,7 +34,7 @@ class OrderController extends Controller
         ->paginate($perpage);
         return response()->json([
             'status' => 'success',
-            'message' => 'Customer list',
+            'message' => 'Order list',
             'data' => $order->items(),
             'current_page' => $order->currentPage(),
             'per_page' => $order->perPage(),
@@ -87,9 +88,9 @@ class OrderController extends Controller
             'data' => $item,
         ]);
       }
+      // retrieve orders based on status
     public function ordersStatusFilter(Request $request)
     {
-        
         $code = $request->header('citycode');
         $status = $request->header('status');
         $custName = str_replace('{code}', $code, (new LG_CLCARD)->getTable());
@@ -109,6 +110,7 @@ class OrderController extends Controller
             'data' => $order,
         ], 200);
     }
+    // retrieve orders based on date
    public function OrderDateFilter(Request $request)
 {
     $code = $request->header('citycode');
@@ -152,6 +154,7 @@ public function customerpreviousorder(Request $request)
         'data' => $order,
     ], 200);
 }
+//retrieve previous order details based on order number
 public function previousorderdetails(Request $request)
     {   
         $code = $request->header('citycode');

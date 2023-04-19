@@ -26,21 +26,27 @@ use App\Http\Controllers\TestController;
 
 Route::controller(SalesmanController::class)->group(function () {
     Route::prefix('salesman')->group(function () {
+        Route::prefix('accounting')->group(function () {
+            Route::post('/salesmans', 'index');
+            Route::post('/previousorders', 'previousorders');
+        });
         Route::post('/', 'index');
-        Route::post('/cashvan', 'cashvan');
-        Route::post('/previousinvoices', 'previousinvoices');
-        Route::post('/invoicedetails', 'invoicedetails');
         Route::post('/previousorders', 'previousorders');
     });
 });
 
 Route::controller(CustomerController::class)->group(function () {
     Route::prefix('customer')->group(function () {
-        Route::post('/', 'index');
-        Route::post('/getcustomerbycode', 'getcustomerByCode');
-        Route::post('/customerdetails', 'customerDetails');
-        Route::post('/salesmancustomers', 'salesmancustomers');
-        Route::post('/debitandpayment', 'debitandpayment');
+        Route::prefix('accounting')->group(function () {
+            Route::post('/', 'index');
+            Route::post('/getcustomerbycode', 'getcustomerByCode');
+            Route::post('/debitandpayment', 'debitandpayment');
+        });
+        Route::prefix('salesman')->group(function () {
+            Route::post('/customers', 'salesmancustomers');
+            Route::post('/customerdetails', 'customerDetails');
+            Route::post('/getcustomerbycode', 'getcustomerByCode');
+        });
     });
 });
 
@@ -50,15 +56,22 @@ Route::controller(ItemController::class)->group(function () {
     });
 });
 
-// Route::controller(ItemDefController::class)->group(function () {
-//     Route::prefix('item')->group(function () {
-//         Route::post('/def', 'import');
-//     });
-// });
+Route::controller(ItemDefController::class)->group(function () {
+    Route::prefix('salesman')->group(function () {
+        Route::prefix('category')->group(function () {
+            Route::post('/', 'categories');
+        });
+        Route::prefix('subcategory')->group(function () {
+            Route::post('/', 'subcategories');
+        });
+    });  
+});
 
 Route::controller(MarkController::class)->group(function () {
     Route::prefix('mark')->group(function () {
-        Route::post('/', 'import');
+        Route::prefix('salesman')->group(function () {
+            Route::post('/brands', 'brands');
+        });
     });
 });
 
@@ -70,22 +83,31 @@ Route::controller(EmployeeController::class)->group(function () {
 
 Route::controller(OrderController::class)->group(function () {
     Route::prefix('order')->group(function () {
-        Route::post('/', 'index');
+        Route::prefix('accounting')->group(function () {
+        Route::post('/orders', 'index');
         Route::post('/bystatus', 'ordersStatusFilter');
         Route::post('/bydate', 'OrderDateFilter');
         Route::post('/orderdetails', 'orderdetails');
-        Route::post('/customerpreviousorder', 'customerpreviousorder');
         Route::post('/previousorderdetails', 'previousorderdetails');
-
+        });
+        Route::prefix('salesman')->group(function () {
+            Route::post('/previousorder', 'customerpreviousorder');
+            });
     });
 });
 
 Route::controller(InvoiceController::class)->group(function () {
     Route::prefix('invoice')->group(function () {
-        Route::prefix('customer')->group(function () {
+        Route::prefix('accounting')->group(function () {
             Route::post('/previousreturninvoices', 'customerpreviousreturninvoices');
             Route::post('/searchinvoicebydate', 'searchreturnedinvoicebydate');
             Route::post('/searchinvoicebynumber', 'searchreturnedinvoicebynumber');
+            Route::post('/salesmaninvoices', 'salesmaninvoices');
+            Route::post('/searchbydate', 'InvoiceDateFilter');
+        });
+        Route::prefix('salesman')->group(function () {
+            Route::post('/previousinvoices', 'salesmanmonthlyinvoices');
+            Route::post('/invoicedetails', 'salesmaninvoicedetails');
         });
     });
 });

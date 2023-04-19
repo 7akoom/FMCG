@@ -37,32 +37,7 @@ class SalesManController extends Controller
         ]);
     }
 
-    // retrieve current month invoices that realted to salesman 
-    public function previousinvoices(Request $request)
-    {
-        $code = $request->header('citycode');
-        $slsman = $request->header('id');
-        $type = $request->header('type');
-        $invoiceName = str_replace('{code}', $code, (new LG_01_INVOICE)->getTable());
-        $custName = str_replace('{code}', $code, (new LG_CLCARD)->getTable());
-        $invoices = DB::table('lg_slsman')
-            ->join($invoiceName, "{$invoiceName}.salesmanref", "=", 'lg_slsman.logicalref')
-            ->join($custName, "{$invoiceName}.clientref", "=", "{$custName}.logicalref")
-            ->select("{$custName}.logicalref as customer_id","{$custName}.code as customer_code",
-            "{$invoiceName}.logicalref as invoice_id","{$invoiceName}.capiblock_creadeddate as invoice_date_",
-            "{$custName}.definition_ as customer_name",
-            "{$invoiceName}.ficheno as invoice_number", "{$invoiceName}.capiblock_creadeddate as invoice_date",
-            "{$invoiceName}.nettotal as total_amount","{$invoiceName}.docode as from_p_invoice")
-            ->whereMonth("{$invoiceName}.capiblock_creadeddate", '=', now()->month)
-            ->where(["{$invoiceName}.salesmanref" => $slsman, "{$invoiceName}.trcode" => $type])
-            ->orderby("{$invoiceName}.capiblock_creadeddate","desc")
-            ->get();
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Salesman list',
-            'data' => $invoices,
-        ]);
-    }
+
     // retrieve current month orders that related to salesman
     public function previousorders(Request $request)
     {
@@ -86,54 +61,7 @@ class SalesManController extends Controller
             'data' => $orders,
         ]);
     }
-    // retrieve invoice details according on salesman logicalref and invoice logicalref
-    public function invoicedetails(Request $request)
-      {
-        $slsman = $request->header('id');
-        $code = $request->header('citycode');
-        $invoice = $request->header('invoice');
-        $stlName = str_replace('{code}', $code, (new LG_01_STLINE)->getTable());
-        $itmName = str_replace('{code}', $code, (new LG_ITEMS)->getTable());
-        $invName = str_replace('{code}', $code, (new LG_01_INVOICE)->getTable());
-        $weightName = str_replace('{code}', $code, (new LG_ITMUNITA)->getTable());
-        $custName = str_replace('{code}', $code, (new LG_CLCARD)->getTable());
-        $clcName = str_replace('{code}', $code, (new LV_01_CLCARD)->getTable());
-        $ppName = str_replace('{code}', $code, (new LG_PAYPLANS)->getTable());
-        $info = DB::table("{$stlName}")
-        ->join("{$itmName}","{$stlName}.stockref","=","{$itmName}.logicalref")
-        ->join('lg_slsman',"{$stlName}.salesmanref","=",'lg_slsman.logicalref')
-        ->join("{$weightName}","{$weightName}.itemref","=","{$itmName}.logicalref")
-        ->join("{$invName}","{$stlName}.invoiceref","=","{$invName}.logicalref")
-        ->join("{$custName}","{$stlName}.clientref","=","{$custName}.logicalref")
-        ->join("{$clcName}","{$clcName}.logicalref","=","{$custName}.logicalref")
-        ->join("{$ppName}","{$ppName}.logicalref",'=',"{$custName}.paymentref")
-        ->select("{$invName}.capiblock_creadeddate as date","{$invName}.ficheno as number","{$invName}.genexp1 as approved_by",
-        "{$invName}.grosstotal as invoice_amount","{$invName}.totaldiscounts as invoice_discount","{$invName}.nettotal as invoice_total",
-        'lg_slsman.definition_ as salesman_name',"{$custName}.code as customer_code","{$custName}.definition_ as customer_name",
-        "{$custName}.addr1 as customer_address","{$custName}.telnrs1 as customer_phone","{$clcName}.debit as customer_debit",
-        "{$clcName}.credit as customer_credit","{$ppName}.code as customer_payment_plan","{$invName}.genexp2 as payment_type")
-        ->where(["{$invName}.ficheno" => $invoice, 'lg_slsman.logicalref' => $slsman,"{$stlName}.iocode" => 4,])
-        ->distinct()
-        ->first();
-        $item = DB::table("{$stlName}")
-        ->join("{$itmName}","{$stlName}.stockref","=","{$itmName}.logicalref")
-        ->join('lg_slsman',"{$stlName}.salesmanref","=",'lg_slsman.logicalref')
-        ->join("{$weightName}","{$weightName}.itemref","=","{$itmName}.logicalref")
-        ->join("{$invName}","{$stlName}.invoiceref","=","{$invName}.logicalref")
-        ->join("{$custName}","{$stlName}.clientref","=","{$custName}.logicalref")
-        ->select("{$stlName}.invoicelnno as line","{$itmName}.code as code","{$itmName}.name as name",
-        "{$stlName}.amount as quantity","{$stlName}.price as price","{$stlName}.total as total",
-        "{$stlName}.distdisc as discount","{$weightName}.grossweight as weight")
-        ->where(["{$invName}.ficheno" => $invoice, 'lg_slsman.logicalref' => $slsman,"{$weightName}.linenr" => 1,"{$stlName}.iocode" => 4,])
-        ->get();
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Invoice details',
-            'invoice_info' => $info = (array) $info,
-            'data' => $item,
-        ]);
-      }
-
+   
     public function salesmaninvoice(Request $request)
     {
       $slsman = $request->header('id');

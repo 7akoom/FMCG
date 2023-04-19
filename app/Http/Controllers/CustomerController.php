@@ -42,11 +42,24 @@ class CustomerController extends Controller
     {
         $code = $request->header('citycode');
         $customer = $request->header('customer');
+        $relName = str_replace('{code}', $code, (new LG_SLSCLREL)->getTable());
         $custName = str_replace('{code}', $code, (new LG_CLCARD)->getTable());
-        $tableName = str_replace('{code}', $code, (new LG_SLSCLREL)->getTable());
-        $data = DB::table('lg_slsman')->WHERE('FIRMNR',$code)
-        ->join("{$tableName}", 'lg_slsman.logicalref','=',"{$tableName}.salesmanref")
-        ->join("{$custName}","{$custName}.logicalref",'=',"{$tableName}.clientref")->where("{$custName}.code",$customer)->first();
+        $data = DB::table("{$relName}")
+        ->join('lg_slsman', "{$relName}.salesmanref", '=', 'lg_slsman.logicalref')
+        ->join("{$custName}", "{$relName}.clientref", '=', "{$custName}.logicalref")
+        ->select("{$relName}.salesmanref",'lg_slsman.code as salesman_code','lg_slsman.definition_ as salesman_name',"{$custName}.logicalref as customer_id",
+        "{$custName}.definition2 as customer_name","{$custName}.code as customer_code", "{$custName}.definition_ as market_name","{$custName}.addr1 as customer_address",
+        "{$custName}.PPGROUPCODE as group","{$custName}.telnrs1 as customer_phone","{$custName}.telnrs2 as second_customer_phone","{$custName}.longitude",
+        "{$custName}.latitute as latitude")
+        ->where(["{$custName}.code" => $customer, "{$relName}.salesmanref" => DB::raw('lg_slsman.logicalref')])
+        ->whereNotNull("{$custName}.telnrs2")
+        ->orderByDesc("{$relName}.logicalref")
+        ->first();
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Customers list',
+            'data' => $data,
+        ]); 
         return response()->json($data); 
     }
     // retrieve customer details (debit, credit, limit,......) depending on salesman logicalref
@@ -89,14 +102,15 @@ class CustomerController extends Controller
         $data = DB::table("{$relName}")
         ->join('lg_slsman', "{$relName}.salesmanref", '=', 'lg_slsman.logicalref')
         ->join("{$custName}", "{$relName}.clientref", '=', "{$custName}.logicalref")
-        ->select("{$custName}.logicalref as customer_id","{$custName}.definition2 as customer_name","{$custName}.code as customer_code", 
-        "{$custName}.definition_ as market_name","{$custName}.addr1 as customer_address","{$custName}.telnrs1 as customer_phone","{$custName}.telnrs2 as second_customer_phone")
+        ->select("{$relName}.salesmanref",'lg_slsman.code as salesman_code','lg_slsman.definition_ as salesman_name',"{$custName}.logicalref as customer_id",
+        "{$custName}.definition2 as customer_name","{$custName}.code as customer_code", "{$custName}.definition_ as market_name","{$custName}.addr1 as customer_address",
+        "{$custName}.PPGROUPCODE as group","{$custName}.telnrs1 as customer_phone","{$custName}.telnrs2 as second_customer_phone","{$custName}.longitude","{$custName}.latitute")
         ->where(['lg_slsman.logicalref' => $slsman,'lg_slsman.active' => '0',"{$custName}.active" => $isactive,])
         ->whereNotNull("{$custName}.telnrs2")
         ->get();
         return response()->json([
             'status' => 'success',
-            'message' => 'Salesman list',
+            'message' => 'Customers list',
             'data' => $data,
         ]); 
     } 
@@ -110,14 +124,14 @@ class CustomerController extends Controller
         $ppName = str_replace('{code}', $code, (new LG_PAYPLANS)->getTable());
         $clcName = str_replace('{code}', $code, (new LV_01_CLCARD)->getTable());
         $clrName = str_replace('{code}', $code, (new LG_01_CLRNUMS)->getTable());
-        $ordName = str_replace('{code}', $code, (new LG_01_ORFICHE)->getTable());
+        $invName = str_replace('{code}', $code, (new LG_01_INVOICE)->getTable());
         $results = DB::table("{$custName}")
             ->join("{$clrName}","{$clrName}.clcardref",'=',"{$custName}.logicalref")
             ->join("{$ppName}","{$ppName}.logicalref",'=',"{$custName}.paymentref")
             ->join("{$clcName}","{$clcName}.logicalref",'=',"{$clrName}.clcardref")
-            ->join("{$ordName}","{$clcName}.logicalref",'=',"{$ordName}.clientref")
+            ->join("{$invName}","{$clcName}.logicalref",'=',"{$invName}.clientref")
             ->select("{$clrName}.accrisktotal as limit","{$ppName}.code as payment_plan","{$clcName}.debit","{$clcName}.credit",
-            DB::raw("(MAX({$ordName}.date_)) as last_order_date"))
+            DB::raw("(MAX({$invName}.date_)) as last_invoice_date"))
             ->where(["{$custName}.code" => $customer])
             ->groupBy("{$clrName}.accrisktotal", "{$ppName}.code", "{$clcName}.debit", "{$clcName}.credit")
             ->get();
