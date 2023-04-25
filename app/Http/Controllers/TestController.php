@@ -108,16 +108,19 @@ class TestController extends Controller
           'data' => $order,
         ]);
       }
-      public function test()
+      public function test(Request $request)
       {
-        $invoice = DB::table('lg_325_01_invoice')->where('trcode',8)->orwhere('trcode',2)
-        ->orwhere('trcode',3)->orwhere('trcode',7)->orwhere('trcode',9)->orwhere('trcode',11)
-        ->orwhere('trcode',14)->paginate(100);
-        return response()->json($invoice);
+        $code = $request->header('citycode');
+        $custName = str_replace('{code}', $code, (new LG_CLCARD)->getTable());
+        $debitName = str_replace('{code}', $code, (new LV_01_CLCARD)->getTable());
+        $clrName = str_replace('{code}', $code, (new LG_01_CLRNUMS)->getTable());
+        $ppName = str_replace('{code}', $code, (new LG_PAYPLANS)->getTable());
+        $test = DB::table("{$custName}")
+        ->join("{$debitName}","{$custName}.logicalref",'=',"{$debitName}.logicalref")
+        ->join("{$clrName}","{$custName}.logicalref",'=',"{$clrName}.clcardref")
+        ->join("{$ppName}","{$ppName}.logicalref",'=',"{$custName}.paymentref")
+        ->select("{$custName}.logicalref","{$custName}.code","{$custName}.definition_","{$debitName}.debit","{$debitName}.credit","{$ppName}.code as payplan","{$clrName}.accrisklimit")
+        ->get();
+        return response()->json($test);
       }
-
-      public function import(Request $request){
-        Excel::import(new ItemImport, $request->file('file')->store('files'));
-        return response()->json();
-    }
 }

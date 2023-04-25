@@ -62,7 +62,7 @@ class OrderController extends Controller
         ->join("{$custName}","{$orlName}.clientref","=","{$custName}.logicalref")
         ->join("{$clcName}","{$clcName}.logicalref","=","{$custName}.logicalref")
         ->join("{$ppName}","{$ppName}.logicalref",'=',"{$custName}.paymentref")
-        ->select("{$ordName}.ficheno as number","{$ordName}.grosstotal as order_amount","{$ordName}.totaldiscounts as order_discount",
+        ->select("{$ordName}.date_ as date","{$ordName}.ficheno as number","{$ordName}.grosstotal as order_amount","{$ordName}.totaldiscounts as order_discount",
         "{$ordName}.nettotal as order_total","{$ordName}.genexp1 as approved_by",
         'lg_slsman.definition_ as salesman_name',"{$custName}.code as customer_code","{$custName}.definition_ as customer_name",
         "{$custName}.addr1 as customer_address","{$custName}.telnrs1 as customer_phone","{$clcName}.debit as customer_debit",
@@ -136,17 +136,28 @@ class OrderController extends Controller
     ], 200);
 }
 //retrieve previous orders that related to customer
-public function customerpreviousorder(Request $request)
+public function salesmanlacurrentmonthorder(Request $request)
 {
     $code = $request->header('citycode');
-    $customer = $request->header('customer');
+    $salesman = $request->header('id');
     $custName = str_replace('{code}', $code, (new LG_CLCARD)->getTable());
     $orderName = str_replace('{code}', $code, (new LG_01_ORFICHE)->getTable());
     $order = DB::table("{$orderName}")
-    ->join("{$custName}","{$custName}.logicalref","=","{$orderName}.clientref")
-    ->select("{$orderName}.capiblock_creadeddate as date","{$orderName}.ficheno as number","{$orderName}.grosstotal as amount","{$orderName}.totaldiscounts as discount",
-    "{$orderName}.nettotal as total")
-    ->where("{$custName}.code", $customer)
+    ->join("{$custName}", "{$custName}.logicalref", "=", "{$orderName}.clientref")
+    ->select(
+        "{$custName}.definition_ as customer_name",
+        "{$orderName}.capiblock_creadeddate as date",
+        "{$orderName}.ficheno as number",
+        "{$orderName}.grosstotal as amount",
+        "{$orderName}.totaldiscounts as discount",
+        "{$orderName}.nettotal as total",
+        "{$orderName}.status"
+    )
+    ->where(["{$orderName}.salesmanref" => $salesman,"{$orderName}.status" => 1])
+    ->orwhere("{$orderName}.status",2)
+    ->whereYear("{$orderName}.capiblock_creadeddate", "=", now()->year)
+    ->whereMonth("{$orderName}.capiblock_creadeddate", "=", now()->month)
+    ->orderby("{$orderName}.capiblock_creadeddate", "desc")
     ->get();
     return response()->json([
         'status' => 'success',
@@ -154,6 +165,9 @@ public function customerpreviousorder(Request $request)
         'data' => $order,
     ], 200);
 }
+
+
+
 //retrieve previous order details based on order number
 public function previousorderdetails(Request $request)
     {   

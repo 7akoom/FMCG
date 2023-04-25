@@ -38,7 +38,7 @@ Route::controller(SalesmanController::class)->group(function () {
 Route::controller(CustomerController::class)->group(function () {
     Route::prefix('customer')->group(function () {
         Route::prefix('accounting')->group(function () {
-            Route::post('/', 'index');
+            Route::post('/customers', 'index');
             Route::post('/getcustomerbycode', 'getcustomerByCode');
             Route::post('/debitandpayment', 'debitandpayment');
         });
@@ -52,7 +52,9 @@ Route::controller(CustomerController::class)->group(function () {
 
 Route::controller(ItemController::class)->group(function () {
     Route::prefix('item')->group(function () {
-        Route::post('/', 'index');
+        Route::prefix('salesman')->group(function () {
+            Route::post('/items', 'index');
+        });
     });
 });
 
@@ -91,7 +93,7 @@ Route::controller(OrderController::class)->group(function () {
         Route::post('/previousorderdetails', 'previousorderdetails');
         });
         Route::prefix('salesman')->group(function () {
-            Route::post('/previousorder', 'customerpreviousorder');
+            Route::post('/previousorder', 'salesmanlacurrentmonthorder');
             });
     });
 });
@@ -108,6 +110,7 @@ Route::controller(InvoiceController::class)->group(function () {
         Route::prefix('salesman')->group(function () {
             Route::post('/previousinvoices', 'salesmanmonthlyinvoices');
             Route::post('/invoicedetails', 'salesmaninvoicedetails');
+            Route::post('/customerpreviousinvoices', 'customerlastteninvoices');
         });
     });
 });
@@ -122,7 +125,7 @@ Route::controller(WareHouseController::class)->group(function () {
 
 Route::controller(TestController::class)->group(function () {
     Route::prefix('test')->group(function () {
-        Route::post('/', 'import');
+        Route::post('/', 'test');
 
     });
 });

@@ -22,20 +22,26 @@ class CustomerController extends Controller
     public function index(Request $request)
     {
         $code = $request->header('citycode');
-        $perpage = request()->input('per_page', 15);
-        $tableName = str_replace('{code}', $code, (new LG_CLCARD)->getTable());
-        $data = DB::table($tableName)->select('logicalref as id','code','definition_ AS arabic_name',
-        'definition2 AS turkish_name','addr1 as address','city','country','telnrs1 as phone_number','guid as image')
-        ->paginate($perpage);
+        $paginate = $request->input('per_page',50);
+        $country = $request->header('country','iraq');
+        $custName = str_replace('{code}', $code, (new LG_CLCARD)->getTable());
+        $ppName = str_replace('{code}', $code, (new LG_PAYPLANS)->getTable());
+        $clcName = str_replace('{code}', $code, (new LV_01_CLCARD)->getTable());
+        $clrName = str_replace('{code}', $code, (new LG_01_CLRNUMS)->getTable());
+        $data = DB::table("{$custName}")
+        ->join("{$clcName}","{$custName}.logicalref",'=',"{$clcName}.logicalref")
+        ->join("{$ppName}","{$ppName}.logicalref",'=',"{$custName}.paymentref")
+        ->join("{$clrName}","{$custName}.logicalref",'=',"{$clrName}.clcardref")
+        ->select("{$custName}.logicalref as id","{$custName}.code","{$custName}.definition_ as name","{$custName}.addr1 as address","{$custName}.telnrs1 as phone","{$clcName}.debit",
+        "{$clcName}.credit","{$ppName}.code as paymant_plan","{$clrName}.accrisklimit as limit")
+        ->where("{$custName}.country",$country)
+        ->paginate($paginate);
         return response()->json([
             'status' => 'success',
-            'message' => 'Customer list',
-            'data' => $data->items(),
-            'current_page' => $data->currentPage(),
-            'per_page' => $data->perPage(),
-            'last_page' => $data->lastPage(),
-            'total' => $data->total(),
-        ], 200);
+            'message' => 'Customers list',
+            'data' => $data,
+        ]); 
+        return response()->json($data);
     }
     // retrieve customer by code
     public function getcustomerByCode(Request $request)

@@ -210,4 +210,26 @@ class InvoiceController extends Controller
              'data' => $invoices,
          ]);
      }
+
+         // retrieve last 10 invoices that related to customer
+    public function customerlastteninvoices(Request $request)
+    {
+        $code = $request->header('citycode');
+        $customer = $request->header('customer');
+        $invoiceName = str_replace('{code}', $code, (new LG_01_INVOICE)->getTable());
+        $custName = str_replace('{code}', $code, (new LG_CLCARD)->getTable());
+        $invoices = DB::table("{$invoiceName}")
+            ->join($custName, "{$invoiceName}.clientref", "=", "{$custName}.logicalref")
+            ->select("{$invoiceName}.capiblock_creadeddate as date","{$invoiceName}.ficheno as invoice_number",
+            "{$invoiceName}.grosstotal as amount","{$invoiceName}.totaldiscounts as discount","{$invoiceName}.nettotal as total",)
+            ->where(["{$custName}.code" => $customer,])
+            ->orderby("{$invoiceName}.capiblock_creadeddate","desc")
+            ->limit(10)
+            ->get();
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Invoice list',
+            'data' => $invoices,
+        ]);
+    }
 }
