@@ -15,6 +15,7 @@ use App\Models\LG_01_ORFICHE;
 use App\Imports\CustomerImport;
 use App\Exports\CustomerExport;
 use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Support\Facades\Schema;
 
 class CustomerController extends Controller
 {
@@ -23,7 +24,6 @@ class CustomerController extends Controller
     {
         $code = $request->header('citycode');
         $paginate = $request->input('per_page',50);
-        $country = $request->header('country','iraq');
         $custName = str_replace('{code}', $code, (new LG_CLCARD)->getTable());
         $ppName = str_replace('{code}', $code, (new LG_PAYPLANS)->getTable());
         $clcName = str_replace('{code}', $code, (new LV_01_CLCARD)->getTable());
@@ -33,15 +33,173 @@ class CustomerController extends Controller
         ->join("{$ppName}","{$ppName}.logicalref",'=',"{$custName}.paymentref")
         ->join("{$clrName}","{$custName}.logicalref",'=',"{$clrName}.clcardref")
         ->select("{$custName}.logicalref as id","{$custName}.code","{$custName}.definition_ as name","{$custName}.addr1 as address","{$custName}.telnrs1 as phone","{$clcName}.debit",
-        "{$clcName}.credit","{$ppName}.code as paymant_plan","{$clrName}.accrisklimit as limit")
-        ->where("{$custName}.country",$country)
-        ->paginate($paginate);
+        "{$clcName}.credit","{$ppName}.code as paymant_plan","{$clrName}.accrisklimit as limit");
+        if ($request->hasHeader('country')) {
+            $country = $request->header('country');
+            $data->where("{$custName}.country", $country);
+        }
+        $customer = $data->paginate($paginate);
         return response()->json([
             'status' => 'success',
             'message' => 'Customers list',
-            'data' => $data,
+            'data' => $customer,
         ]); 
-        return response()->json($data);
+    }
+    // store new customer
+    public function store(Request $request)
+    {
+        try {
+        $salesman = $request->header('id');
+        $code = $request->header('citycode');
+        $sls = DB::table('lg_slsman')->where('logicalref', $salesman)->select('position_')->first();
+        $custName = str_replace('{code}', $code, (new LG_CLCARD)->getTable());
+        $limitName = str_replace('{code}', $code, (new LG_01_CLRNUMS)->getTable());
+        $validateData = $request->validate([
+            'market_name' => 'required',
+            'customer_name' => 'required',
+            'phone' => 'required|unique:'.$custName.',telnrs1|numeric|digits:11',
+            'city' => 'required',
+            'address' => 'required',
+            'zone' => 'required',
+            'longitude' => 'required',
+            'latitude' => 'required',
+        ]);
+        $columnNames = Schema::getColumnListing($custName);
+        $defaultValues = array_fill_keys($columnNames, 0);
+        $defaultValues = [
+            'active' => 2,
+            'cardtype' => 3,
+            'definition_' => $request->market_name,
+            'definition2' => $request->customer_name,
+            'telnrs1' => $request->phone,
+            'telnrs2' => $request->phone2,
+            'city' => $request->city,
+            'addr1' => $request->address,
+            'addr2' => $request->zone,
+            'mapid' => $salesman,
+            'country' => 'iraq',
+            'cyphcode' => '1',
+            'paymentref' => '4',
+            'longitude' => $request->longitude,
+            'latitute' => $request->latitude,
+            'capiblock_createdby' => $salesman,
+        ];
+        $limitNames = Schema::getColumnListing($limitName);
+        $limitValues = array_fill_keys($limitNames, 0);
+        DB::beginTransaction();
+            if($sls && $sls->position_ ==1)
+            {
+                $latestCode = DB::table($custName)
+                ->where('code', 'like', '120.%')
+                ->orderBy('logicalref', 'desc')
+                ->value('code');
+                $defaultValues['code'] = '120.' . str_pad(substr($latestCode, 4) + 1, 4, '0', STR_PAD_LEFT);
+            }
+            else if ($sls && $sls->position_ ==2)
+            {
+                $latestCode = DB::table($custName)
+                ->where('code', 'like', '180.%')
+                ->orderBy('logicalref', 'desc')
+                ->value('code');
+                $defaultValues['code'] = '180.' . str_pad(substr($latestCode, 4) + 1, 4, '0', STR_PAD_LEFT);
+            }
+            $logicalref = DB::table($custName)->insertGetId($defaultValues);
+            $limitValues = [
+                'clcardref' => $logicalref,
+                'accrisklimit' => '0'
+            ];
+            DB::table($limitName)->insert($limitValues);
+            DB::commit();
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Customers inserted successfully',
+                'data' => $defaultValues,
+            ],200);
+        } catch (ValidationException $e) {
+            $errors = $e->validator->errors()->getMessages();
+            $errorMsg = [];
+            foreach ($errors as $key => $value) {
+                $errorMsg[$key] = $value[0];
+            }
+            return response()->json([
+                'errors' => $errorMsg,
+            ], 422);
+        }
+    }
+        
+    //retrieve pending customers
+    public function newCustomer(Request $request)
+    {
+        $code = $request->header('citycode');
+        $custName = str_replace('{code}', $code, (new LG_CLCARD)->getTable());
+        $customer = DB::table("{$custName}")
+        ->join('lg_slsman', "{$custName}.mapid", '=', 'lg_slsman.logicalref')
+        ->select("{$custName}.logicalref as customer_id","{$custName}.definition2 as customer_name","{$custName}.definition_ as market_name",
+        "{$custName}.telnrs1 as first_phone","{$custName}.code as customer_code","{$custName}.addr2 as zone","lg_slsman.definition_ as salesman_name")
+        ->where("{$custName}.active",2)
+        ->orderby("{$custName}.logicalref","desc")
+        ->get();
+        return response()->json([
+            'status' => 'success',
+            'message' => 'New customer list',
+            'data' => $customer,
+        ]);
+    }
+    //retrieve pending customer details
+    public function pendingCustomerDetails(Request $request)
+    {
+        $code = $request->header('citycode');
+        $customer = $request->header('customer');
+        $custName = str_replace('{code}', $code, (new LG_CLCARD)->getTable());
+        $limitName = str_replace('{code}', $code, (new LG_01_CLRNUMS)->getTable());
+        $planName = str_replace('{code}', $code, (new LG_PAYPLANS)->getTable());
+        $data = DB::table("{$custName}")
+        ->join('lg_slsman', "{$custName}.mapid", '=', 'lg_slsman.logicalref')
+        ->join("{$limitName}","{$limitName}.clcardref","=","{$custName}.logicalref")
+        ->join("{$planName}","{$planName}.logicalref","=","{$custName}.paymentref")
+        ->select("{$custName}.definition2 as customer_name","{$custName}.definition_ as market_name",'lg_slsman.definition_ as salesman_name',"{$custName}.telnrs1 as first_phone",
+        "{$custName}.telnrs2 as second_phone","{$custName}.code","{$custName}.city","{$custName}.addr2 as zone","{$custName}.addr1 as address",
+        "{$custName}.ppgroupcode as customer_type","{$planName}.code as payment_plan",DB::raw("COALESCE({$limitName}.accrisklimit, 0) as limit"))
+        ->where("{$custName}.logicalref",$customer)
+        ->get();
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Pending customer details',
+            'data' => $data,
+        ]);
+    }
+    //update pending customer
+    public function UpdatePendingCustomer(Request $request, $id)
+    {
+        $code = $request->header('citycode');
+        $custName = str_replace('{code}', $code, (new LG_CLCARD)->getTable());
+        $limitName = str_replace('{code}', $code, (new LG_01_CLRNUMS)->getTable());
+        $customer = DB::table("{$custName}")->where('logicalref',$id)->first();      
+        $limit = DB::table("{$limitName}")->where('clcardref',$id)->first();
+        $custData = [
+            'definition2' => $request->customer_name,
+            'definition_' => $request->market_name,
+            'telnrs1' => $request->first_phone,
+            'telnrs2' => $request->second_phone,
+            'city' => $request->city,
+            'addr2' => $request->zone,
+            'addr1' => $request->address,
+            'ppgroupcode' => $request->customer_type,
+            'paymentref' => $request->payment_plan,
+            'active' => $request->active,
+        ];
+        $limitData = [
+            'accrisklimit' => $request->limit
+        ];
+        DB::beginTransaction();
+        DB::table("{$custName}")->where('logicalref',$id)->update($custData);
+        DB::table("{$limitName}")->where('clcardref',$id)->update($limitData);
+        DB::commit();
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Customer updated successfully',
+            'data' => $custData,
+        ],200); 
     }
     // retrieve customer by code
     public function getcustomerByCode(Request $request)
@@ -132,14 +290,20 @@ class CustomerController extends Controller
         $clrName = str_replace('{code}', $code, (new LG_01_CLRNUMS)->getTable());
         $invName = str_replace('{code}', $code, (new LG_01_INVOICE)->getTable());
         $results = DB::table("{$custName}")
-            ->join("{$clrName}","{$clrName}.clcardref",'=',"{$custName}.logicalref")
-            ->join("{$ppName}","{$ppName}.logicalref",'=',"{$custName}.paymentref")
-            ->join("{$clcName}","{$clcName}.logicalref",'=',"{$clrName}.clcardref")
-            ->join("{$invName}","{$clcName}.logicalref",'=',"{$invName}.clientref")
-            ->select("{$clrName}.accrisktotal as limit","{$ppName}.code as payment_plan","{$clcName}.debit","{$clcName}.credit",
-            DB::raw("(MAX({$invName}.date_)) as last_invoice_date"))
+        ->leftJoin("{$clrName}", "{$clrName}.clcardref", '=', "{$custName}.logicalref")
+        ->leftJoin("{$ppName}", "{$ppName}.logicalref", '=', "{$custName}.paymentref")
+        ->leftJoin("{$clcName}", "{$clcName}.logicalref", '=', "{$clrName}.clcardref")
+        ->leftJoin("{$invName}", "{$clcName}.logicalref", '=', "{$invName}.clientref")
+        ->select(
+        DB::raw("COALESCE({$clrName}.accrisklimit, 0) as limit"),
+        DB::raw("COALESCE({$ppName}.code, '0') as payment_plan"),
+        DB::raw("COALESCE({$clcName}.debit, 0) as debit"),
+        DB::raw("COALESCE({$clcName}.credit, 0) as credit"),
+        DB::raw("COALESCE(CONVERT(varchar(10), MAX({$invName}.date_), 120), '0000-00-00') as last_invoice_date")
+
+    )
             ->where(["{$custName}.code" => $customer])
-            ->groupBy("{$clrName}.accrisktotal", "{$ppName}.code", "{$clcName}.debit", "{$clcName}.credit")
+            ->groupBy("{$clrName}.accrisklimit", "{$ppName}.code", "{$clcName}.debit", "{$clcName}.credit")
             ->get();
             return response()->json([
                 'status' => 'success',

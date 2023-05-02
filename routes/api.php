@@ -11,6 +11,8 @@ use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\WareHouseController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\SafeController;
+use App\Http\Controllers\PayPlanController;
 use App\Http\Controllers\TestController;
 
 /*
@@ -41,11 +43,16 @@ Route::controller(CustomerController::class)->group(function () {
             Route::post('/customers', 'index');
             Route::post('/getcustomerbycode', 'getcustomerByCode');
             Route::post('/debitandpayment', 'debitandpayment');
+            Route::post('/newcustomer', 'newCustomer');
+            Route::post('/pendingcustomer', 'pendingCustomerDetails');
+            Route::post('/updatecustomerstatus/{id}', 'UpdatePendingCustomer');
         });
         Route::prefix('salesman')->group(function () {
             Route::post('/customers', 'salesmancustomers');
             Route::post('/customerdetails', 'customerDetails');
+            Route::post('/debitandpayment', 'debitandpayment');
             Route::post('/getcustomerbycode', 'getcustomerByCode');
+            Route::post('/newcustomer', 'store');
         });
     });
 });
@@ -54,6 +61,11 @@ Route::controller(ItemController::class)->group(function () {
     Route::prefix('item')->group(function () {
         Route::prefix('salesman')->group(function () {
             Route::post('/items', 'index');
+        });
+        Route::prefix('accounting')->group(function () {
+            Route::post('/items', 'index');
+            Route::post('/item', 'finalItem');
+            Route::post('/filterbybrand', 'searchbybrand');
         });
     });
 });
@@ -74,12 +86,26 @@ Route::controller(MarkController::class)->group(function () {
         Route::prefix('salesman')->group(function () {
             Route::post('/brands', 'brands');
         });
+        Route::prefix('accounting')->group(function () {
+            Route::post('/brands', 'brands');
+        });
+        Route::prefix('management')->group(function () {
+            Route::post('/new', 'store');
+        });
     });
 });
 
 Route::controller(EmployeeController::class)->group(function () {
     Route::prefix('emp')->group(function () {
         Route::post('/', 'index');
+    });
+});
+
+Route::controller(PayPlanController::class)->group(function () {
+    Route::prefix('payplans')->group(function () {
+        Route::prefix('accounting')->group(function () {
+            Route::post('/payplans', 'index');
+        });
     });
 });
 
@@ -94,6 +120,7 @@ Route::controller(OrderController::class)->group(function () {
         });
         Route::prefix('salesman')->group(function () {
             Route::post('/previousorder', 'salesmanlacurrentmonthorder');
+            Route::post('/previousorderdetails', 'previousorderdetails');
             });
     });
 });
@@ -120,6 +147,14 @@ Route::controller(WareHouseController::class)->group(function () {
         Route::post('/merkez', 'mainWHouse');
         Route::post('/cashvan', 'cashvanWHouse');
         Route::post('/wastage', 'wastageWHouse');
+    });
+});
+
+Route::controller(SafeController::class)->group(function () {
+    Route::prefix('safes')->group(function () {
+        Route::prefix('accounting')->group(function () {
+            Route::post('/safes', 'index');
+        });
     });
 });
 

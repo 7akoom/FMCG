@@ -106,7 +106,8 @@ class InvoiceController extends Controller
        ->select("{$stlName}.invoicelnno as line","{$itmName}.code as code","{$itmName}.name as name",
        "{$stlName}.amount as quantity","{$stlName}.price as price","{$stlName}.total as total",
        "{$stlName}.distdisc as discount","{$weightName}.grossweight as weight")
-       ->where(["{$invName}.ficheno" => $invoice, 'lg_slsman.logicalref' => $slsman,"{$weightName}.linenr" => 1,"{$stlName}.iocode" => 4,])
+       ->where(["{$invName}.ficheno" => $invoice, 'lg_slsman.logicalref' => $slsman,"{$weightName}.linenr" => 1,"{$stlName}.iocode" => 4])
+       ->orderby("{$stlName}.invoicelnno","asc")
        ->get();
        return response()->json([
            'status' => 'success',

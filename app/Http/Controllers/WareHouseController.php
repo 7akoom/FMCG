@@ -23,11 +23,7 @@ class WareHouseController extends Controller
     public function mainWHouse(Request $request)
     {
         $code = $request->header("citycode");
-        $type = $request->header("type");
         $lang = $request->header("lang");
-        $category = $request->header("category");
-        $subcategory = $request->header("subcategory");
-        $mark = $request->header("mark");
         $itemsTable = (new LG_ITEMS)->getTable();
         $itemName = str_replace('{code}', $code, $itemsTable);
         $priceName = str_replace('{code}', $code, (new LG_PRCLIST)->getTable());
@@ -56,21 +52,43 @@ class WareHouseController extends Controller
         })
         ->select("{$itemName}.logicalref as id", "{$itemName}.code as code", DB::raw("CASE WHEN '{$lang}' = 'ar' THEN {$itemName}.name WHEN '{$lang}' = 'en' THEN {$itemName}.name3 WHEN '{$lang}' = 'tr' THEN {$itemName}.name4 ELSE {$itemName}.name
         END as name"),
-"{$itemName}.stgrpcode as group",
-DB::raw("CASE WHEN '{$lang}' = 'ar' THEN cat.definition_  WHEN '{$lang}' = 'en' THEN cat.definition2 WHEN '{$lang}' = 'tr' THEN cat.definition3 ELSE cat.definition_
+        "{$itemName}.stgrpcode as group",
+        DB::raw("CASE WHEN '{$lang}' = 'ar' THEN cat.definition_  WHEN '{$lang}' = 'en' THEN cat.definition2 WHEN '{$lang}' = 'tr' THEN cat.definition3 ELSE cat.definition_
         END as category"), DB::raw("CASE WHEN '{$lang}' = 'ar' THEN sub.definition_  WHEN '{$lang}' = 'en' THEN sub.definition2
         WHEN '{$lang}' = 'tr' THEN sub.definition3 ELSE sub.definition_ END as subcategory"),
-        "{$itemName}.stgrpcode as group","{$priceName}.price",
+        "{$itemName}.stgrpcode as group",
         "{$unitName}.code as unit", "{$weightName}.grossweight as weight", DB::raw("COALESCE(SUM({$warehousetName}.onhand), 0) as quantity"))
-        ->where(["{$itemName}.active" => 0, "{$itemName}.classtype" => $type]) 
+        ->where(["{$itemName}.active" => 0])
+        ->having(DB::raw('COALESCE(SUM('.$warehousetName.'.onhand), 0)'), '>', 0)
+
         ->groupBy("{$itemName}.logicalref","{$itemName}.code", "{$itemName}.name",'cat.definition_','cat.definition2','cat.definition3',"{$markName}.code","{$itemName}.name3","{$itemName}.name4", "{$itemName}.stgrpcode","{$itemName}.categoryid",
         'sub.definition_','sub.definition2','sub.definition3',"{$itemName}.markref",
-        "{$itemName}.stgrpcode", "{$priceName}.price", "{$unitName}.code", "{$weightName}.grossweight")
-        ->get();
+        "{$itemName}.stgrpcode", "{$priceName}.price", "{$unitName}.code", "{$weightName}.grossweight");
+        if ($request->hasHeader('type')) {
+            $type = $request->header('type');
+            $result->where("{$itemName}.classtype", $type);
+        }
+    
+        if ($request->hasHeader('category')) {
+            $category = $request->header('category');
+            $result->where("{$itemName}.categoryid", $category);
+        }
+    
+        if ($request->hasHeader('subcategory')) {
+            $subcategory = $request->header('subcategory');
+            $result->where("{$itemName}.specode", $subcategory);
+        }
+    
+        if ($request->hasHeader('brand')) {
+            $brand = $request->header('brand');
+            $result->where("{$itemName}.markref", $brand);
+        }
+    
+        $items = $result->orderby("{$itemName}.code","asc")->get();
         return response()->json([
             'status' => 'success',
             'message' => 'Items list',
-            'data' => $result,
+            'data' => $items,
         ], 200);
     }  
 
@@ -78,11 +96,7 @@ DB::raw("CASE WHEN '{$lang}' = 'ar' THEN cat.definition_  WHEN '{$lang}' = 'en' 
     public function cashvanWHouse(Request $request)
 {
     $code = $request->header("citycode");
-    $type = $request->header("type");
     $lang = $request->header("lang");
-    $category = $request->header("category");
-    $subcategory = $request->header("subcategory");
-    $mark = $request->header("mark");
     $itemsTable = (new LG_ITEMS)->getTable();
     $itemName = str_replace('{code}', $code, $itemsTable);
     $priceName = str_replace('{code}', $code, (new LG_PRCLIST)->getTable());
@@ -93,50 +107,67 @@ DB::raw("CASE WHEN '{$lang}' = 'ar' THEN cat.definition_  WHEN '{$lang}' = 'en' 
     $catName = str_replace('{code}', $code, (new LG_SPECODES)->getTable());
     $result = DB::table("{$itemName}")
     ->leftJoin("$priceName", function($join) use ($itemName, $priceName) {
-        $join->on("{$itemName}.logicalref", "=", "{$priceName}.cardref")
-        ->where(["{$priceName}.clientcode" => "" , "{$priceName}.active" => 0])
-            ->whereRaw("{$priceName}.priority = (SELECT MAX(priority) FROM {$priceName} WHERE cardref = {$itemName}.logicalref)");
+    $join->on("{$itemName}.logicalref", "=", "{$priceName}.cardref")
+        ->where(["{$priceName}.clientcode" => "180.*" , "{$priceName}.active" => 0])
+        ->whereRaw("{$priceName}.priority = (SELECT MAX(priority) FROM {$priceName} WHERE cardref = {$itemName}.logicalref)");
     })
     ->leftJoin("{$unitName}", "{$itemName}.unitsetref", "=", "{$unitName}.logicalref")
     ->leftJoin("{$markName}", "{$itemName}.markref", "=", "{$markName}.logicalref")
     ->leftJoin("{$catName} as cat", "{$itemName}.categoryid", "=", "cat.logicalref")
     ->leftJoin("{$catName} as sub", "{$itemName}.specode", "=", "sub.logicalref")
     ->leftJoin("{$weightName}", function($join) use ($itemName, $weightName) {
-        $join->on("{$itemName}.logicalref", "=", "{$weightName}.itemref")
-            ->where("{$weightName}.linenr", "=", 1);
+    $join->on("{$itemName}.logicalref", "=", "{$weightName}.itemref")
+        ->where("{$weightName}.linenr", "=", 1);
     })
     ->leftJoin("{$warehousetName}", function($join) use ($itemName, $warehousetName) {
-        $join->on("{$itemName}.logicalref", "=", "{$warehousetName}.stockref")
-            ->where("{$warehousetName}.invenno", "=", 10);
+    $join->on("{$itemName}.logicalref", "=", "{$warehousetName}.stockref")
+        ->where("{$warehousetName}.invenno", "=", 10);
     })
-    ->select("{$itemName}.logicalref as id", "{$itemName}.code as code", 
-        DB::raw("CASE WHEN '{$lang}' = 'ar' THEN {$itemName}.name WHEN '{$lang}' = 'en' THEN {$itemName}.name3 WHEN '{$lang}' = 'tr' THEN {$itemName}.name4 ELSE {$itemName}.name
-                END as name"),
-        "{$itemName}.stgrpcode as group",
-        DB::raw("CASE WHEN '{$lang}' = 'ar' THEN cat.definition_  WHEN '{$lang}' = 'en' THEN cat.definition2 WHEN '{$lang}' = 'tr' THEN cat.definition3 ELSE cat.definition_
-                END as category"), DB::raw("CASE WHEN '{$lang}' = 'ar' THEN sub.definition_  WHEN '{$lang}' = 'en' THEN sub.definition2
-                WHEN '{$lang}' = 'tr' THEN sub.definition3 ELSE sub.definition_ END as subcategory"),"{$markName}.code as brand",
-        "{$priceName}.price","{$unitName}.code as unit", "{$weightName}.grossweight as weight", DB::raw("COALESCE(SUM({$warehousetName}.onhand), 0) as quantity"))
-        ->where(["{$itemName}.active" => 0, "{$itemName}.classtype" => $type]) 
-        ->groupBy("{$itemName}.logicalref","{$itemName}.code", "{$itemName}.name",'cat.definition_','cat.definition2','cat.definition3',"{$markName}.code","{$itemName}.name3","{$itemName}.name4", "{$itemName}.stgrpcode","{$itemName}.categoryid",
-        'sub.definition_','sub.definition2','sub.definition3',"{$itemName}.markref","{$priceName}.price", "{$unitName}.code", "{$weightName}.grossweight")
-    ->havingRaw("SUM({$warehousetName}.onhand) > 0")
-    ->orderby("{$itemName}.code",'desc')
-    ->get();
+    ->select("{$itemName}.logicalref as id", "{$itemName}.code as code", DB::raw("CASE WHEN '{$lang}' = 'ar' THEN {$itemName}.name WHEN '{$lang}' = 'en' THEN {$itemName}.name3 WHEN '{$lang}' = 'tr' THEN {$itemName}.name4 ELSE {$itemName}.name
+    END as name"),
+    "{$itemName}.stgrpcode as group",
+    DB::raw("CASE WHEN '{$lang}' = 'ar' THEN cat.definition_  WHEN '{$lang}' = 'en' THEN cat.definition2 WHEN '{$lang}' = 'tr' THEN cat.definition3 ELSE cat.definition_
+    END as category"), DB::raw("CASE WHEN '{$lang}' = 'ar' THEN sub.definition_  WHEN '{$lang}' = 'en' THEN sub.definition2
+    WHEN '{$lang}' = 'tr' THEN sub.definition3 ELSE sub.definition_ END as subcategory"),
+    "{$itemName}.stgrpcode as group","{$priceName}.price",
+    "{$unitName}.code as unit", "{$weightName}.grossweight as weight", DB::raw("COALESCE(SUM({$warehousetName}.onhand), 0) as quantity"))
+    ->where(["{$itemName}.active" => 0])
+    ->having(DB::raw('COALESCE(SUM('.$warehousetName.'.onhand), 0)'), '>', 0)
+    ->groupBy("{$itemName}.logicalref","{$itemName}.code", "{$itemName}.name",'cat.definition_','cat.definition2','cat.definition3',"{$markName}.code","{$itemName}.name3","{$itemName}.name4", "{$itemName}.stgrpcode","{$itemName}.categoryid",
+    'sub.definition_','sub.definition2','sub.definition3',"{$itemName}.markref",
+    "{$itemName}.stgrpcode", "{$priceName}.price", "{$unitName}.code", "{$weightName}.grossweight");
+    if ($request->hasHeader('type')) {
+        $type = $request->header('type');
+        $result->where("{$itemName}.classtype", $type);
+    }
+
+    if ($request->hasHeader('category')) {
+        $category = $request->header('category');
+        $result->where("{$itemName}.categoryid", $category);
+    }
+
+    if ($request->hasHeader('subcategory')) {
+        $subcategory = $request->header('subcategory');
+        $result->where("{$itemName}.specode", $subcategory);
+    }
+
+    if ($request->hasHeader('brand')) {
+        $brand = $request->header('brand');
+        $result->where("{$itemName}.markref", $brand);
+    }
+
+    $items = $result->orderby("{$itemName}.code","asc")->get();
     return response()->json([
         'status' => 'success',
         'message' => 'Items list',
-        'data' => $result,
-    ]);
+        'data' => $items,
+    ], 200);
 }
 
     //retrieve wastage items
     public function wastageWHouse(Request $request)
     {
         $code = $request->header("citycode");
-        $type = $request->header("type");
-        $category = $request->header("category");
-        $subcategory = $request->header("subcategory");
         $lang = $request->header("lang");
         $itemsTable = (new LG_ITEMS)->getTable();
         $itemName = str_replace('{code}', $code, $itemsTable);
@@ -148,40 +179,60 @@ DB::raw("CASE WHEN '{$lang}' = 'ar' THEN cat.definition_  WHEN '{$lang}' = 'en' 
         $catName = str_replace('{code}', $code, (new LG_SPECODES)->getTable());
         $result = DB::table("{$itemName}")
         ->leftJoin("$priceName", function($join) use ($itemName, $priceName) {
-            $join->on("{$itemName}.logicalref", "=", "{$priceName}.cardref")
-            ->where(["{$priceName}.clientcode" => "" , "{$priceName}.active" => 0])
-                ->whereRaw("{$priceName}.priority = (SELECT MAX(priority) FROM {$priceName} WHERE cardref = {$itemName}.logicalref)");
+        $join->on("{$itemName}.logicalref", "=", "{$priceName}.cardref")
+            ->where(["{$priceName}.clientcode" => "180.*" , "{$priceName}.active" => 0])
+            ->whereRaw("{$priceName}.priority = (SELECT MAX(priority) FROM {$priceName} WHERE cardref = {$itemName}.logicalref)");
         })
         ->leftJoin("{$unitName}", "{$itemName}.unitsetref", "=", "{$unitName}.logicalref")
         ->leftJoin("{$markName}", "{$itemName}.markref", "=", "{$markName}.logicalref")
         ->leftJoin("{$catName} as cat", "{$itemName}.categoryid", "=", "cat.logicalref")
         ->leftJoin("{$catName} as sub", "{$itemName}.specode", "=", "sub.logicalref")
         ->leftJoin("{$weightName}", function($join) use ($itemName, $weightName) {
-            $join->on("{$itemName}.logicalref", "=", "{$weightName}.itemref")
-                ->where("{$weightName}.linenr", "=", 1);
+        $join->on("{$itemName}.logicalref", "=", "{$weightName}.itemref")
+            ->where("{$weightName}.linenr", "=", 1);
         })
         ->leftJoin("{$warehousetName}", function($join) use ($itemName, $warehousetName) {
-            $join->on("{$itemName}.logicalref", "=", "{$warehousetName}.stockref")
-                ->where("{$warehousetName}.invenno", "=", 9);
+        $join->on("{$itemName}.logicalref", "=", "{$warehousetName}.stockref")
+            ->where("{$warehousetName}.invenno", "=", 9);
         })
-        ->select("{$itemName}.logicalref as id", "{$itemName}.code as code",DB::raw("CASE WHEN '{$lang}' = 'ar' THEN {$itemName}.name WHEN '{$lang}' = 'en' THEN {$itemName}.name3 WHEN '{$lang}' = 'tr' THEN {$itemName}.name4 ELSE {$itemName}.name
+        ->select("{$itemName}.logicalref as id", "{$itemName}.code as code", DB::raw("CASE WHEN '{$lang}' = 'ar' THEN {$itemName}.name WHEN '{$lang}' = 'en' THEN {$itemName}.name3 WHEN '{$lang}' = 'tr' THEN {$itemName}.name4 ELSE {$itemName}.name
         END as name"),
-"{$itemName}.stgrpcode as group",
-DB::raw("CASE WHEN '{$lang}' = 'ar' THEN cat.definition_  WHEN '{$lang}' = 'en' THEN cat.definition2 WHEN '{$lang}' = 'tr' THEN cat.definition3 ELSE cat.definition_
+        "{$itemName}.stgrpcode as group",
+        DB::raw("CASE WHEN '{$lang}' = 'ar' THEN cat.definition_  WHEN '{$lang}' = 'en' THEN cat.definition2 WHEN '{$lang}' = 'tr' THEN cat.definition3 ELSE cat.definition_
         END as category"), DB::raw("CASE WHEN '{$lang}' = 'ar' THEN sub.definition_  WHEN '{$lang}' = 'en' THEN sub.definition2
-        WHEN '{$lang}' = 'tr' THEN sub.definition3 ELSE sub.definition_ END as subcategory"),"{$itemName}.stgrpcode as group", "{$priceName}.price",
-            "{$unitName}.code as unit", "{$weightName}.grossweight as weight", DB::raw("COALESCE(SUM({$warehousetName}.onhand), 0) as quantity"))
-            ->where(["{$itemName}.active" => 0, "{$itemName}.classtype" => $type]) 
-            ->groupBy("{$itemName}.logicalref","{$itemName}.code",'cat.definition_','cat.definition2','cat.definition3',
-            'sub.definition_','sub.definition2','sub.definition3',"{$itemName}.markref","{$itemName}.name","{$itemName}.name3","{$itemName}.name4",
-            "{$itemName}.stgrpcode", "{$priceName}.price", "{$unitName}.code", "{$weightName}.grossweight")
-        ->havingRaw("SUM({$warehousetName}.onhand) > 0")
-        ->orderby("{$itemName}.code",'desc')
-        ->get();
+        WHEN '{$lang}' = 'tr' THEN sub.definition3 ELSE sub.definition_ END as subcategory"),
+        "{$itemName}.stgrpcode as group","{$priceName}.price",
+        "{$unitName}.code as unit", "{$weightName}.grossweight as weight", DB::raw("COALESCE(SUM({$warehousetName}.onhand), 0) as quantity"))
+        ->where(["{$itemName}.active" => 0]) 
+        ->having(DB::raw('COALESCE(SUM('.$warehousetName.'.onhand), 0)'), '>', 0)
+        ->groupBy("{$itemName}.logicalref","{$itemName}.code", "{$itemName}.name",'cat.definition_','cat.definition2','cat.definition3',"{$markName}.code","{$itemName}.name3","{$itemName}.name4", "{$itemName}.stgrpcode","{$itemName}.categoryid",
+        'sub.definition_','sub.definition2','sub.definition3',"{$itemName}.markref",
+        "{$itemName}.stgrpcode", "{$priceName}.price", "{$unitName}.code", "{$weightName}.grossweight");
+        if ($request->hasHeader('type')) {
+            $type = $request->header('type');
+            $result->where("{$itemName}.classtype", $type);
+        }
+    
+        if ($request->hasHeader('category')) {
+            $category = $request->header('category');
+            $result->where("{$itemName}.categoryid", $category);
+        }
+    
+        if ($request->hasHeader('subcategory')) {
+            $subcategory = $request->header('subcategory');
+            $result->where("{$itemName}.specode", $subcategory);
+        }
+    
+        if ($request->hasHeader('brand')) {
+            $brand = $request->header('brand');
+            $result->where("{$itemName}.markref", $brand);
+        }
+    
+        $items = $result->orderby("{$itemName}.code","asc")->get();
         return response()->json([
             'status' => 'success',
             'message' => 'Items list',
-            'data' => $result,
+            'data' => $items,
         ], 200);
     }
 

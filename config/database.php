@@ -92,6 +92,22 @@ return [
             'prefix_indexes' => true,
         ],
 
+    //     'sqlsrv' => [
+    //         'driver' => 'mysql',
+    //         'host' => env('DB_HOST', '10.27.0.110'),
+    //         'port' => env('DB_PORT', '1433'),
+    //         'database' => env('DB_DATABASE', 'INTLOGODB'),
+    //         'username' => env('DB_USERNAME', 'sa'),
+    //         'password' => env('DB_PASSWORD', 'Sqlpass123'),
+    //         'unix_socket' => env('DB_SOCKET', ''),
+    //         'charset' => 'utf8mb4',
+    //         'collation' => 'utf8mb4_unicode_ci',
+    //         'prefix' => '',
+    //         'strict' => true, // Set the strict mode to true
+    //         'engine' => null,
+    //    ],
+       
+
     ],
 
     /*
