@@ -13,6 +13,7 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\SafeController;
 use App\Http\Controllers\PayPlanController;
+use App\Http\Controllers\CollectionController;
 use App\Http\Controllers\TestController;
 
 /*
@@ -63,11 +64,13 @@ Route::controller(ItemController::class)->group(function () {
     Route::prefix('item')->group(function () {
         Route::prefix('salesman')->group(function () {
             Route::post('/items', 'index');
+            Route::post('/itemdetails', 'getItemDetails');
         });
         Route::prefix('accounting')->group(function () {
             Route::post('/items', 'index');
             Route::post('/item', 'finalItem');
             Route::post('/filterbybrand', 'searchbybrand');
+            Route::post('/itemdetails', 'getItemDetails');
         });
     });
 });
@@ -80,7 +83,10 @@ Route::controller(ItemDefController::class)->group(function () {
         Route::prefix('subcategory')->group(function () {
             Route::post('/', 'subcategories');
         });
-    });  
+    }); 
+    Route::prefix('accounting')->group(function () { 
+        Route::post('/categories', 'catAndSubCategory');
+    });
 });
 
 Route::controller(MarkController::class)->group(function () {
@@ -124,6 +130,7 @@ Route::controller(OrderController::class)->group(function () {
         Route::prefix('salesman')->group(function () {
             Route::post('/previousorder', 'salesmanlacurrentmonthorder');
             Route::post('/previousorderdetails', 'previousorderdetails');
+            Route::post('/neworder', 'store');
             });
     });
 });
@@ -162,6 +169,17 @@ Route::controller(SafeController::class)->group(function () {
         });
         Route::prefix('salesman')->group(function () {
             Route::post('/safetransaction', 'salesmanSafeTransaction');
+        });
+    });
+});
+
+Route::controller(CollectionController::class)->group(function () {
+    Route::prefix('collection')->group(function () {
+        Route::prefix('accounting')->group(function () {
+
+        });
+        Route::prefix('salesman')->group(function () {
+            Route::post('/newcurrentaccountcollection', 'newCustomerPayment');
         });
     });
 });

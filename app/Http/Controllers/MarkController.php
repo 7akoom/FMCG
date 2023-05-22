@@ -19,16 +19,18 @@ class MarkController extends Controller
     //retrieve brands by type
     public function brands(Request $request){
         $code = $request->header("citycode");
-        $type = $request->header("type");
         $markName = str_replace('{code}', $code, (new LG_MARK)->getTable());
         $brand = DB::table("{$markName}")
-        ->select("{$markName}.logicalref as id","{$markName}.code as name","{$markName}.descr as image")
-        ->where("{$markName}.specode",$type)
-        ->get();
+        ->select("{$markName}.logicalref as id","{$markName}.code as name","{$markName}.descr as image");
+        if ($request->hasHeader('type')) {
+            $type = $request->header('type');
+            $brand->where("{$markName}.specode", $type);
+        }
+        $data = $brand->get();
         return response()->json([
             'status' => 'success',
             'message' => 'Brands list',
-            'data' => $brand,
+            'data' => $data,
         ], 200);
      }
      // insert new brand
