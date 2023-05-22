@@ -22,7 +22,7 @@ class InvoiceController extends Controller
     {
         $code = $request->header('citycode');
         $slsman = $request->header('id');
-        $type = $request->header('type');
+        // $type = $request->header('type');
         $invoiceName = str_replace('{code}', $code, (new LG_01_INVOICE)->getTable());
         $custName = str_replace('{code}', $code, (new LG_CLCARD)->getTable());
         $invoices = DB::table('lg_slsman')
@@ -31,10 +31,10 @@ class InvoiceController extends Controller
             ->select("{$custName}.logicalref as customer_id","{$custName}.code as customer_code",
             "{$invoiceName}.logicalref as invoice_id","{$invoiceName}.capiblock_creadeddate as invoice_date_",
             "{$custName}.definition_ as customer_name",
-            "{$invoiceName}.ficheno as invoice_number", "{$invoiceName}.capiblock_creadeddate as invoice_date",
+            "{$invoiceName}.ficheno as invoice_number",
             "{$invoiceName}.nettotal as total_amount","{$invoiceName}.docode as from_p_invoice")
+            ->where(["{$invoiceName}.salesmanref" => $slsman,])
             ->whereMonth("{$invoiceName}.capiblock_creadeddate", '=', now()->month)
-            ->where(["{$invoiceName}.salesmanref" => $slsman, "{$invoiceName}.trcode" => $type])
             ->orderby("{$invoiceName}.capiblock_creadeddate","desc")
             ->get();
         return response()->json([
@@ -155,6 +155,27 @@ class InvoiceController extends Controller
             "{$invoiceName}.grosstotal as amount","{$invoiceName}.totaldiscounts as discount","{$invoiceName}.nettotal as total",
             "{$invoiceName}.docode as from_p_invoice","{$invoiceName}.genexp1 as note",)
             ->where(["{$custName}.code" => $customer, "{$invoiceName}.trcode" => 3])
+            ->orderby("{$invoiceName}.capiblock_creadeddate","desc")
+            ->get();
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Invoice list',
+            'data' => $invoices,
+        ]);
+    }
+    // retrieve returned invoices that related to customer
+    public function customerpreviousinvoices(Request $request)
+    {
+        $code = $request->header('citycode');
+        $customer = $request->header('customer');
+        $invoiceName = str_replace('{code}', $code, (new LG_01_INVOICE)->getTable());
+        $custName = str_replace('{code}', $code, (new LG_CLCARD)->getTable());
+        $invoices = DB::table("{$invoiceName}")
+            ->join($custName, "{$invoiceName}.clientref", "=", "{$custName}.logicalref")
+            ->select("{$invoiceName}.capiblock_creadeddate as date","{$invoiceName}.ficheno as invoice_number",
+            "{$invoiceName}.grosstotal as amount","{$invoiceName}.totaldiscounts as discount","{$invoiceName}.nettotal as total",
+            "{$invoiceName}.docode as from_p_invoice","{$invoiceName}.genexp1 as note",)
+            ->where(["{$custName}.code" => $customer, "{$invoiceName}.trcode" => 8])
             ->orderby("{$invoiceName}.capiblock_creadeddate","desc")
             ->get();
         return response()->json([

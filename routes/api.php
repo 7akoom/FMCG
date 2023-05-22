@@ -46,6 +46,8 @@ Route::controller(CustomerController::class)->group(function () {
             Route::post('/newcustomer', 'newCustomer');
             Route::post('/pendingcustomer', 'pendingCustomerDetails');
             Route::post('/updatecustomerstatus/{id}', 'UpdatePendingCustomer');
+            Route::post('/salesmancustomers', 'accountingSalesmanCustomers');
+
         });
         Route::prefix('salesman')->group(function () {
             Route::post('/customers', 'salesmancustomers');
@@ -117,6 +119,7 @@ Route::controller(OrderController::class)->group(function () {
         Route::post('/bydate', 'OrderDateFilter');
         Route::post('/orderdetails', 'orderdetails');
         Route::post('/previousorderdetails', 'previousorderdetails');
+        Route::post('/customercurrentorder', 'customerCurrentOrder');
         });
         Route::prefix('salesman')->group(function () {
             Route::post('/previousorder', 'salesmanlacurrentmonthorder');
@@ -129,10 +132,12 @@ Route::controller(InvoiceController::class)->group(function () {
     Route::prefix('invoice')->group(function () {
         Route::prefix('accounting')->group(function () {
             Route::post('/previousreturninvoices', 'customerpreviousreturninvoices');
+            Route::post('/customerpreviousinvoices', 'customerpreviousinvoices');
             Route::post('/searchinvoicebydate', 'searchreturnedinvoicebydate');
             Route::post('/searchinvoicebynumber', 'searchreturnedinvoicebynumber');
             Route::post('/salesmaninvoices', 'salesmaninvoices');
             Route::post('/searchbydate', 'InvoiceDateFilter');
+            Route::post('/invoicedetails', 'salesmaninvoicedetails');
         });
         Route::prefix('salesman')->group(function () {
             Route::post('/previousinvoices', 'salesmanmonthlyinvoices');
@@ -154,6 +159,9 @@ Route::controller(SafeController::class)->group(function () {
     Route::prefix('safes')->group(function () {
         Route::prefix('accounting')->group(function () {
             Route::post('/safes', 'index');
+        });
+        Route::prefix('salesman')->group(function () {
+            Route::post('/safetransaction', 'salesmanSafeTransaction');
         });
     });
 });

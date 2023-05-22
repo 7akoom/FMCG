@@ -202,5 +202,50 @@ public function previousorderdetails(Request $request)
             'data' => $item,
         ]);
       }
-   
+       //retrieve order details based on order number
+    public function customerCurrentOrder(Request $request)
+    {   
+        $code = $request->header('citycode');
+        $customer = $request->header('customer');
+        $orlName = str_replace('{code}', $code, (new LG_01_ORFLINE)->getTable());
+        $itmName = str_replace('{code}', $code, (new LG_ITEMS)->getTable());
+        $ordName = str_replace('{code}', $code, (new LG_01_ORFICHE)->getTable());
+        $weightName = str_replace('{code}', $code, (new LG_ITMUNITA)->getTable());
+        $custName = str_replace('{code}', $code, (new LG_CLCARD)->getTable());
+        $clcName = str_replace('{code}', $code, (new LV_01_CLCARD)->getTable());
+        $ppName = str_replace('{code}', $code, (new LG_PAYPLANS)->getTable());
+        $info = DB::table("{$orlName}")
+        ->join("{$itmName}","{$orlName}.stockref","=","{$itmName}.logicalref")
+        ->join('lg_slsman',"{$orlName}.salesmanref","=",'lg_slsman.logicalref')
+        ->join("{$weightName}","{$weightName}.itemref","=","{$itmName}.logicalref")
+        ->join("{$ordName}","{$orlName}.ordficheref","=","{$ordName}.logicalref")
+        ->join("{$custName}","{$orlName}.clientref","=","{$custName}.logicalref")
+        ->join("{$clcName}","{$clcName}.logicalref","=","{$custName}.logicalref")
+        ->join("{$ppName}","{$ppName}.logicalref",'=',"{$custName}.paymentref")
+        ->select("{$ordName}.date_ as date","{$ordName}.ficheno as number","{$ordName}.grosstotal as order_amount","{$ordName}.totaldiscounts as order_discount",
+        "{$ordName}.nettotal as order_total","{$ordName}.genexp1 as approved_by",
+        'lg_slsman.definition_ as salesman_name',"{$custName}.code as customer_code","{$custName}.definition_ as customer_name",
+        "{$custName}.addr1 as customer_address","{$custName}.telnrs1 as customer_phone","{$clcName}.debit as customer_debit",
+        "{$clcName}.credit as customer_credit","{$ppName}.code as customer_payment_plan","{$ordName}.genexp2 as payment_type")
+        ->where(["{$custName}.code" => $customer])
+        ->distinct()
+        ->first();
+        $item = DB::table("{$orlName}")
+        ->join("{$itmName}","{$orlName}.stockref","=","{$itmName}.logicalref")
+        ->join('lg_slsman',"{$orlName}.salesmanref","=",'lg_slsman.logicalref')
+        ->join("{$weightName}","{$weightName}.itemref","=","{$itmName}.logicalref")
+        ->join("{$ordName}","{$orlName}.ordficheref","=","{$ordName}.logicalref")
+        ->join("{$custName}","{$orlName}.clientref","=","{$custName}.logicalref")
+        ->select("{$orlName}.lineno_ as line","{$ordName}.capiblock_creadeddate as date","{$itmName}.code as code","{$itmName}.name as name",
+        "{$orlName}.amount as quantity","{$orlName}.price as price","{$orlName}.total as total",
+        "{$orlName}.distdisc as discount","{$weightName}.grossweight as weight")
+        ->where(["{$weightName}.linenr" => 1, "{$custName}.code" => $customer,"{$ordName}.status" => 1])
+        ->get();
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Order details',
+            'order_info' => $info = (array) $info,
+            'data' => $item,
+        ]);
+      }
 }
