@@ -58,7 +58,8 @@ class ItemController extends Controller
         "{$itemName}.stgrpcode as group",'sub.logicalref as subcategory_id',DB::raw("CASE WHEN '{$lang}' = 'ar' THEN sub.definition_  WHEN '{$lang}' = 'en' THEN sub.definition2
         WHEN '{$lang}' = 'tr' THEN sub.definition3 ELSE sub.definition_ END as subcategory_name"),"{$itemName}.stgrpcode as group","{$priceName}.price",
         "{$unitName}.logicalref as unit_id","{$unitName}.code as unit","weights.logicalref as weight_id","weights.grossweight as weight","number.convfact1 as pieces_number")
-        ->where(["{$itemName}.active" => 0,"{$itemName}.specode" => $subcategory,"{$priceName}.GRPCODE" => $last_customer])
+        ->where(["{$itemName}.active" => 0,"{$itemName}.specode" => $subcategory])
+        // ,"{$priceName}.GRPCODE" => $last_customer
         ->groupBy("{$itemName}.logicalref","{$itemName}.code", "{$itemName}.name","{$markName}.code",'sub.logicalref',"{$itemName}.name3","{$itemName}.name4", "{$itemName}.stgrpcode",
         'sub.definition_','sub.definition2','sub.definition3',"{$itemName}.markref", "{$priceName}.price","{$unitName}.logicalref", "{$unitName}.code","weights.grossweight",
         "weights.logicalref", "number.convfact1")

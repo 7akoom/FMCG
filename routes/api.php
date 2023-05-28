@@ -186,7 +186,11 @@ Route::controller(CollectionController::class)->group(function () {
 
 Route::controller(TestController::class)->group(function () {
     Route::prefix('test')->group(function () {
-        Route::post('/', 'test');
-
+        Route::post('/', 'import');
+        Route::post('/index', 'index');
+    });
+    Route::prefix('accounting')->group(function () { 
+        Route::post('/categories', 'catAndSubCategory');
+        Route::post('/merkez', 'mainWHouse');
     });
 });

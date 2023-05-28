@@ -24,4 +24,7 @@ Route::get('/',[TestController::class,'invoicedetails']);
 Route::get('/file-import',[TestController::class,'invoicedetails']);
 Route::post('/import',[CustomerController::class,'import'])->name('import');
 Route::get('/export-users',[CustomerController::class,'exportUsers'])->name('export-users');
+Route::get('/categories',[TestController::class,'catAndSubCategory']);
+
+
 
