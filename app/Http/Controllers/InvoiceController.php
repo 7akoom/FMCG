@@ -35,7 +35,7 @@ class InvoiceController extends Controller
             "{$invoiceName}.nettotal as total_amount","{$invoiceName}.docode as from_p_invoice")
             ->where(["{$invoiceName}.salesmanref" => $slsman,])
             ->whereMonth("{$invoiceName}.capiblock_creadeddate", '=', now()->month)
-            ->orderby("{$invoiceName}.capiblock_creadeddate","desc")
+            ->orderby("{$invoiceName}.date_","desc")
             ->get();
         return response()->json([
             'status' => 'success',
@@ -60,14 +60,24 @@ class InvoiceController extends Controller
             "{$invoiceName}.ficheno as invoice_number", "{$invoiceName}.capiblock_creadeddate as invoice_date",
             "{$invoiceName}.nettotal as total_amount","{$invoiceName}.docode as from_p_invoice")
             ->where(["{$invoiceName}.salesmanref" => $slsman, "{$invoiceName}.trcode" => $type])
-            ->orderby("{$invoiceName}.capiblock_creadeddate","desc")
+            ->orderBy("{$invoiceName}.capiblock_creadeddate", "desc")
             ->get();
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Current month invoices',
-            'data' => $invoices,
-        ]);
+    
+        if ($invoices->count() > 0) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Invoices list',
+                'data' => $invoices,
+            ]);
+        } else {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'No invoices found for this salesman',
+            ]);
+        }
     }
+    
+    
      // retrieve invoice details according on salesman logicalref and invoice logicalref
      public function salesmaninvoicedetails(Request $request)
      {

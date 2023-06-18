@@ -29,7 +29,7 @@ class SalesManController extends Controller
         $code = $request->header('citycode');
         $position = $request->header('position');
         $salesman = DB::table('LG_SLSMAN')->select('LOGICALREF as id','code','DEFINITION_ as name','TELNUMBER as phone')
-        ->WHERE(['FIRMNR' => $code, 'ACTIVE' => '0','typ' => $position])->get();
+        ->WHERE(['FIRMNR' => $code, 'ACTIVE' => '0','POSITION_' => $position])->get();
         return response()->json([
             'status' => 'success',
             'message' => 'Salesman list',

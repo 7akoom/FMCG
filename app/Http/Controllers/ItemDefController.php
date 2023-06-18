@@ -10,23 +10,34 @@ use DB;
 
 class ItemDefController extends Controller
 {
-    public function categories(Request $request)
+        public function categories(Request $request)
     {
         $code = $request->header("citycode");
         $lang = $request->header("lang");
         $type = $request->header("type");
         $catName = str_replace('{code}', $code, (new LG_SPECODES)->getTable());
         $category = DB::table("{$catName}")
-       ->select("{$catName}.logicalref as id",DB::raw("CASE WHEN '{$lang}' = 'ar' THEN $catName.definition_  WHEN '{$lang}' = 'en' THEN $catName.definition2 
-       WHEN '{$lang}' = 'tr' THEN $catName.definition3 ELSE $catName.definition_ END as name"))
-       ->where("{$catName}.codetype",$type)
-        ->get();
+        ->select("{$catName}.logicalref as id",DB::raw("CASE WHEN '{$lang}' = 'ar' THEN $catName.definition_  
+        WHEN '{$lang}' = 'en' THEN $catName.definition2 
+        WHEN '{$lang}' = 'tr' THEN $catName.definition3 
+        ELSE $catName.definition_ END as name"))
+        ->where(["{$catName}.codetype" => 1, "{$catName}.specodetype" => 1, "{$catName}.spetyp1" => 1]);
+        
+        if ($type == -1) {
+            $category = $category->get();
+        } elseif ($type == 1) {
+            $category = $category->where("{$catName}.color", 1)->get();
+        } elseif ($type == 2) {
+            $category = $category->where("{$catName}.color", 2)->get();
+        }
+        
         return response()->json([
             'status' => 'success',
             'message' => 'categories list',
             'data' => $category,
         ], 200);
     }
+
     public function subcategories(Request $request)
     {
         $code = $request->header("citycode");
@@ -54,14 +65,14 @@ class ItemDefController extends Controller
             ->select("{$catName}.logicalref as id", DB::raw("CASE WHEN '{$lang}' = 'ar' THEN $catName.definition_  
                 WHEN '{$lang}' = 'en' THEN $catName.definition2 
                 WHEN '{$lang}' = 'tr' THEN $catName.definition3 ELSE $catName.definition_ END as category_name"))
-            ->where("{$catName}.codetype", $type)
+                ->where(["{$catName}.codetype" => 1, "{$catName}.specodetype" => 1, "{$catName}.spetyp1" => 1,"{$catName}.color" => $type])
             ->get();
         $categoryIds = $categories->pluck('id');
         $subcategories = DB::table("{$catName} as sub")
         ->select('logicalref as subcategory_id', DB::raw("CASE WHEN '{$lang}' = 'ar' THEN sub.definition_  
         WHEN '{$lang}' = 'en' THEN sub.definition2 
-        WHEN '{$lang}' = 'tr' THEN sub.definition3 ELSE sub.definition_ END as subcategory_name"), 'codetype as category_id')
-        ->whereIn('codetype', $categoryIds)
+        WHEN '{$lang}' = 'tr' THEN sub.definition3 ELSE sub.definition_ END as subcategory_name"), 'globalid as category_id')
+        ->whereIn('globalid', $categoryIds)
         ->get();
         $categoriesWithSubcategories = [];
         foreach ($categories as $category) {

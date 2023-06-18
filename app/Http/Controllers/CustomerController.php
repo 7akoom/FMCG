@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Models\LG_CLCARD;
 use App\Models\LG_SLSCLREL;
+use App\Models\LG_SPECODES;
 use App\Models\LG_PAYPLANS; 
 use App\Models\LV_01_CLCARD;
 use App\Models\LG_01_CLRNUMS;
@@ -248,8 +249,8 @@ class CustomerController extends Controller
             ->join("{$clrName}","{$clrName}.clcardref",'=',"{$custName}.logicalref")
             ->select("{$custName}.logicalref as customer_id",
             "{$custName}.code as customer_code", "{$custName}.definition_ as customer_name", "{$custName}.addr1 as address","{$custName}.city",
-            "{$custName}.country","{$custName}.telnrs1 as customer_phone","{$clcName}.debit","{$ppName}.definition_ as payment_plan",
-            "{$clcName}.credit","{$clrName}.accrisklimit as customer_limit")
+            "{$custName}.country","{$custName}.telnrs1 as customer_phone",DB::raw("COALESCE({$clcName}.debit, 0)"),"{$ppName}.definition_ as payment_plan",
+            DB::raw("COALESCE({$clcName}.debit, 0)"),DB::raw("COALESCE({$clrName}.accrisklimit, 0) as limit"))
             ->where("{$custName}.country" ,"!=", "stop")
             ->where(['lg_slsman.logicalref' => $slsman,'lg_slsman.active' => '0',"{$custName}.active" => '0'])
             ->get();
@@ -287,31 +288,37 @@ class CustomerController extends Controller
      // retrieve  customers list depending on salesman logicalref (Accounting)
      public function accountingSalesmanCustomers(Request $request)
      {
-         $slsman = $request->header('id');
-         $code = $request->header('citycode');
-         $isactive = $request->header('isactive');
-         $relName = str_replace('{code}', $code, (new LG_SLSCLREL)->getTable());
+        $slsman = $request->header('id');
+        $code = $request->header('citycode');
+        $isactive = $request->header('isactive');
+        $relName = str_replace('{code}', $code, (new LG_SLSCLREL)->getTable());
         $custName = str_replace('{code}', $code, (new LG_CLCARD)->getTable());
-        $ppName = str_replace('{code}', $code, (new LG_PAYPLANS)->getTable());
         $clcName = str_replace('{code}', $code, (new LV_01_CLCARD)->getTable());
+        $ppName = str_replace('{code}', $code, (new LG_PAYPLANS)->getTable());
         $clrName = str_replace('{code}', $code, (new LG_01_CLRNUMS)->getTable());
-        $results = DB::table("{$relName}")
-            ->join('lg_slsman', "{$relName}.salesmanref", '=', 'lg_slsman.logicalref')
-            ->join("{$custName}", "{$relName}.clientref", '=', "{$custName}.logicalref")
-            ->join("{$clcName}","{$relName}.clientref",'=',"{$clcName}.logicalref")
-            ->join("{$ppName}","{$ppName}.logicalref",'=',"{$custName}.paymentref")
-            ->join("{$clrName}","{$clrName}.clcardref",'=',"{$custName}.logicalref")
-            ->select("{$custName}.logicalref as customer_id",
-            "{$custName}.code as customer_code", "{$custName}.definition_ as customer_name", "{$custName}.addr1 as address","{$custName}.city",
-            "{$custName}.country","{$custName}.telnrs1 as customer_phone","{$clcName}.debit","{$ppName}.definition_ as payment_plan",
-            "{$clcName}.credit","{$clrName}.accrisklimit as customer_limit")
-            ->where("{$custName}.country" ,"!=", "stop")
-            ->where(['lg_slsman.logicalref' => $slsman,'lg_slsman.active' => '0',"{$custName}.active" => '0'])
-            ->get();
+        $speName = str_replace('{code}', $code, (new LG_SPECODES)->getTable());
+        $data = DB::table("{$custName}")
+        ->join("{$relName}","{$relName}.clientref","=","{$custName}.logicalref")
+        ->join("{$clcName}","{$relName}.clientref","=","{$clcName}.logicalref")
+        ->join("{$ppName}","{$ppName}.logicalref","=","{$custName}.paymentref")
+        ->leftjoin("{$clrName}","{$clrName}.clcardref","=","{$custName}.logicalref")
+        ->join("{$speName}","{$speName}.specode","=","{$custName}.specode2")
+        ->select("{$custName}.logicalref as customer_id","{$custName}.code as customer_code", "{$custName}.definition_ as customer_name","{$custName}.addr1 as address",
+        "{$custName}.city","{$custName}.country","{$custName}.telnrs1 as customer_phone","{$custName}.specode2 as price_group",DB::raw("COALESCE({$clcName}.debit, 0) as debit"),
+        DB::raw("COALESCE({$clcName}.credit, 0) as credit"),"{$ppName}.definition_ as payment_plan",DB::raw("COALESCE({$clrName}.accrisklimit, 0) as limit"),
+        "{$speName}.definition_ as price_group")
+        ->where(["{$relName}.salesmanref" => $slsman,"{$custName}.active" => $isactive,"{$speName}.codetype" => 1,"{$speName}.specodetype" => 26])
+        ->get();
+            // ->select("{$custName}.logicalref as customer_id","{$custName}.code as customer_code", "{$custName}.definition_ as customer_name", "{$custName}.addr1 as address",
+            // "{$custName}.city","{$custName}.country","{$custName}.telnrs1 as customer_phone","{$custName}.specode2 as price_group","{$ppName}.definition_ as payment_plan",
+            // )
+            // ->where(['lg_slsman.logicalref' => $slsman,'lg_slsman.active' => '0',"{$custName}.active" => $isactive])
+            // ->get();
+            // DB::raw("COALESCE({$clrName}.accrisklimit, 0) as limit"),DB::raw("COALESCE({$clcName}.debit, 0) as debit"),DB::raw("COALESCE({$clcName}.credit, 0) as credit")
          return response()->json([
              'status' => 'success',
              'message' => 'Customers list',
-             'data' => $results,
+             'data' => $data,
          ]); 
      } 
 
@@ -336,7 +343,7 @@ class CustomerController extends Controller
         DB::raw("COALESCE({$ppName}.code, '0') as payment_plan"),
         DB::raw("COALESCE({$clcName}.debit, 0) as debit"),
         DB::raw("COALESCE({$clcName}.credit, 0) as credit"),
-        DB::raw("COALESCE(CONVERT(varchar(10), MAX({$invName}.date_), 120), '0000-00-00') as last_invoice_date"))
+        DB::raw("COALESCE(CONVERT(varchar(10), MAX({$invName}.date_), 120), 'No invoice found') as last_invoice_date"))
         ->where(["{$custName}.code" => $customer])
         ->groupBy("{$clrName}.accrisklimit", "{$ppName}.code", "{$clcName}.debit", "{$clcName}.credit")
         ->get();

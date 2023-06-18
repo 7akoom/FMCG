@@ -16,6 +16,7 @@ use App\Http\Controllers\PayPlanController;
 use App\Http\Controllers\CollectionController;
 use App\Http\Controllers\TestController;
 
+
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -83,8 +84,8 @@ Route::controller(ItemDefController::class)->group(function () {
         Route::prefix('subcategory')->group(function () {
             Route::post('/', 'subcategories');
         });
-    }); 
-    Route::prefix('accounting')->group(function () { 
+    });
+    Route::prefix('accounting')->group(function () {
         Route::post('/categories', 'catAndSubCategory');
     });
 });
@@ -120,18 +121,18 @@ Route::controller(PayPlanController::class)->group(function () {
 Route::controller(OrderController::class)->group(function () {
     Route::prefix('order')->group(function () {
         Route::prefix('accounting')->group(function () {
-        Route::post('/orders', 'index');
-        Route::post('/bystatus', 'ordersStatusFilter');
-        Route::post('/bydate', 'OrderDateFilter');
-        Route::post('/orderdetails', 'orderdetails');
-        Route::post('/previousorderdetails', 'previousorderdetails');
-        Route::post('/customercurrentorder', 'customerCurrentOrder');
+            Route::post('/orders', 'index');
+            Route::post('/bystatus', 'ordersStatusFilter');
+            Route::post('/bydate', 'OrderDateFilter');
+            Route::post('/orderdetails', 'orderdetails');
+            Route::post('/previousorderdetails', 'previousorderdetails');
+            Route::post('/customercurrentorder', 'customerCurrentOrder');
         });
         Route::prefix('salesman')->group(function () {
             Route::post('/previousorder', 'salesmanlacurrentmonthorder');
             Route::post('/previousorderdetails', 'previousorderdetails');
             Route::post('/neworder', 'store');
-            });
+        })->middleware('AuthMiddleware');
     });
 });
 
@@ -187,10 +188,31 @@ Route::controller(CollectionController::class)->group(function () {
 Route::controller(TestController::class)->group(function () {
     Route::prefix('test')->group(function () {
         Route::post('/', 'import');
-        Route::post('/index', 'index');
-    });
-    Route::prefix('accounting')->group(function () { 
+        Route::post('/index', 'accountingSalesmanCustomers');
+        Route::post('/store', 'store');
+        Route::post('/testy', 'testy');
+
+    })->middleware('AuthMiddleware');
+    Route::prefix('accounting')->group(function () {
         Route::post('/categories', 'catAndSubCategory');
         Route::post('/merkez', 'mainWHouse');
-    });
+        Route::get('/token', 'test');
+    })->middleware('AuthMiddleware');
 });
+// ->middleware('AuthMiddleware')
+
+
+// function(){
+//             $response = Http::withOptions([
+//                 'verify' => false,
+//             ])
+//                 ->withHeaders([
+//                     'Authorization' => 'basic TUVGQVBFWDpGWEh4VGV4NThWd0pwbXNaSC9sSHVybkQ1elAwWVo3Tm14M0xZaDF1SFVvPQ==',
+//                     'Accept' => 'application/json',
+//                     'Content-Type' => 'application/json'
+//                 ])
+//                 ->withBody('grant_type=password&username=REST&firmno=888&password=REST454545', 'text/plain')
+//                 ->post('https://10.27.0.109:32002/api/v1/token');
+
+//             return $response;
+//         }

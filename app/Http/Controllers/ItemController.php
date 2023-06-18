@@ -44,7 +44,7 @@ class ItemController extends Controller
             })
         ->leftJoin("{$unitName}", "{$itemName}.unitsetref", "=", "{$unitName}.logicalref")
         ->leftJoin("{$markName}", "{$itemName}.markref", "=", "{$markName}.logicalref")
-        ->leftJoin("{$catName} as sub", "{$itemName}.specode", "=", "sub.logicalref")
+        ->leftJoin("{$catName} as sub", "{$itemName}.categoryname", "=", "sub.logicalref")
         ->leftJoin("{$weightName} as weights", function($join) use ($itemName, $weightName) {
         $join->on("{$itemName}.logicalref", "=", "weights.itemref")
             ->where("weights.linenr", "=", 1);
@@ -58,7 +58,7 @@ class ItemController extends Controller
         "{$itemName}.stgrpcode as group",'sub.logicalref as subcategory_id',DB::raw("CASE WHEN '{$lang}' = 'ar' THEN sub.definition_  WHEN '{$lang}' = 'en' THEN sub.definition2
         WHEN '{$lang}' = 'tr' THEN sub.definition3 ELSE sub.definition_ END as subcategory_name"),"{$itemName}.stgrpcode as group","{$priceName}.price",
         "{$unitName}.logicalref as unit_id","{$unitName}.code as unit","weights.logicalref as weight_id","weights.grossweight as weight","number.convfact1 as pieces_number")
-        ->where(["{$itemName}.active" => 0,"{$itemName}.specode" => $subcategory])
+        ->where(["{$itemName}.active" => 0,"{$itemName}.categoryname" => $subcategory])
         // ,"{$priceName}.GRPCODE" => $last_customer
         ->groupBy("{$itemName}.logicalref","{$itemName}.code", "{$itemName}.name","{$markName}.code",'sub.logicalref',"{$itemName}.name3","{$itemName}.name4", "{$itemName}.stgrpcode",
         'sub.definition_','sub.definition2','sub.definition3',"{$itemName}.markref", "{$priceName}.price","{$unitName}.logicalref", "{$unitName}.code","weights.grossweight",
