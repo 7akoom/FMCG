@@ -719,59 +719,47 @@ class OrderController extends Controller
     // }
     public function store(Request $request)
     {
-        try {
-            $code = $request->header('citycode');
-            $slsman = $request->header('id');
-            $customer = $request->header('customer');
-            $custName = str_replace('{code}', $code, (new LG_CLCARD)->getTable());
-            $custName = str_replace('{code}', $code, (new LG_CLCARD)->getTable());
-            $itmName = str_replace('{code}', $code, (new LG_ITEMS)->getTable());
-            $priceName = str_replace('{code}', $code, (new LG_PRCLIST)->getTable());
-            $unitName = str_replace('{code}', $code, (new LG_UNITSETF)->getTable());
-            $weightName = str_replace('{code}', $code, (new LG_ITMUNITA)->getTable());
-            $last_customer = DB::table($custName)->where('logicalref', $customer)->first();
-            $data = [
-                'INTERNAL_REFERENCE' => 0,
-                'TYPE' => 1,
-                'NUMBER' => '~',
-                'DATE' => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d H:i:s.v'),
-                'TIME' => sprintf("%09d", mt_rand(1, 999999999)),
-                'CLIENTREF' => $customer,
-                'TOTAL_DISCOUNTS' => $request->total_discounts,
-                'TOTAL_DISCOUNTED' => $request->after_discounts,
-                'TOTAL_GROSS' => $request->total_amount,
-                'TOTAL_NET' => $request->net_amount,
-                'NOTES1' => $request->notes,
-                'PAYDEFREF' => 7,
-                'ORDER_STATUS' => 1,
-                'CREATED_BY' => 139,
-                'DATE_CREATED' => Carbon::now()->toIso8601String(),
-                'HOUR_CREATED' => Carbon::now()->hour,
-                'MIN_CREATED' => Carbon::now()->minute,
-                'SEC_CREATED' => Carbon::now()->second,
-                'SALESMANREF' => $slsman,
-                'TC_NET' => $request->transaction_amount,
-            ];
-            $items = [];
-            foreach ($request->input('items') as $item) {
-                $items[] = [
-                    'INTERNAL_REFERENCE' => 0,
-                    'STOCKREF' => $item['item_id'],
-                    'ORDFICHEREF' => $data['INTERNAL_REFERENCE'],
-                    'CLIENTREF' => $customer,
-                    'LINENO' => $item['item_line_number'],
-                    'SLIP_TYPE' => 1,
-                    'DATE' => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d H:i:s.v'),
-                    'QUANTITY' => $item['item_quantity'],
-                    'PRICE' => $item['item_price'],
-                    'TOTAL' => $item['item_total'],
-                    'TOTAL_NET' => $item['after_discount'],
-                    'SALESMANREF' => $slsman,
-                    'ORDER_STATUS' => 1,
-                ];
-            }
-            $data['TRANSACTIONS'] = $items;
-            dd($items);
+        $customer = $request->header('customer_code');
+        $data = [
+            'INTERNAL_REFERENCE' => 0,
+            'NUMBER' => '~',
+            'DATE' => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d H:i:s.v'),
+            'TIME' => strtotime(Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d H:i:s.v')),
+            'ARP_CODE' => $customer,
+            'CURRSEL_TOTAL' => 1,
+        ];  
+         $transactions = $request->input('TRANSACTIONS.items');
+
+    // Process each item
+    foreach ($transactions as $item) {
+        $type = 0;
+        $masterCode = $item['item_code'];
+        $quantity = $item['item_quantity'];
+        $price = $item['item_price'];
+        $vatRate = 0;
+        $unitCode = $item['item_unit'];
+        $unitConv1 = 1;
+        $unitConv2 = 1;
+        $edtCurr = 1;
+
+        // Create an array for the current item
+        $itemData = [
+            'TYPE' => $type,
+            'MASTER_CODE' => $masterCode,
+            'QUANTITY' => $quantity,
+            'PRICE' => $price,
+            'VAT_RATE' => $vatRate,
+            'UNIT_CODE' => $unitCode,
+            'UNIT_CONV1' => $unitConv1,
+            'UNIT_CONV2' => $unitConv2,
+            'EDT_CURR' => $edtCurr,
+        ];
+
+        // Push the item array to the data['TRANSACTIONS']['items']
+        $data['TRANSACTIONS']['items'][] = $itemData;
+    }        
+            try {
+
             $response = Http::withOptions([
                 'verify' => false,
             ])
@@ -785,8 +773,7 @@ class OrderController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'Order sent successfully',
-                'token' => $request->header(),
-                'Order' => $response,
+                'Order' => json_decode($response),
             ], 200);
         } catch (Throwable $e) {
             return response()->json([
@@ -795,4 +782,27 @@ class OrderController extends Controller
             ], 422);
         }
     }
+//     public function store(Request $request)
+//     {
+//         $dateTime = "2023-02-26 13:03:28.000";
+// $unixTimestamp = strtotime($dateTime);
+// dd($unixTimestamp);
+//         $requestData = $request->all();
+//         $response = Http::withOptions([
+//             'verify' => false,
+//         ])
+//         ->withHeaders([
+//                     'Accept' => 'application/json',
+//                     'Content-Type' => 'application/json',
+//                     'Authorization' => $request->header('authorization')
+//                 ])
+//         ->withBody(json_encode($requestData), 'application/json')
+//             ->post('https://10.27.0.109:32002/api/v1/salesorders');
+//         if ($response->successful()) {
+//             $apiResponse = $response->json();
+//             return response()->json($apiResponse);
+//         } else {
+//             return response()->json(['error' => 'API request failed'], $response->status());
+//         }
+//     }
 }

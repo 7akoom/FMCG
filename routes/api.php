@@ -34,8 +34,6 @@ Route::controller(SalesmanController::class)->group(function () {
             Route::post('/salesmans', 'index');
             Route::post('/previousorders', 'previousorders');
         });
-        Route::post('/', 'index');
-        Route::post('/previousorders', 'previousorders');
     });
 });
 
@@ -192,7 +190,7 @@ Route::controller(TestController::class)->group(function () {
         Route::post('/store', 'store');
         Route::post('/testy', 'testy');
 
-    })->middleware('AuthMiddleware');
+    });
     Route::prefix('accounting')->group(function () {
         Route::post('/categories', 'catAndSubCategory');
         Route::post('/merkez', 'mainWHouse');

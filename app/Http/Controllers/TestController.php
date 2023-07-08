@@ -270,8 +270,10 @@ class TestController extends Controller
                 'Authorization' => $request->header('authorization')
             ])
             ->get('https://10.27.0.109:32002/api/v1/SalesOrders/144');
-        $test = $response->json();
-        return $test;
+        $json = $response->json();
+        $transactions = $json['TRANSACTIONS'];
+        $test = gettype($transactions);
+        return $transactions;
     }
     // public function getAccessToken(Request $request)
     // {
