@@ -14,7 +14,6 @@ use App\Http\Controllers\PayPlanController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\WareHouseController;
 use App\Http\Controllers\CollectionController;
-use App\Http\Middleware\AuthMiddleware;
 
 Route::controller(SalesmanController::class)->group(function () {
     Route::prefix('salesman')->group(function () {
@@ -72,11 +71,11 @@ Route::controller(OrderController::class)->group(function () {
             Route::post('/previousorderdetails', 'previousorderdetails');
             Route::patch('/orders/update-status/{orderId}', 'updateOrderStatus');
             // Route::post('/customercurrentorder', 'customerCurrentOrder');
-        })->middleware(AuthMiddleware::class);
+        })->middleware('AuthMiddleware');
         Route::prefix('salesman')->group(function () {
             Route::post('/previousorder', 'salesmanlacurrentmonthorder');
             Route::post('/previousorderdetails', 'previousorderdetails');
             Route::post('/neworder', 'store');
-        })->middleware(AuthMiddleware::class);
+        })->middleware('AuthMiddleware');
     });
 });
