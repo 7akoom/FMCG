@@ -4,6 +4,16 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\SalesManController;
+use App\Http\Controllers\ItemController;
+use App\Http\Controllers\MarkController;
+use App\Http\Controllers\SafeController;
+use App\Http\Controllers\OrderController;
+use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\ItemDefController;
+use App\Http\Controllers\PayPlanController;
+use App\Http\Controllers\EmployeeController;
+use App\Http\Controllers\WareHouseController;
+use App\Http\Controllers\CollectionController;
 
 Route::controller(SalesmanController::class)->group(function () {
     Route::prefix('salesman')->group(function () {
