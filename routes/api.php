@@ -14,7 +14,7 @@ use App\Http\Controllers\PayPlanController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\WareHouseController;
 use App\Http\Controllers\CollectionController;
-use App\Http\Middleware\InjectAccessTokenThrowRequestMiddleware;
+use App\Http\Middleware\AuthMiddleware;
 
 Route::controller(SalesmanController::class)->group(function () {
     Route::prefix('salesman')->group(function () {
@@ -62,8 +62,11 @@ Route::controller(ItemController::class)->group(function () {
     });
 });
 
-Route::controller(OrderController::class)->group(function () {
-    Route::prefix('order')->group(function () {
+Route::controller(OrderController::class)
+->group(function () {
+    Route::prefix('order')
+    ->middleware(AuthMiddleware::class)
+    ->group(function () {
         Route::prefix('accounting')->group(function () {
             Route::post('/orders', 'index');
             Route::post('/bystatus', 'ordersStatusFilter');
@@ -72,11 +75,13 @@ Route::controller(OrderController::class)->group(function () {
             Route::post('/previousorderdetails', 'previousorderdetails');
             Route::patch('/orders/update-status/{orderId}', 'updateOrderStatus');
             // Route::post('/customercurrentorder', 'customerCurrentOrder');
-        })->middleware(InjectAccessTokenThrowRequestMiddleware::class);
-        Route::prefix('salesman')->group(function () {
+        });
+        Route::prefix('salesman')
+        ->middleware(AuthMiddleware::class)
+        ->group(function () {
             Route::post('/previousorder', 'salesmanlacurrentmonthorder');
             Route::post('/previousorderdetails', 'previousorderdetails');
             Route::post('/neworder', 'store');
-        })->middleware(InjectAccessTokenThrowRequestMiddleware::class);
+        });
     });
 });
