@@ -6,6 +6,7 @@ use Closure;
 use Illuminate\Http\Request;
 use Spatie\FlareClient\Http\Client;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Routing\Controllers\Middleware;
 
 
@@ -30,6 +31,9 @@ class AuthMiddleware
             ])
             ->withBody('grant_type=password&username=REST&firmno=888&password=REST454545', 'text/plain')
             ->post('https://10.27.0.109:32002/api/v1/token');
+
+        Log::debug('response', ['data' => $response->json()]);
+
         $access_token = $response['access_token'];
         $request->headers->add([
             'Authorization' => 'Bearer ' . $access_token,
