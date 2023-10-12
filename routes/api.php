@@ -50,3 +50,22 @@ Route::controller(ItemController::class)->group(function () {
         });
     });
 });
+
+Route::controller(OrderController::class)->group(function () {
+    Route::prefix('order')->group(function () {
+        Route::prefix('accounting')->group(function () {
+            Route::post('/orders', 'index');
+            Route::post('/bystatus', 'ordersStatusFilter');
+            Route::post('/bydate', 'OrderDateFilter');
+            Route::post('/orderdetails', 'orderdetails');
+            Route::post('/previousorderdetails', 'previousorderdetails');
+            Route::patch('/orders/update-status/{orderId}', 'updateOrderStatus');
+            // Route::post('/customercurrentorder', 'customerCurrentOrder');
+        })->middleware('AuthMiddleware');
+        Route::prefix('salesman')->group(function () {
+            Route::post('/previousorder', 'salesmanlacurrentmonthorder');
+            Route::post('/previousorderdetails', 'previousorderdetails');
+            Route::post('/neworder', 'store');
+        })->middleware('AuthMiddleware');
+    });
+});
