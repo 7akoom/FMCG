@@ -6,7 +6,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
-use League\CommonMark\Extension\CommonMark\Node\Inline\Code;
 
 class CustomerController extends Controller
 {
@@ -70,8 +69,14 @@ class CustomerController extends Controller
         } else {
             $data->where("{$this->customersTable}.active", 0);
         }
-
         $customer = $data->paginate($this->perpage);
+        if ($customer->isEmpty()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'There is no data',
+                'data' => [],
+            ], 200);
+        }
         return response()->json([
             'status' => 'success',
             'message' => 'Customers list',
@@ -86,7 +91,6 @@ class CustomerController extends Controller
         ], 200);
     }
 
-    // store new customer
     public function store(Request $request)
     {
         try {
@@ -160,7 +164,7 @@ class CustomerController extends Controller
         }
     }
 
-    //retrieve pending customers
+
     public function newCustomer(Request $request)
     {
         $customer = DB::table($this->customersTable)
@@ -183,7 +187,7 @@ class CustomerController extends Controller
             'data' => $customer,
         ]);
     }
-    //retrieve pending customer details
+
     public function pendingCustomerDetails(Request $request)
     {
         $customer = $request->header('customer');
@@ -213,7 +217,7 @@ class CustomerController extends Controller
             'data' => $data,
         ]);
     }
-    //update pending customer
+
     public function UpdatePendingCustomer(Request $request, $id)
     {
         $customer = DB::table("{$this->customersTable}")->where('logicalref', $id)->first();
@@ -243,7 +247,7 @@ class CustomerController extends Controller
             'data' => $custData,
         ], 200);
     }
-    // retrieve customer by code
+
     public function getcustomerByCode(Request $request)
     {
         $customer = $request->header('customer');
@@ -276,7 +280,7 @@ class CustomerController extends Controller
         ]);
         return response()->json($data);
     }
-    // retrieve customer details (debit, credit, limit,......) depending on salesman logicalref
+
     public function customerDetails(Request $request)
     {
         $results = DB::table("{$this->customersTable}")
@@ -308,7 +312,7 @@ class CustomerController extends Controller
             'data' => $results,
         ]);
     }
-    // retrieve active or nonactive customers list depending on salesman logicalref
+
     public function salesmancustomers(Request $request)
     {
         $data = DB::table($this->customersSalesmansRelationsTable)
@@ -340,8 +344,6 @@ class CustomerController extends Controller
         ]);
     }
 
-
-    // retrieve  customers list depending on salesman logicalref (Accounting)
     public function accountingSalesmanCustomers(Request $request)
     {
         $data = DB::table("$this->customersTable")
@@ -385,7 +387,7 @@ class CustomerController extends Controller
             'total' => $result->total(),
         ]);
     }
-    // retrieve customer debit and limit
+
     public function debitandpayment(Request $request)
     {
         $customer = $request->header('customer');
