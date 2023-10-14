@@ -4,9 +4,7 @@ namespace App\Http\Controllers;
 
 use Throwable;
 use Carbon\Carbon;
-
 use Illuminate\Http\Request;
-
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 
@@ -58,6 +56,7 @@ class OrderController extends Controller
         $this->cutoemrsView = 'LV_' . $this->code . '_01_CLCARD';
     }
 
+    // retrieve orders list
     public function index(Request $request)
     {
         $order = DB::table("$this->salesmansTable")
@@ -110,6 +109,8 @@ class OrderController extends Controller
         ], 200);
     }
 
+
+    //retrieve order details based on order number
     public function orderdetails(Request $request)
     {
         $order = $request->header('order');
@@ -173,6 +174,7 @@ class OrderController extends Controller
         ]);
     }
 
+    // retrieve orders based on status
     public function ordersStatusFilter(Request $request)
     {
         $order = DB::table("$this->salesmansTable")
@@ -216,7 +218,7 @@ class OrderController extends Controller
             'total' => $result->total(),
         ], 200);
     }
-
+    // retrieve orders based on date
     public function OrderDateFilter(Request $request)
     {
         $order = DB::table("$this->salesmansTable")
@@ -257,7 +259,7 @@ class OrderController extends Controller
             'total' => $result->total(),
         ], 200);
     }
-
+    //retrieve previous orders that related to customer
     public function salesmanlacurrentmonthorder(Request $request)
     {
         $order = DB::table("$this->ordersTable")
@@ -280,6 +282,9 @@ class OrderController extends Controller
         ], 200);
     }
 
+
+
+    //retrieve previous order details based on order number
     public function previousorderdetails(Request $request)
     {
         $order = $request->header('order');
@@ -336,6 +341,7 @@ class OrderController extends Controller
         $salesman = $request->header('salesman');
         $salesman_code = $this->fetchValueFromTable($this->salesmansTable, 'logicalref', $salesman, 'code');
         $payment_ref = $this->fetchValueFromTable($this->customersTable, 'code', $customer, 'paymentref');
+        // $payment_code = $this->fetchValueFromTable($this->payplansTable, 'logicalref', $payment_ref, 'code');
         $data = [
             'INTERNAL_REFERENCE' => 0,
             'NUMBER' => '~',
@@ -408,7 +414,6 @@ class OrderController extends Controller
             $data['TRANSACTIONS']['items'][] = $itemData;
         }
         try {
-
             $response = Http::withOptions([
                 'verify' => false,
             ])
@@ -433,44 +438,31 @@ class OrderController extends Controller
         }
     }
 
-    public function updateOrderStatus(Request $request, $orderId)
+    public function updateOrderStatus(Request $request, $order)
     {
-        $order = Http::withOptions([
-            'verify' => false,
-        ])
-            ->withHeaders([
-                'Accept' => 'application/json',
-                'Content-Type' => 'application/json',
-                'Authorization' => $request->header('authorization')
-            ])
-            ->get('https://10.27.0.109:32002/api/v1/salesOrders/' . $orderId);
-        $data = $order->json();
-        try {
-            if (!$order) {
-                return response()->json([
-                    'status' => 'failed',
-                    'message' => 'Order not found',
-                    'data' => $order,
-                ], 404);
-            }
-            $data = $order->json();
-            $data['ORDER_STATUS'] = $request->order_status;
-            // dd($data);
-            $response = Http::withOptions([
-                'verify' => false,
-            ])
-                ->withHeaders([
-                    'Accept' => 'application/json',
-                    'Content-Type' => 'application/json',
-                    'Authorization' => $request->header('authorization')
-                ])
-                ->withBody(json_encode($data), 'application/json')
-                ->patch('https://10.27.0.109:32002/api/v1/salesOrders/' . $orderId);
-
+        $status = $request->order_status;
+        $item = DB::table($this->ordersTable)->where('ficheno', $order)->first();
+        if (!$item) {
             return response()->json([
                 'status' => 'success',
-                'message' => 'Order status updated successfully',
-                'Order' => json_decode($response),
+                'message' => 'Order is not exist',
+                'data' => '',
+            ], 404);
+        }
+        $result = get_object_vars($item);
+        $id = $result["LOGICALREF"];
+        $order_line = DB::table($this->ordersTransactionsTable)->where('ORDFICHEREF', $id)->get();
+        DB::beginTransaction();
+        try {
+            DB::table($this->ordersTable)->where('logicalref', $id)
+                ->update(['status' => $status]);
+            DB::table($this->ordersTransactionsTable)->where('ORDFICHEREF', $id)
+                ->update(['status' => $status]);
+            DB::commit();
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Order updated succssfully',
+                'data' => $item,
             ], 200);
         } catch (Throwable $e) {
             return response()->json([
