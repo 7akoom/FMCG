@@ -62,20 +62,18 @@ Route::controller(ItemController::class)->group(function () {
     });
 });
 
-Route::controller(ItemController::class)->group(function () {
-    Route::prefix('item')->group(function () {
+Route::controller(ItemDefController::class)->group(function () {
+    Route::prefix('itemdef')->group(function () {
         Route::prefix('salesman')->group(function () {
-            Route::post('/items', 'index');
-            Route::post('/itemdetails', 'getItemDetails');
+            Route::post('/category', 'categories');
+            Route::post('/subcategory', 'subcategories');
         });
         Route::prefix('accounting')->group(function () {
-            Route::post('/items', 'index');
-            Route::post('/item', 'finalItem');
-            Route::post('/filterbybrand', 'searchbybrand');
-            Route::post('/itemdetails', 'getItemDetails');
+            Route::post('/categoriestree', 'catAndSubCategory');
         });
     });
 });
+
 
 Route::controller(MarkController::class)->group(function () {
     Route::prefix('mark')->group(function () {
