@@ -319,7 +319,7 @@ class CustomerController extends Controller
             ->join("$this->salesmansTable", "$this->customersSalesmansRelationsTable.salesmanref", '=', "$this->salesmansTable.logicalref")
             ->join("$this->customersTable", "$this->customersSalesmansRelationsTable.clientref", '=', "$this->customersTable.logicalref")
             ->select(
-                "CONVERT($this->customersSalesmansRelationsTable.salesmanref, 'CHAR') as salesman_id",
+                "$this->customersSalesmansRelationsTable.salesmanref as salesman_id",
                 "$this->salesmansTable.code as salesman_code",
                 "$this->salesmansTable.definition_ as salesman_name",
                 "$this->customersTable.logicalref as customer_id",
