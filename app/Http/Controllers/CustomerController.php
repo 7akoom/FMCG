@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
+use League\CommonMark\Extension\CommonMark\Node\Inline\Code;
 
 class CustomerController extends Controller
 {
@@ -69,14 +70,8 @@ class CustomerController extends Controller
         } else {
             $data->where("{$this->customersTable}.active", 0);
         }
+
         $customer = $data->paginate($this->perpage);
-        if ($customer->isEmpty()) {
-            return response()->json([
-                'status' => 'success',
-                'message' => 'There is no data',
-                'data' => [],
-            ], 200);
-        }
         return response()->json([
             'status' => 'success',
             'message' => 'Customers list',
@@ -164,6 +159,44 @@ class CustomerController extends Controller
         }
     }
 
+    public function editCustomer($id)
+    {
+        $customer = DB::table($this->customersTable)
+            ->select(
+                'definition_ as market_name',
+                'addr1 as customer_address',
+                'telnrs1 as customer_phone',
+                'longitude',
+                'latitute'
+            )
+            ->where('logicalref', $id)
+            ->first();
+        return response()->json([
+            'status' => 'success',
+            'message' => 'customer informations',
+            'data' => $customer
+        ]);
+    }
+
+    public function updateCustomer(Request $request, $id)
+    {
+        $data = ([
+            'definition_' => $request->market_name,
+            'addr1' => $request->customer_address,
+            'telnrs1' => $request->customer_phone,
+            'longitude' => $request->longitude,
+            'latitute' => $request->latitute,
+        ]);
+        $customer =  $customer = DB::table($this->customersTable)
+            ->where('logicalref', $id)
+            ->update($data);
+        dd($data);
+        return response()->json([
+            'status' => 'success',
+            'message' => 'customer updated successfully',
+            'data' => $data
+        ]);
+    }
 
     public function newCustomer(Request $request)
     {
@@ -334,7 +367,7 @@ class CustomerController extends Controller
                 "$this->customersTable.latitute"
             )
             ->where(["$this->salesmansTable.logicalref" => $this->salesman_id, "$this->salesmansTable.active" => '0', "$this->customersTable.active" => 0])
-            ->whereNotNull("$this->customersTable.telnrs2")
+            // ->whereNotNull("$this->customersTable.telnrs2")
             ->orderBy("$this->customersTable.Code")
             ->get();
         return response()->json([
@@ -410,6 +443,38 @@ class CustomerController extends Controller
             'status' => 'success',
             'message' => 'Customer details',
             'data' => $results,
+        ]);
+    }
+    public function allCustomers()
+    {
+        $customers = DB::select("select lg_329_clcard.logicalref as customer_id,
+        lg_329_clcard.definition_ as customer_name,
+        lg_329_clcard.code as customer_code,
+        lg_329_clcard.addr1 as address,
+        lg_329_clcard.city,
+        lg_329_clcard.country,
+        lg_329_clcard.telnrs1 as phone,
+        lg_329_clcard.longitude,
+        lg_329_clcard.latitute,
+        lg_slsman.logicalref as salesman_id,
+        lg_slsman.code as salesman_code,
+        lg_slsman.definition_ as salesman_name,
+        lg_slsman.firmnr as salesman_city_code,
+        lg_329_clcard.logicalref
+        from lg_329_clcard
+        left join
+        (select * from lg_329_slsclrel
+        where logicalref in
+        (select max(logicalref) from lg_329_slsclrel
+        group by clientref)
+        ) as n2
+        on n2.clientref=
+        lg_329_clcard.logicalref
+        left join lg_slsman on
+        n2.salesmanref = lg_slsman.LOGICALREF");
+        return response()->json([
+            'message' => 'customers list',
+            'data' => $customers
         ]);
     }
 }

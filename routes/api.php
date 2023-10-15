@@ -43,6 +43,8 @@ Route::controller(CustomerController::class)->group(function () {
             Route::post('/debitandpayment', 'debitandpayment');
             Route::post('/getcustomerbycode', 'getcustomerByCode');
             Route::post('/newcustomer', 'store');
+            Route::post('/editcustomerinfo/{id}', 'editCustomer');
+            Route::post('/updatecustomer/{id}', 'updateCustomer');
         });
     });
 });
