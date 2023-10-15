@@ -172,6 +172,7 @@ Route::controller(SafeController::class)
             ->group(function () {
                 Route::prefix('accounting')->group(function () {
                     Route::post('/safes', 'index');
+                    Route::post('/safesinformation/{safe_code}', 'safesInformation');
                     Route::post('/safetransaction', 'accountingsalesmanSafeTransaction');
                     Route::post('/transactiondetails/{id}', 'fetchTransactionDetails');
                 });

@@ -20,6 +20,7 @@ class SafeController extends Controller
     protected $safesTable;
     protected $customersTable;
     protected $safesTransactionsTable;
+    protected $currenciesTable;
     protected $customerTransactionsTable;
 
     public function __construct(Request $request)
@@ -30,6 +31,7 @@ class SafeController extends Controller
         $this->salesmansTable = 'LG_SLSMAN';
         $this->safesTable = 'LG_' . $this->code . '_KSCARD';
         $this->customersTable = 'LG_' . $this->code . '_CLCARD';
+        $this->currenciesTable = 'L_CURRENCYLIST';
         $this->safesTransactionsTable = 'LG_' . $this->code . '_01_KSLINES';
         $this->customerTransactionsTable = 'LG_' . $this->code . '_01_CLFLINE';
     }
@@ -122,6 +124,52 @@ class SafeController extends Controller
             "total_amount" => $total,
             "data" => $data,
         ]);
+    }
+
+    public function safesInformation($safe_code)
+    {
+        $safe = DB::table($this->safesTable)
+            ->leftJoin($this->safesTransactionsTable, "$this->safesTable.logicalref", "=", "$this->safesTransactionsTable.cardref")
+            ->join($this->currenciesTable, "$this->currenciesTable.logicalref", "=", "$this->safesTable.ccurrency")
+            ->select(
+                "$this->safesTable.code",
+                "$this->safesTable.active as status",
+                "$this->safesTable.name",
+                "$this->safesTable.explain",
+                "$this->safesTable.branch",
+                "$this->safesTable.specode as special_code",
+                "$this->safesTable.cyphcode as auth_code",
+                "$this->safesTable.addr1 as address1",
+                "$this->safesTable.addr2 as address2",
+                "$this->currenciesTable.curname as forien_currency_type",
+                "$this->safesTable.curratetype as exchange_price_type",
+                "$this->safesTable.fixedcurrtype as check_box",
+                DB::raw("COALESCE(SUM(CASE WHEN $this->safesTransactionsTable.sign = 0 THEN $this->safesTransactionsTable.amount ELSE 0 END), 0) AS total_collections"),
+                DB::raw("COALESCE(SUM(CASE WHEN $this->safesTransactionsTable.sign = 1 THEN $this->safesTransactionsTable.amount ELSE 0 END), 0) AS total_payments"),
+                DB::raw("(COALESCE(SUM(CASE WHEN $this->safesTransactionsTable.sign = 0 THEN $this->safesTransactionsTable.amount ELSE 0 END), 0) - COALESCE(SUM(CASE WHEN $this->safesTransactionsTable.sign = 1 THEN $this->safesTransactionsTable.amount ELSE 0 END), 0)) AS balance")
+            )
+            ->where("$this->safesTable.code", $safe_code)
+            ->groupBy(
+                "$this->safesTable.code",
+                "$this->safesTable.active",
+                "$this->safesTable.name",
+                "$this->safesTable.explain",
+                "$this->safesTable.branch",
+                "$this->safesTable.specode",
+                "$this->safesTable.cyphcode",
+                "$this->safesTable.addr1",
+                "$this->safesTable.addr2",
+                "$this->currenciesTable.curname",
+                "$this->safesTable.curratetype",
+                "$this->safesTable.fixedcurrtype"
+            )
+            ->first();
+
+        return response()->json([
+            "status" => "success",
+            "message" => "Safes information",
+            "data" => $safe,
+        ], 200);
     }
 
     // accounting salesman safe transaction lines
