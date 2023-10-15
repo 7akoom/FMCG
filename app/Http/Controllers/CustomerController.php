@@ -190,7 +190,6 @@ class CustomerController extends Controller
         $customer =  $customer = DB::table($this->customersTable)
             ->where('logicalref', $id)
             ->update($data);
-        dd($data);
         return response()->json([
             'status' => 'success',
             'message' => 'customer updated successfully',
