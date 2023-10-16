@@ -82,6 +82,37 @@ class SafeController extends Controller
         ]);
     }
 
+    public function addSafe(Request $request)
+    {
+        $data = [
+            'code' => $request->safe_code,
+            'active' => $request->status,
+            'name' => $request->safe_name,
+            'explain' => $request->explain,
+            'branch' => $request->branch,
+            'specode' => $request->special_code,
+            'cyphcode' => $request->auth_code,
+            'addr1' => $request->address1,
+            'addr2' => $request->address2,
+            'ccurrency' => $request->currency_type,
+            'curratetype' => $request->exchange_price_type,
+            'FIXEDCURRTYPE' => $request->is_currency_type_changable,
+        ];
+        try {
+            DB::table("$this->safesTable")->insert($data);
+            return response()->json([
+                "status" => "success",
+                "message" => "Safes added successfully",
+                "data" => $data,
+            ], 200);
+        } catch (\Throwable $e) {
+            return response()->json([
+                "status" => "failed",
+                "message" => $e->getMessage(),
+                "data" => '',
+            ], 500);
+        }
+    }
 
     //retrieve current month safe transaction
     public function salesmanSafeTransaction(Request $request)

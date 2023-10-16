@@ -36,6 +36,7 @@ Route::controller(CustomerController::class)->group(function () {
             Route::post('/pendingcustomer', 'pendingCustomerDetails');
             Route::post('/updatecustomerstatus/{id}', 'UpdatePendingCustomer');
             Route::post('/salesmancustomers', 'accountingSalesmanCustomers');
+            Route::post('/allcustomers', 'allCustomers');
         });
         Route::prefix('salesman')->group(function () {
             Route::post('/customers', 'salesmancustomers');
@@ -172,6 +173,7 @@ Route::controller(SafeController::class)
             ->group(function () {
                 Route::prefix('accounting')->group(function () {
                     Route::post('/safes', 'index');
+                    Route::post('/newsafe', 'addSafe');
                     Route::post('/safesinformation/{safe_code}', 'safesInformation');
                     Route::post('/safetransaction', 'accountingsalesmanSafeTransaction');
                     Route::post('/transactiondetails/{id}', 'fetchTransactionDetails');
