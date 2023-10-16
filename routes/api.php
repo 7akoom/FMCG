@@ -2,6 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Middleware\AuthMiddleware;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\MarkController;
 use App\Http\Controllers\SafeController;
@@ -9,12 +10,12 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\ItemDefController;
 use App\Http\Controllers\PayPlanController;
+use App\Http\Controllers\CurrencyController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\SalesManController;
 use App\Http\Controllers\WareHouseController;
 use App\Http\Controllers\CollectionController;
-use App\Http\Middleware\AuthMiddleware;
 
 Route::controller(SalesmanController::class)->group(function () {
     Route::prefix('salesman')->group(function () {
@@ -174,6 +175,7 @@ Route::controller(SafeController::class)
                 Route::prefix('accounting')->group(function () {
                     Route::post('/safes', 'index');
                     Route::post('/newsafe', 'addSafe');
+                    Route::post('/addingsafedata', 'addSafeData');
                     Route::post('/safesinformation/{safe_code}', 'safesInformation');
                     Route::post('/safetransaction', 'accountingsalesmanSafeTransaction');
                     Route::post('/transactiondetails/{id}', 'fetchTransactionDetails');
@@ -204,3 +206,11 @@ Route::controller(CollectionController::class)
                     });
             });
     });
+
+Route::controller(CurrencyController::class)->group(function () {
+    Route::prefix('currencies')->group(function () {
+        Route::prefix('accounting')->group(function () {
+            Route::post('/currencylist', 'index');
+        });
+    });
+});

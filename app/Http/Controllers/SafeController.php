@@ -21,6 +21,7 @@ class SafeController extends Controller
     protected $customersTable;
     protected $safesTransactionsTable;
     protected $currenciesTable;
+    protected $specodesTable;
     protected $customerTransactionsTable;
 
     public function __construct(Request $request)
@@ -31,6 +32,7 @@ class SafeController extends Controller
         $this->salesmansTable = 'LG_SLSMAN';
         $this->safesTable = 'LG_' . $this->code . '_KSCARD';
         $this->customersTable = 'LG_' . $this->code . '_CLCARD';
+        $this->specodesTable = 'LG_' . $this->code . '_SPECODES';
         $this->currenciesTable = 'L_CURRENCYLIST';
         $this->safesTransactionsTable = 'LG_' . $this->code . '_01_KSLINES';
         $this->customerTransactionsTable = 'LG_' . $this->code . '_01_CLFLINE';
@@ -80,6 +82,24 @@ class SafeController extends Controller
             "message" => "Safes list",
             "data" => $safe,
         ]);
+    }
+
+    public function addSafeData()
+    {
+        $currency = DB::table($this->currenciesTable)
+            ->select('logicalref as id', 'curcode as currency_code', 'curname as currency_name')
+            ->where('firmnr', 500)
+            ->get();
+        $auth_codes = DB::table($this->specodesTable)
+            ->select('logicalref as auth_code_id', 'specode as auth_special_code', 'definition_ as auth_code_name')
+            ->where(['codetype' => 2, 'specodetype' => 34])
+            ->get();
+        return response()->json([
+            "status" => "success",
+            "message" => "Adding safes data",
+            "auth_codes" =>  $auth_codes,
+            "currencies" => $currency
+        ], 200);
     }
 
     public function addSafe(Request $request)
