@@ -71,6 +71,7 @@ class ItemController extends Controller
                 "$this->brandsTable.logicalref as brand_id",
                 "$this->brandsTable.code as brand",
                 "$this->brandsTable.descr as brand_image",
+                DB::raw("REVERSE(SUBSTRING(REVERSE($this->brandsTable.descr), 1, CHARINDEX('/', REVERSE($this->brandsTable.descr)) - 1)) as brand_image"),
                 DB::raw("CASE WHEN '$this->lang' = 'ar' THEN {$this->itemsTable}.name
                 WHEN '$this->lang' = 'en' THEN $this->itemsTable.name3 WHEN '$this->lang' = 'tr' THEN {$this->itemsTable}.name4 ELSE $this->itemsTable.name END as name"),
                 "{$this->itemsTable}.stgrpcode as group",
