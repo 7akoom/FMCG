@@ -181,13 +181,14 @@ class CustomerController extends Controller
     public function updateCustomer(Request $request, $id)
     {
         $data = ([
+            'definition2' => $request->customer_name,
             'definition_' => $request->market_name,
             'addr1' => $request->customer_address,
             'telnrs1' => $request->customer_phone,
             'longitude' => $request->longitude,
             'latitute' => $request->latitute,
         ]);
-        $customer =  $customer = DB::table($this->customersTable)
+        DB::table($this->customersTable)
             ->where('logicalref', $id)
             ->update($data);
         return response()->json([
