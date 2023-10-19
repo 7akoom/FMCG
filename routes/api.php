@@ -214,3 +214,11 @@ Route::controller(CurrencyController::class)->group(function () {
         });
     });
 });
+
+Route::controller(UnitController::class)->group(function () {
+    Route::prefix('units')->group(function () {
+        Route::prefix('salesman')->group(function () {
+            Route::post('/unitslist', 'itemUnit');
+        });
+    });
+});

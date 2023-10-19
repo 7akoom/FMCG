@@ -6,10 +6,12 @@ use Throwable;
 use App\Models\LG_KSCARD;
 use Illuminate\Http\Request;
 use App\Models\LG_01_KSLINES;
+use Illuminate\Support\Carbon;
+use PhpParser\Node\Stmt\TryCatch;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Response;
-
 
 class SafeController extends Controller
 {
@@ -68,7 +70,7 @@ class SafeController extends Controller
                 return response()->json([
                     'status' => 'success',
                     'message' => 'There is no such as type',
-                    'data' => $query
+                    'data' => ''
                 ]);
             }
         }
@@ -81,7 +83,52 @@ class SafeController extends Controller
             "status" => "success",
             "message" => "Safes list",
             "data" => $safe,
-        ]);
+        ], 200);
+    }
+
+    public function safesInformation($safe_code)
+    {
+        $safe = DB::table($this->safesTable)
+            ->leftJoin($this->safesTransactionsTable, "$this->safesTable.logicalref", "=", "$this->safesTransactionsTable.cardref")
+            ->join($this->currenciesTable, "$this->currenciesTable.logicalref", "=", "$this->safesTable.ccurrency")
+            ->select(
+                "$this->safesTable.code",
+                "$this->safesTable.active as status",
+                "$this->safesTable.name",
+                "$this->safesTable.explain",
+                "$this->safesTable.branch",
+                "$this->safesTable.specode as special_code",
+                "$this->safesTable.cyphcode as auth_code",
+                "$this->safesTable.addr1 as address1",
+                "$this->safesTable.addr2 as address2",
+                "$this->currenciesTable.curname as forien_currency_type",
+                "$this->safesTable.curratetype as exchange_price_type",
+                "$this->safesTable.fixedcurrtype as check_box",
+                DB::raw("COALESCE(SUM(CASE WHEN $this->safesTransactionsTable.sign = 0 THEN $this->safesTransactionsTable.amount ELSE 0 END), 0) AS total_collections"),
+                DB::raw("COALESCE(SUM(CASE WHEN $this->safesTransactionsTable.sign = 1 THEN $this->safesTransactionsTable.amount ELSE 0 END), 0) AS total_payments"),
+                DB::raw("(COALESCE(SUM(CASE WHEN $this->safesTransactionsTable.sign = 0 THEN $this->safesTransactionsTable.amount ELSE 0 END), 0) - COALESCE(SUM(CASE WHEN $this->safesTransactionsTable.sign = 1 THEN $this->safesTransactionsTable.amount ELSE 0 END), 0)) AS balance")
+            )
+            ->where(["$this->safesTable.code" => $safe_code])
+            ->groupBy(
+                "$this->safesTable.code",
+                "$this->safesTable.active",
+                "$this->safesTable.name",
+                "$this->safesTable.explain",
+                "$this->safesTable.branch",
+                "$this->safesTable.specode",
+                "$this->safesTable.cyphcode",
+                "$this->safesTable.addr1",
+                "$this->safesTable.addr2",
+                "$this->currenciesTable.curname",
+                "$this->safesTable.curratetype",
+                "$this->safesTable.fixedcurrtype"
+            )
+            ->first();
+        return response()->json([
+            "status" => "success",
+            "message" => "Safes information",
+            "data" => $safe,
+        ], 200);
     }
 
     public function addSafeData()
@@ -104,26 +151,68 @@ class SafeController extends Controller
 
     public function addSafe(Request $request)
     {
-        $data = [
-            'code' => $request->safe_code,
-            'active' => $request->status,
-            'name' => $request->safe_name,
-            'explain' => $request->explain,
-            'branch' => $request->branch,
-            'specode' => $request->special_code,
-            'cyphcode' => $request->auth_code,
-            'addr1' => $request->address1,
-            'addr2' => $request->address2,
-            'ccurrency' => $request->currency_type,
-            'curratetype' => $request->exchange_price_type,
-            'FIXEDCURRTYPE' => $request->is_currency_type_changable,
+        $currency = DB::table($this->currenciesTable)
+            ->select('logicalref as id', 'curcode as currency_code', 'curname as currency_name')
+            ->where('firmnr', 500)
+            ->get();
+        $specode = DB::table($this->specodesTable)
+            ->select('logicalref as id', 'specode', 'definition_')
+            ->where(['codetype' => 1, 'specodetype' => 50])
+            ->orderby('logicalref', 'desc')
+            ->first();
+        $columns = Schema::getColumnListing($this->specodesTable);
+        $defaultValues = array_fill_keys($columns, 0);
+        unset($defaultValues['LOGICALREF']);
+        $overrides = [
+            'CODETYPE' => 1,
+            'SPECODETYPE' => 50,
+            'SPECODE' => $specode->specode + 1,
+            'DEFINITION_' => $request->safe_code,
+            'RECSTATUS' => 1,
         ];
+        $mergedDefaultValues = array_merge($defaultValues, $overrides);
+        $safeColumns = Schema::getColumnListing($this->safesTable);
+        $defaultSafeValues = array_fill_keys($safeColumns, 0);
+        unset(
+            $defaultSafeValues['LOGICALREF'],
+            $defaultSafeValues['CAPIBLOCK_MODIFIEDBY'],
+            $defaultSafeValues['CAPIBLOCK_MODIFIEDDATE'],
+            $defaultSafeValues['CAPIBLOCK_MODIFIEDHOUR'],
+            $defaultSafeValues['CAPIBLOCK_MODIFIEDMIN'],
+            $defaultSafeValues['CAPIBLOCK_MODIFIEDSEC']
+        );
+
+        $now = now();
+        $data = [
+            'CODE' => $request->safe_code,
+            'ACTIVE' => $request->status,
+            'NAME' => $request->safe_name,
+            'EXPLAIN' => $request->explain,
+            'BRANCH' => $request->branch,
+            'SPECODE' => $specode->specode + 1,
+            'CYPHCODE' => $request->auth_code,
+            'ADDR1' => $request->address1,
+            'ADDR2' => $request->address2,
+            'CCURRENCY' => $request->currency_type,
+            'CURRATETYPE' => $request->exchange_price_type,
+            'FIXEDCURRTYPE' => $request->is_currency_type_changable,
+            'CAPIBLOCK_CREATEDBY' => 0,
+            'CAPIBLOCK_CREADEDDATE' => DB::raw("convert(datetime,'$now',101)"),
+            'CAPIBLOCK_CREATEDHOUR' => Carbon::now()->timezone('Asia/Baghdad')->format('H'),
+            'CAPIBLOCK_CREATEDMIN' => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
+            'CAPIBLOCK_CREATEDSEC' => Carbon::now()->timezone('Asia/Baghdad')->format('s'),
+        ];
+        $mergedSafeDefaultValues = array_merge($defaultSafeValues, $data);
+        DB::beginTransaction();
         try {
-            DB::table("$this->safesTable")->insert($data);
+            DB::table("$this->specodesTable")->insert($mergedDefaultValues);
+            DB::table("$this->safesTable")->insertGetId($mergedSafeDefaultValues);
+            DB::commit();
             return response()->json([
                 "status" => "success",
                 "message" => "Safes added successfully",
-                "data" => $data,
+                "currencies" => $currency,
+                "data" => $mergedSafeDefaultValues,
             ], 200);
         } catch (\Throwable $e) {
             return response()->json([
@@ -166,6 +255,7 @@ class SafeController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'There is no data',
+                "total_amount" => $total,
                 'data' => $data,
             ]);
         }
@@ -175,52 +265,6 @@ class SafeController extends Controller
             "total_amount" => $total,
             "data" => $data,
         ]);
-    }
-
-    public function safesInformation($safe_code)
-    {
-        $safe = DB::table($this->safesTable)
-            ->leftJoin($this->safesTransactionsTable, "$this->safesTable.logicalref", "=", "$this->safesTransactionsTable.cardref")
-            ->join($this->currenciesTable, "$this->currenciesTable.logicalref", "=", "$this->safesTable.ccurrency")
-            ->select(
-                "$this->safesTable.code",
-                "$this->safesTable.active as status",
-                "$this->safesTable.name",
-                "$this->safesTable.explain",
-                "$this->safesTable.branch",
-                "$this->safesTable.specode as special_code",
-                "$this->safesTable.cyphcode as auth_code",
-                "$this->safesTable.addr1 as address1",
-                "$this->safesTable.addr2 as address2",
-                "$this->currenciesTable.curname as forien_currency_type",
-                "$this->safesTable.curratetype as exchange_price_type",
-                "$this->safesTable.fixedcurrtype as check_box",
-                DB::raw("COALESCE(SUM(CASE WHEN $this->safesTransactionsTable.sign = 0 THEN $this->safesTransactionsTable.amount ELSE 0 END), 0) AS total_collections"),
-                DB::raw("COALESCE(SUM(CASE WHEN $this->safesTransactionsTable.sign = 1 THEN $this->safesTransactionsTable.amount ELSE 0 END), 0) AS total_payments"),
-                DB::raw("(COALESCE(SUM(CASE WHEN $this->safesTransactionsTable.sign = 0 THEN $this->safesTransactionsTable.amount ELSE 0 END), 0) - COALESCE(SUM(CASE WHEN $this->safesTransactionsTable.sign = 1 THEN $this->safesTransactionsTable.amount ELSE 0 END), 0)) AS balance")
-            )
-            ->where("$this->safesTable.code", $safe_code)
-            ->groupBy(
-                "$this->safesTable.code",
-                "$this->safesTable.active",
-                "$this->safesTable.name",
-                "$this->safesTable.explain",
-                "$this->safesTable.branch",
-                "$this->safesTable.specode",
-                "$this->safesTable.cyphcode",
-                "$this->safesTable.addr1",
-                "$this->safesTable.addr2",
-                "$this->currenciesTable.curname",
-                "$this->safesTable.curratetype",
-                "$this->safesTable.fixedcurrtype"
-            )
-            ->first();
-
-        return response()->json([
-            "status" => "success",
-            "message" => "Safes information",
-            "data" => $safe,
-        ], 200);
     }
 
     // accounting salesman safe transaction lines
