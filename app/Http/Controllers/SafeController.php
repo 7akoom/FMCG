@@ -315,6 +315,53 @@ class SafeController extends Controller
             "data" => $data,
         ]);
     }
+
+    public function accountingSafeTransaction(Request $request)
+    {
+        $safe_code = $request->header('safe-code');
+        $data = DB::table("$this->safesTransactionsTable")
+            ->join("$this->safesTable", "$this->safesTable.logicalref", "=", "$this->safesTransactionsTable.cardref")
+            ->join("$this->customerTransactionsTable", "$this->customerTransactionsTable.sourcefref", "=", "$this->safesTransactionsTable.logicalref")
+            ->select(
+                "$this->safesTransactionsTable.logicalref as id",
+                "$this->safesTransactionsTable.date_ as date",
+                "$this->safesTransactionsTable.custtitle as safe_description",
+                "$this->safesTransactionsTable.ficheno as safe_transaction_number",
+                "$this->customerTransactionsTable.tranno as transaction_number",
+                "$this->safesTransactionsTable.amount",
+                "$this->safesTransactionsTable.lineexp as description",
+                "$this->safesTransactionsTable.trcode as transaction_type",
+                "$this->safesTransactionsTable.docode as document_number"
+            )
+            ->where(["$this->safesTable.code" => $safe_code])
+            ->get();
+        $total_collection = DB::table("$this->safesTransactionsTable")
+            ->join("$this->safesTable", "$this->safesTable.logicalref", "=", "$this->safesTransactionsTable.cardref")
+            ->where(["$this->safesTable.specode" => $safe_code, "$this->safesTable.cyphcode" => 3])
+            ->where("$this->safesTransactionsTable.sign", "=", 0)
+            ->sum("$this->safesTransactionsTable.amount");
+        $total_payment = DB::table("$this->safesTransactionsTable")
+            ->join("$this->safesTable", "$this->safesTable.logicalref", "=", "$this->safesTransactionsTable.cardref")
+            ->where(["$this->safesTable.specode" => $safe_code, "$this->safesTable.cyphcode" => 3])
+            ->where("$this->safesTransactionsTable.sign", "=", 1)
+            ->sum("$this->safesTransactionsTable.amount");
+        $total =  $total_collection - $total_payment;
+        if ($data->isEmpty()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'There is no data',
+                'data' => $data
+            ]);
+        }
+        return response()->json([
+            "status" => "success",
+            "message" => "Safes transaction list",
+            "total_collection" => $total_collection,
+            "safe_balance" => $total,
+            "data" => $data,
+        ]);
+    }
+
     public function fetchTransactionDetails($id)
     {
         $transaction = DB::table($this->safesTransactionsTable)

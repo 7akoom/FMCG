@@ -178,6 +178,7 @@ Route::controller(SafeController::class)
                     Route::post('/addingsafedata', 'addSafeData');
                     Route::post('/safesinformation/{safe_code}', 'safesInformation');
                     Route::post('/safetransaction', 'accountingsalesmanSafeTransaction');
+                    Route::post('/generalsafetransaction', 'accountingSafeTransaction');
                     Route::post('/transactiondetails/{id}', 'fetchTransactionDetails');
                 });
                 Route::prefix('salesman')

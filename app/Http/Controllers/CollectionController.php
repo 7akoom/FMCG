@@ -75,7 +75,7 @@ class CollectionController extends Controller
             "POS_TRANSFER_INFO" => $salesman_code,
             "DOC_DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
             "SALESMANREF" => $this->salesman_id,
-            'TIME' => strtotime(Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d H:i:s.v')),
+            'TIME' => calculateTime(),
         ];
         $ATTACHMENT_ARP = [
             "INTERNAL_REFERENCE" => 0,
