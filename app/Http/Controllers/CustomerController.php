@@ -327,7 +327,7 @@ class CustomerController extends Controller
             ->whereNotNull("{$this->customersTable}.telnrs2")
             ->orderByDesc("{$this->customersSalesmansRelationsTable}.logicalref")
             ->first();
-        if ($data->isEmpty()) {
+        if (!$data) {
             return response()->json([
                 'status' => 'success',
                 'message' => 'There is no data',
@@ -339,7 +339,7 @@ class CustomerController extends Controller
             'message' => 'Customers list',
             'data' => $data,
         ]);
-        return response()->json($data);
+        // return response()->json($data);
     }
 
     public function customerDetails(Request $request)
