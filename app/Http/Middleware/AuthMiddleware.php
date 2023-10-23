@@ -23,10 +23,12 @@ class AuthMiddleware
     public function handle(Request $request, Closure $next)
     {
 
+        Log::debug('headers', ['data' => $request->headers]);
+
         $type = $request->header('source_type');
 
         if(!$type) {
-            return abort(403, 'unauthenticated');
+            return abort(401, 'unauthenticated');
         }
 
         $token = $type == 'finance' ? $this->getFinanceToken() : $this->getSalesManToken();
@@ -46,12 +48,7 @@ class AuthMiddleware
           $username = request()->header('username');
           $password = request()->header('password');
 
-        return Cache::remember("finance:$username:$cityCode", 60 * 25, function () use(
-            $cityCode,
-            $username,
-            $password
-        ) {
-            $response = Http::withOptions(['verify' => false])
+           $response = Http::withOptions(['verify' => false])
                 ->withHeaders([
                     'Authorization' => 'basic TUVGQVBFWDpGWEh4VGV4NThWd0pwbXNaSC9sSHVybkQ1elAwWVo3Tm14M0xZaDF1SFVvPQ==',
                     'Accept' => 'application/json',
@@ -63,18 +60,14 @@ class AuthMiddleware
             Log::debug('response', ['data' => $response->json()]);
     
             return $response['access_token'] ?? abort(403);
-        });
     }
 
     private function getSalesManToken()
     {
 
-         $cityCode = request()->header('citycode');
+        $cityCode = request()->header('citycode');
 
-        return Cache::remember("salesman:$cityCode", 60 * 25, function () {
-
-        
-            $response = Http::withOptions(['verify' => false])
+       $response = Http::withOptions(['verify' => false])
                 ->withHeaders([
                     'Authorization' => 'basic TUVGQVBFWDpGWEh4VGV4NThWd0pwbXNaSC9sSHVybkQ1elAwWVo3Tm14M0xZaDF1SFVvPQ==',
                     'Accept' => 'application/json',
@@ -86,7 +79,6 @@ class AuthMiddleware
             Log::debug('response', ['data' => $response->json()]);
     
             return $response['access_token'] ?? abort(403);
-        });
-    }
        
+}
 }
