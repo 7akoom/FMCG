@@ -22,16 +22,46 @@ class AuthMiddleware
      */
     public function handle(Request $request, Closure $next)
     {
+
+        $type = $request->header('source_type');
+
+        $token = $type == 'finance' ? $this->getFinanceToken() : $this->getSalesManToken();
+
         $request->headers->add([
-            'Authorization' => 'Bearer ' . $this->getToken(),
+            'Authorization' => 'Bearer ' . $token,
         ]);
 
 
         return $next($request);
     }
 
-    private function getToken(): string
+    private function getFinanceToken()
     {
+
+        return Cache::remember('token', 60 * 25, function () {
+
+            $cityCode = request()->header('citycode');
+            $username = request()->header('username');
+            $password = request()->header('password');
+
+            $response = Http::withOptions(['verify' => false])
+                ->withHeaders([
+                    'Authorization' => 'basic TUVGQVBFWDpGWEh4VGV4NThWd0pwbXNaSC9sSHVybkQ1elAwWVo3Tm14M0xZaDF1SFVvPQ==',
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json'
+                ])
+                ->withBody("grant_type=password&username=$username&firmno=$cityCode&password=$password", 'text/plain')
+                ->post('https://10.27.0.109:32002/api/v1/token');
+    
+            Log::debug('response', ['data' => $response->json()]);
+    
+            return $response['access_token'] ?? abort(403);
+        });
+    }
+
+    private function getSalesManToken()
+    {
+
         return Cache::remember('token', 60 * 25, function () {
 
             $cityCode = request()->header('citycode');
@@ -47,7 +77,8 @@ class AuthMiddleware
     
             Log::debug('response', ['data' => $response->json()]);
     
-            return $response['access_token'];
+            return $response['access_token'] ?? abort(403);
         });
     }
+       
 }
