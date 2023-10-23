@@ -42,12 +42,15 @@ class AuthMiddleware
     private function getFinanceToken()
     {
 
-        return Cache::remember('token', 60 * 25, function () {
+          $cityCode = request()->header('citycode');
+          $username = request()->header('username');
+          $password = request()->header('password');
 
-            $cityCode = request()->header('citycode');
-            $username = request()->header('username');
-            $password = request()->header('password');
-
+        return Cache::remember("finance:$username:$cityCode", 60 * 25, function () use(
+            $cityCode,
+            $username,
+            $password
+        ) {
             $response = Http::withOptions(['verify' => false])
                 ->withHeaders([
                     'Authorization' => 'basic TUVGQVBFWDpGWEh4VGV4NThWd0pwbXNaSC9sSHVybkQ1elAwWVo3Tm14M0xZaDF1SFVvPQ==',
@@ -66,10 +69,11 @@ class AuthMiddleware
     private function getSalesManToken()
     {
 
-        return Cache::remember('token', 60 * 25, function () {
+         $cityCode = request()->header('citycode');
 
-            $cityCode = request()->header('citycode');
+        return Cache::remember("salesman:$cityCode", 60 * 25, function () {
 
+        
             $response = Http::withOptions(['verify' => false])
                 ->withHeaders([
                     'Authorization' => 'basic TUVGQVBFWDpGWEh4VGV4NThWd0pwbXNaSC9sSHVybkQ1elAwWVo3Tm14M0xZaDF1SFVvPQ==',
