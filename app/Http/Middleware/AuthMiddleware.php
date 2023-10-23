@@ -25,7 +25,7 @@ class AuthMiddleware
 
         Log::debug('headers', ['data' => $request->headers]);
 
-        $type = $request->header('source_type');
+        $type = $request->header('sourcetype');
 
         if(!$type) {
             return abort(401, 'unauthenticated');
