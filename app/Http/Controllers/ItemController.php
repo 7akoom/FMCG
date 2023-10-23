@@ -123,7 +123,7 @@ class ItemController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'There is no data',
-                'data' => $result
+                'data' => []
             ]);
         }
         return response()->json([
@@ -186,6 +186,13 @@ class ItemController extends Controller
                 "weights.grossweight",
             )
             ->get();
+        if ($items->isEmpty()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'There is no data',
+                'data' => [],
+            ]);
+        }
         return response()->json([
             'status' => 'success',
             'message' => 'Items list',
@@ -260,6 +267,13 @@ class ItemController extends Controller
         }
 
         $items = $result->get();
+        if ($items->isEmpty()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'There is no data',
+                'data' => [],
+            ]);
+        }
         return response()->json([
             'status' => 'success',
             'message' => 'Items list',

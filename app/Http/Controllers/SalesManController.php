@@ -68,6 +68,13 @@ class SalesManController extends Controller
             ->where("$this->ordersTable.salesmanref", $this->salesman_id)
             ->orderby("$this->ordersTable.capiblock_creadeddate", "desc")
             ->get();
+        if ($orders->isEmpty()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'There is no data',
+                'data' => [],
+            ]);
+        }
         return response()->json([
             'status' => 'success',
             'message' => 'Salesman list',
@@ -93,6 +100,13 @@ class SalesManController extends Controller
             ->orderBy("$this->invoicesTable.date_", 'desc')
             ->where(["$this->invoicesTable.trcode" => $invoicetype, 'lg_slsman.logicalref' => $this->salesman_id])
             ->paginate($this->perpage);
+        if ($invoice->isEmpty()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'There is no data',
+                'data' => [],
+            ]);
+        }
         return response()->json([
             'status' => 'success',
             'message' => 'Customer list',

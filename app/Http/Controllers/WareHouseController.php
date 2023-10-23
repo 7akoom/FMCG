@@ -143,7 +143,7 @@ class WareHouseController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'There is no data',
-                'data' => $result
+                'data' => []
             ]);
         }
         return response()->json([
@@ -261,7 +261,7 @@ class WareHouseController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'There is no data',
-                'data' => $result
+                'data' => []
             ]);
         }
         return response()->json([
@@ -378,7 +378,7 @@ class WareHouseController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'There is no data',
-                'data' => $result
+                'data' => []
             ]);
         }
         return response()->json([

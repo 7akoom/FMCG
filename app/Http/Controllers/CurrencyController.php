@@ -22,6 +22,13 @@ class CurrencyController extends Controller
             ->select('logicalref as id', 'curcode as currency_code', 'curname as currency_name')
             ->where('firmnr', 500)
             ->get();
+        if ($currency->isEmpty()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'There is no data',
+                'data' => [],
+            ]);
+        }
         return response()->json([
             'status' => 'success',
             'message' => 'customer updated successfully',

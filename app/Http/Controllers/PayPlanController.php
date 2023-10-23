@@ -22,6 +22,13 @@ class PayPlanController extends Controller
             ->select('logicalref as id', 'code as name')
             ->where("$this->payplansTable.active", 0)
             ->get();
+        if ($plan->isEmpty()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'There is no data',
+                'data' => [],
+            ]);
+        }
         return response()->json([
             'status' => 'success',
             'message' => 'PayPlans list',

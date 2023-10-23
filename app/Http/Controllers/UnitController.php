@@ -23,6 +23,13 @@ class UnitController extends Controller
             ->select('logicalref as id', 'name as unit_name')
             ->where('unitsetref', $item)
             ->get();
+        if ($unit->isEmpty()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'There is no data',
+                'data' => [],
+            ]);
+        }
         return response()->json([
             'status' => 'success',
             'message' => 'Units list',

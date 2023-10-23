@@ -163,7 +163,7 @@ class OrderController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'There is no data',
-                'data' => $item,
+                'data' => []
             ], 200);
         }
         return response()->json([
@@ -203,7 +203,7 @@ class OrderController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'There is no data',
-                'data' => $result,
+                'data' => []
             ], 200);
         }
         return response()->json([
@@ -244,7 +244,7 @@ class OrderController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'There is no data',
-                'data' => $result,
+                'data' => []
             ], 200);
         }
         return response()->json([
@@ -275,6 +275,13 @@ class OrderController extends Controller
             ->whereMonth("$this->ordersTable.date_", "=", now()->month)
             ->orderby("$this->ordersTable.capiblock_creadeddate", "desc")
             ->get();
+        if ($order->isEmpty()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'There is no data',
+                'data' => [],
+            ]);
+        }
         return response()->json([
             'status' => 'success',
             'message' => 'orders list',
@@ -324,7 +331,7 @@ class OrderController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'There is no data',
-                'data' => $item,
+                'data' => []
             ], 200);
         }
         return response()->json([
@@ -445,7 +452,7 @@ class OrderController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'Order is not exist',
-                'data' => '',
+                'data' => []
             ], 404);
         }
         $result = get_object_vars($item);

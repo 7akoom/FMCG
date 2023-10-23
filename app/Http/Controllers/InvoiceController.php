@@ -110,6 +110,13 @@ class InvoiceController extends Controller
             ],
         ]);
         $invoicesData = $invoices->orderBy("$this->invoicesTable.capiblock_creadeddate", "desc")->paginate($this->perpage);
+        if ($invoicesData->isEmpty()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'There is no data',
+                'data' => [],
+            ]);
+        }
         return response()->json([
             'status' => 'success',
             'message' => 'Invoices list',
@@ -177,7 +184,7 @@ class InvoiceController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'There is no data',
-                'data' => $item,
+                'data' => []
             ]);
         }
         return response()->json([
@@ -232,6 +239,13 @@ class InvoiceController extends Controller
             ],
         ]);
         $invoicesData = $invoices->orderBy("$this->invoicesTable.capiblock_creadeddate", "desc")->paginate($this->perpage);
+        if ($invoicesData->isEmpty()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'There is no data',
+                'data' => [],
+            ]);
+        }
         return response()->json([
             'status' => 'success',
             'message' => 'Invoices list',
@@ -299,7 +313,7 @@ class InvoiceController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'There is no data',
-                'data' => $item
+                'data' => []
             ]);
         }
         return response()->json([
@@ -363,7 +377,7 @@ class InvoiceController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'There is no data',
-                'data' => $item,
+                'data' => []
             ]);
         }
         return response()->json([
@@ -419,6 +433,13 @@ class InvoiceController extends Controller
             ],
         ]);
         $invoicesData = $invoices->orderBy("$this->invoicesTable.capiblock_creadeddate", "desc")->paginate($this->perpage);
+        if ($invoicesData->isEmpty()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'There is no data',
+                'data' => [],
+            ]);
+        }
         return response()->json([
             'status' => 'success',
             'message' => 'Invoices list',
@@ -485,7 +506,7 @@ class InvoiceController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'There is no data',
-                'data' => $item,
+                'data' => []
             ]);
         }
         return response()->json([
@@ -540,6 +561,13 @@ class InvoiceController extends Controller
             ],
         ]);
         $invoicesData = $invoices->orderBy("$this->invoicesTable.capiblock_creadeddate", "desc")->paginate($this->perpage);
+        if ($invoicesData->isEmpty()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'There is no data',
+                'data' => [],
+            ]);
+        }
         return response()->json([
             'status' => 'success',
             'message' => 'Invoices list',
@@ -606,7 +634,7 @@ class InvoiceController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'There is no data',
-                'data' => $item,
+                'data' => []
             ]);
         }
         return response()->json([
@@ -966,7 +994,8 @@ class InvoiceController extends Controller
         if ($invoices->isEmpty()) {
             return response()->json([
                 'status' => 'success',
-                'message' => 'There is no data'
+                'message' => 'There is no data',
+                'data' => [],
             ]);
         }
         return response()->json([
@@ -994,6 +1023,13 @@ class InvoiceController extends Controller
             ->where(["$this->invoicesTable.salesmanref" => $this->salesman_id, "$this->invoicesTable.grpcode" => 2, "$this->invoicesTable.trcode" => $this->type])
             ->orderBy("$this->invoicesTable.capiblock_creadeddate", "desc");
         $invoicesData = $invoices->paginate($this->perpage);
+        if ($invoicesData->isEmpty()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'There is no data',
+                'data' => [],
+            ]);
+        }
         return response()->json([
             'status' => 'success',
             'message' => 'Invoices list',
@@ -1067,7 +1103,7 @@ class InvoiceController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'There is no data',
-                'data' => $item,
+                'data' => []
             ]);
         }
         return response()->json([
@@ -1135,7 +1171,7 @@ class InvoiceController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'There is no data',
-                'data' => $item,
+                'data' => []
             ]);
         }
         return response()->json([
@@ -1168,7 +1204,7 @@ class InvoiceController extends Controller
             return response()->json([
                 'ststus' => 'success',
                 'message' => 'There is no data',
-                'data' => $invoice,
+                'data' => [],
             ]);
         }
         return response()->json([
@@ -1199,7 +1235,7 @@ class InvoiceController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'There is no data',
-                'data' => $invoices,
+                'data' => []
             ], 200);
         }
         return response()->json([
@@ -1232,6 +1268,13 @@ class InvoiceController extends Controller
             }
         }
         $data = $invoices->orderby("$this->invoicesTable.capiblock_creadeddate", "desc")->paginate($this->perpage);
+        if ($data->isEmpty()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'There is no data',
+                'data' => [],
+            ]);
+        }
         return response()->json([
             'status' => 'success',
             'message' => 'Invoice list',
@@ -1267,7 +1310,7 @@ class InvoiceController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'There is no data',
-                'data' => $invoices,
+                'data' => []
             ]);
         }
         return response()->json([
@@ -1295,6 +1338,13 @@ class InvoiceController extends Controller
             // ->where("{$custName}.code", $customer)
             ->where("$this->invoicesTable.ficheno", $invoice)
             ->get();
+        if ($invoices->isEmpty()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'There is no data',
+                'data' => [],
+            ]);
+        }
         return response()->json([
             'status' => 'success',
             'message' => 'Invoice details',
@@ -1327,7 +1377,7 @@ class InvoiceController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'There is no data',
-                'data' => $invoices
+                'data' => []
             ]);
         }
         return response()->json([

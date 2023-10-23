@@ -50,7 +50,13 @@ class ItemDefController extends Controller
                 "$this->specialcodesTable.spetyp1" => 1, "$this->specialcodesTable.globalid" => 2,
             ])->get();
         }
-
+        if ($category->isEmpty()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'There is no data',
+                'data' => [],
+            ]);
+        }
         return response()->json([
             'status' => 'success',
             'message' => 'categories list',
@@ -69,6 +75,13 @@ class ItemDefController extends Controller
             )
             ->where(["$this->specialcodesTable.spetyp2" => 1, "$this->specialcodesTable.globalid" => $this->category])
             ->get();
+        if ($category->isEmpty()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'There is no data',
+                'data' => [],
+            ]);
+        }
         return response()->json([
             'status' => 'success',
             'message' => 'sub categories list',
@@ -107,10 +120,16 @@ class ItemDefController extends Controller
             $category->subcategories = $subcategories->where('category_id', $category->id)->values()->toArray();
             $categoriesWithSubcategories[] = $category;
         }
+        if (!$categoriesWithSubcategories) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'There is no data',
+                'data' => [],
+            ]);
+        }
         return response()->json([
             'status' => 'success',
             'message' => 'Categories with subcategories list',
-            // 'data' => $categories,
             'data' => $categoriesWithSubcategories,
         ], 200);
     }

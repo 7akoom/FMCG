@@ -70,7 +70,7 @@ class SafeController extends Controller
                 return response()->json([
                     'status' => 'success',
                     'message' => 'There is no such as type',
-                    'data' => ''
+                    'data' => []
                 ]);
             }
         }
@@ -124,6 +124,13 @@ class SafeController extends Controller
                 "$this->safesTable.fixedcurrtype"
             )
             ->first();
+        if ($safe->isEmpty()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'There is no data',
+                'data' => [],
+            ]);
+        }
         return response()->json([
             "status" => "success",
             "message" => "Safes information",
@@ -218,7 +225,7 @@ class SafeController extends Controller
             return response()->json([
                 "status" => "failed",
                 "message" => $e->getMessage(),
-                "data" => '',
+                "data" => [],
             ], 500);
         }
     }
@@ -256,7 +263,7 @@ class SafeController extends Controller
                 'status' => 'success',
                 'message' => 'There is no data',
                 "total_amount" => $total,
-                'data' => $data,
+                'data' => []
             ]);
         }
         return response()->json([
@@ -304,7 +311,7 @@ class SafeController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'There is no data',
-                'data' => $data
+                'data' => []
             ]);
         }
         return response()->json([
@@ -350,7 +357,7 @@ class SafeController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'There is no data',
-                'data' => $data
+                'data' => []
             ]);
         }
         return response()->json([
@@ -394,7 +401,7 @@ class SafeController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'There is no data',
-                'data' => $transaction
+                'data' => []
             ]);
         }
         return response()->json([
@@ -428,7 +435,7 @@ class SafeController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'There is no data',
-                'data' => $transaction
+                'data' => []
             ]);
         }
         return response()->json([

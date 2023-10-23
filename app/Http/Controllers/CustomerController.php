@@ -72,6 +72,13 @@ class CustomerController extends Controller
         }
 
         $customer = $data->paginate($this->perpage);
+        if ($customer->isEmpty()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'There is no data',
+                'data' => [],
+            ]);
+        }
         return response()->json([
             'status' => 'success',
             'message' => 'Customers list',
@@ -171,6 +178,13 @@ class CustomerController extends Controller
             )
             ->where('logicalref', $id)
             ->first();
+        if ($customer->isEmpty()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'There is no data',
+                'data' => [],
+            ]);
+        }
         return response()->json([
             'status' => 'success',
             'message' => 'customer informations',
@@ -244,6 +258,13 @@ class CustomerController extends Controller
             )
             ->where("{$this->customersTable}.logicalref", $customer)
             ->get();
+        if ($data->isEmpty()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'There is no data',
+                'data' => [],
+            ]);
+        }
         return response()->json([
             'status' => 'success',
             'message' => 'Pending customer details',
@@ -306,6 +327,13 @@ class CustomerController extends Controller
             ->whereNotNull("{$this->customersTable}.telnrs2")
             ->orderByDesc("{$this->customersSalesmansRelationsTable}.logicalref")
             ->first();
+        if ($data->isEmpty()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'There is no data',
+                'data' => [],
+            ]);
+        }
         return response()->json([
             'status' => 'success',
             'message' => 'Customers list',
@@ -339,6 +367,13 @@ class CustomerController extends Controller
             )
             ->where(["{$this->customersTable}.active" => '0', 'lg_slsman.logicalref' => $this->salesman_id, 'lg_slsman.active' => 0, "{$this->customersSalesmansRelationsTable}.salesmanref" => $this->salesman_id])
             ->get();
+        if ($results->isEmpty()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'There is no data',
+                'data' => [],
+            ]);
+        }
         return response()->json([
             'status' => 'success',
             'message' => 'Customers list',
@@ -346,7 +381,7 @@ class CustomerController extends Controller
         ]);
     }
 
-    public function salesmancustomers(Request $request)
+    public function salesmancustomers()
     {
         $data = DB::table($this->customersSalesmansRelationsTable)
             ->join("$this->salesmansTable", "$this->customersSalesmansRelationsTable.salesmanref", '=', "$this->salesmansTable.logicalref")
@@ -370,6 +405,13 @@ class CustomerController extends Controller
             // ->whereNotNull("$this->customersTable.telnrs2")
             ->orderBy("$this->customersTable.Code")
             ->get();
+        if ($data->isEmpty()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'There is no data',
+                'data' => [],
+            ]);
+        }
         return response()->json([
             'status' => 'success',
             'message' => 'Customers list',
@@ -439,6 +481,13 @@ class CustomerController extends Controller
             ->where(["$this->customersTable.code" => $customer])
             ->groupBy("$this->customersLimitTable.accrisklimit", "$this->payplansTable.code", "$this->customersView.debit", "$this->customersView.credit")
             ->get();
+        if ($results->isEmpty()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'There is no data',
+                'data' => [],
+            ]);
+        }
         return response()->json([
             'status' => 'success',
             'message' => 'Customer details',
