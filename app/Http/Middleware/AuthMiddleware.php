@@ -25,6 +25,10 @@ class AuthMiddleware
 
         $type = $request->header('source_type');
 
+        if(!$type) {
+            return abort(403, 'unauthenticated');
+        }
+
         $token = $type == 'finance' ? $this->getFinanceToken() : $this->getSalesManToken();
 
         $request->headers->add([
