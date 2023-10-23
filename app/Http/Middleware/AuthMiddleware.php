@@ -23,7 +23,7 @@ class AuthMiddleware
     public function handle(Request $request, Closure $next)
     {
 
-        Log::debug('headers', ['data' => $request->headers]);
+        Log::debug('headers', ['data' => $request->headers('citycode', 'username', 'password', 'source_type')]);
 
         $type = $request->header('source_type');
 
