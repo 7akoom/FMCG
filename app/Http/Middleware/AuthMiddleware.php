@@ -22,9 +22,6 @@ class AuthMiddleware
      */
     public function handle(Request $request, Closure $next)
     {
-
-        Log::debug('headers', ['data' => $request->headers]);
-
         $type = $request->header('sourcetype');
 
         if(!$type) {

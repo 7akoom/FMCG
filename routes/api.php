@@ -2,7 +2,6 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Middleware\AuthMiddleware;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\MarkController;
 use App\Http\Controllers\SafeController;
@@ -16,6 +15,7 @@ use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\SalesManController;
 use App\Http\Controllers\WareHouseController;
+use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CollectionController;
 
 Route::controller(SalesmanController::class)->group(function () {
@@ -105,7 +105,6 @@ Route::controller(PayPlanController::class)->group(function () {
 Route::controller(OrderController::class)
     ->group(function () {
         Route::prefix('order')
-            ->middleware(AuthMiddleware::class)
             ->group(function () {
                 Route::prefix('accounting')->group(function () {
                     Route::post('/orders', 'index');
@@ -117,7 +116,6 @@ Route::controller(OrderController::class)
                     // Route::post('/customercurrentorder', 'customerCurrentOrder');
                 });
                 Route::prefix('salesman')
-                    ->middleware(AuthMiddleware::class)
                     ->group(function () {
                         Route::post('/previousorder', 'salesmanlacurrentmonthorder');
                         Route::post('/previousorderdetails', 'previousorderdetails');
@@ -129,7 +127,6 @@ Route::controller(OrderController::class)
 Route::controller(InvoiceController::class)
     ->group(function () {
         Route::prefix('invoice')
-            ->middleware(AuthMiddleware::class)
             ->group(function () {
                 Route::prefix('accounting')->group(function () {
                     Route::post('/previoussalesreturninvoices', 'customerprevioussalesreturninvoices');
@@ -151,7 +148,6 @@ Route::controller(InvoiceController::class)
                     Route::post('/purchasedservicesinvoicedetails', 'purchasedServicesInvoicedetails');
                 });
                 Route::prefix('salesman')
-                    ->middleware(AuthMiddleware::class)
                     ->group(function () {
                         Route::post('/previousinvoices', 'salesmanmonthlyinvoices');
                         Route::post('/invoicedetails', 'salesmaninvoicedetails');
@@ -171,7 +167,6 @@ Route::controller(WareHouseController::class)->group(function () {
 Route::controller(SafeController::class)
     ->group(function () {
         Route::prefix('safes')
-            ->middleware(AuthMiddleware::class)
             ->group(function () {
                 Route::prefix('accounting')->group(function () {
                     Route::post('/safes', 'index');
@@ -183,7 +178,6 @@ Route::controller(SafeController::class)
                     Route::post('/transactiondetails/{id}', 'fetchTransactionDetails');
                 });
                 Route::prefix('salesman')
-                    ->middleware(AuthMiddleware::class)
                     ->group(function () {
                         Route::post('/safetransaction', 'salesmanSafeTransaction');
                         Route::post('/collection/{id}', 'collectionDetails');
@@ -194,7 +188,6 @@ Route::controller(SafeController::class)
 Route::controller(CollectionController::class)
     ->group(function () {
         Route::prefix('collection')
-            ->middleware(AuthMiddleware::class)
             ->group(function () {
                 Route::prefix('accounting')->group(function () {
                     Route::post('/transferofreceivables', 'transferFromSalesmanToAccountant');
@@ -202,7 +195,6 @@ Route::controller(CollectionController::class)
                     Route::post('/newcurrentaccountpayment', 'currentAccountPayment');
                 });
                 Route::prefix('salesman')
-                    ->middleware(AuthMiddleware::class)
                     ->group(function () {
                         Route::post('/newcurrentaccountcollection', 'currentAccountCollections');
                     });
@@ -222,5 +214,11 @@ Route::controller(UnitController::class)->group(function () {
         Route::prefix('salesman')->group(function () {
             Route::post('/unitslist', 'itemUnit');
         });
+    });
+});
+
+Route::controller(AuthController::class)->group(function () {
+    Route::prefix('auth')->group(function () {
+        Route::post('login', 'login');
     });
 });
