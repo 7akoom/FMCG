@@ -14,6 +14,7 @@ class Handler extends ExceptionHandler
             if(in_array($e->getStatusCode(), [403,401 ])) {
                 return response()->json([
                   'message' => 'unauthenticated',
+                  'is_authenticated' => false
                 ], $e->getStatusCode());
             }
         }

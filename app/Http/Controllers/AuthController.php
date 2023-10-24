@@ -9,7 +9,8 @@ class AuthController extends Controller
     public function login()
     {
         return response()->json([
-            'message' => 'login successful'
+            'message' => 'login successful',
+            'is_authenticated' => true
         ]);
     }
 }

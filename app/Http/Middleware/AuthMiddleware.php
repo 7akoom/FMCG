@@ -45,6 +45,10 @@ class AuthMiddleware
           $username = request()->header('username');
           $password = request()->header('password');
 
+          if($username == "REST") {
+            return abort(403);
+          }
+
            $response = Http::withOptions(['verify' => false])
                 ->withHeaders([
                     'Authorization' => 'basic TUVGQVBFWDpGWEh4VGV4NThWd0pwbXNaSC9sSHVybkQ1elAwWVo3Tm14M0xZaDF1SFVvPQ==',
@@ -64,7 +68,7 @@ class AuthMiddleware
 
         $cityCode = request()->header('citycode');
 
-       $response = Http::withOptions(['verify' => false])
+        $response = Http::withOptions(['verify' => false])
                 ->withHeaders([
                     'Authorization' => 'basic TUVGQVBFWDpGWEh4VGV4NThWd0pwbXNaSC9sSHVybkQ1elAwWVo3Tm14M0xZaDF1SFVvPQ==',
                     'Accept' => 'application/json',
