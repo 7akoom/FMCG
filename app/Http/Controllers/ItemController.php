@@ -209,26 +209,40 @@ class ItemController extends Controller
 
     public function getUnitWithPrice()
     {
+        request()->validate([
+            'item_id'  => ['required', 'numeric']
+        ]);
+
         $itemId = request()->get('item_id');
 
         $customer = request()->header("customer");
 
         $last_customer = DB::table($this->customersTable)->where('logicalref', $customer)->value('specode2');
 
+        if(!$last_customer) {
+            return response()->json([
+              'status' => 'error',
+              'message' => 'Customer not found',
+                'data' => []
+            ], 422);
+        }
+
         $data = DB::select("
             select
                 LG_888_UNITSETL.LOGICALREF as id,
                 LG_888_UNITSETL.name,
                 lg_888_itmunita.convfact1 as per,
-                (select
-                price
-            from
-                lg_888_prclist
-            where
-                clspecode2 = $last_customer
-                and cardref = $itemId
-                and active = 0
-                and ptype = 2) as price
+                (
+                    select
+                        price
+                    from
+                        lg_888_prclist
+                    where
+                        clspecode2 = $last_customer
+                        and cardref = $itemId
+                        and active = 0
+                        and ptype = 2
+                    ) as price
             from
                 lg_888_itmunita
                 join LG_888_UNITSETL on lg_888_itmunita.unitlineref = LG_888_UNITSETL.LOGICALREF
