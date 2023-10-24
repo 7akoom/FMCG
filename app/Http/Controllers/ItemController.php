@@ -211,7 +211,7 @@ class ItemController extends Controller
     {
         $itemId = request()->get('item_id');
 
-        $customer = $request->header("customer");
+        $customer = request()->header("customer");
 
         $last_customer = DB::table($this->customersTable)->where('logicalref', $customer)->value('specode2');
 
