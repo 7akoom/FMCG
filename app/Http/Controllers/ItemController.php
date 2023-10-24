@@ -51,7 +51,10 @@ class ItemController extends Controller
     public function index(Request $request)
     {
         $customer = $request->header("customer");
+
+
         $last_customer = DB::table($this->customersTable)->where('logicalref', $customer)->value('specode2');
+
         $items = DB::table("{$this->itemsTable}")
             ->leftJoin("$this->pricesTable", function ($join) use ($last_customer) {
                 $join->on("$this->pricesTable.cardref", "=", "$this->itemsTable.logicalref")
@@ -203,6 +206,41 @@ class ItemController extends Controller
             // 'total' => $items->total(),
         ], 200);
     }
+
+    public function getUnitWithPrice()
+    {
+        $itemId = request()->get('item_id');
+
+        $customer = $request->header("customer");
+
+        $last_customer = DB::table($this->customersTable)->where('logicalref', $customer)->value('specode2');
+
+        $data = DB::select("
+            select
+                LG_888_UNITSETL.LOGICALREF as id,
+                LG_888_UNITSETL.name,
+                lg_888_itmunita.convfact1 as per,
+                (select
+                price
+            from
+                lg_888_prclist
+            where
+                clspecode2 = $last_customer
+                and cardref = $itemId
+                and active = 0
+                and ptype = 2) as price
+            from
+                lg_888_itmunita
+                join LG_888_UNITSETL on lg_888_itmunita.unitlineref = LG_888_UNITSETL.LOGICALREF
+            where
+                lg_888_itmunita.itemref=$itemId
+        ");
+
+        return response()->json([
+            'data' => $data
+        ]);
+    }
+
     public function getItemDetails(Request $request)
     {
         $itemCode = $request->input('item_code');
