@@ -56,6 +56,7 @@ Route::controller(ItemController::class)->group(function () {
     Route::prefix('item')->group(function () {
         Route::prefix('salesman')->group(function () {
             Route::post('/items', 'index');
+            Route::post('getUnitWithPrice', 'getUnitWithPrice');
             Route::post('/itemdetails', 'getItemDetails');
         });
         Route::prefix('accounting')->group(function () {
