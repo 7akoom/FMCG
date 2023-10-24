@@ -242,7 +242,7 @@ class ItemController extends Controller
                         and cardref = $itemId
                         and active = 0
                         and ptype = 2
-                    ) as price
+                    ) / lg_888_itmunita.convfact1 as price 
             from
                 lg_888_itmunita
                 join LG_888_UNITSETL on lg_888_itmunita.unitlineref = LG_888_UNITSETL.LOGICALREF
