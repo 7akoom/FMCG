@@ -20,6 +20,7 @@ class CustomerController extends Controller
     protected $customersView;
     protected $payplansTable;
     protected $customersLimitTable;
+    protected $customersTransactionsTable;
     protected $customersSalesmansRelationsTable;
     protected $specialcodesTable;
     protected $invoicesTable;
@@ -41,6 +42,7 @@ class CustomerController extends Controller
         $this->salesman_id = $request->header('id');
         $this->salesmansTable = 'LG_SLSMAN';
         $this->customersTable = 'LG_' . $this->code . '_CLCARD';
+        $this->customersTransactionsTable = 'LG_' . $this->code . '_01_CLFLINE';
         $this->customersView = 'LV_' . $this->code . '_01_CLCARD';
         $this->payplansTable = 'LG_' . $this->code . '_PAYPLANS';
         $this->customersLimitTable = 'LG_' . $this->code . '_01_CLRNUMS';
@@ -323,7 +325,10 @@ class CustomerController extends Controller
                 "{$this->customersTable}.longitude",
                 "{$this->customersTable}.latitute as latitude"
             )
-            ->where(["{$this->customersTable}.code" => $customer, "{$this->customersSalesmansRelationsTable}.salesmanref" => DB::raw('lg_slsman.logicalref')])
+            ->where([
+                "{$this->customersTable}.code" => $customer,
+                "{$this->customersSalesmansRelationsTable}.salesmanref" => $this->salesman_id
+            ])
             ->whereNotNull("{$this->customersTable}.telnrs2")
             ->orderByDesc("{$this->customersSalesmansRelationsTable}.logicalref")
             ->first();
@@ -331,7 +336,7 @@ class CustomerController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'There is no data',
-                'data' => [],
+                'data' => $data
             ]);
         }
         return response()->json([
@@ -426,7 +431,7 @@ class CustomerController extends Controller
             ->join("$this->customersView", "$this->customersSalesmansRelationsTable.clientref", "=", "$this->customersView.logicalref")
             ->join("$this->payplansTable", "$this->payplansTable.logicalref", "=", "$this->customersTable.paymentref")
             ->leftjoin("$this->customersLimitTable", "$this->customersLimitTable.clcardref", "=", "$this->customersTable.logicalref")
-            ->join("$this->specialcodesTable", "$this->specialcodesTable.specode", "=", "$this->customersTable.specode2")
+            ->leftjoin("$this->specialcodesTable", "$this->specialcodesTable.specode", "=", "$this->customersTable.specode2")
             ->select(
                 "$this->customersTable.logicalref as customer_id",
                 "$this->customersTable.code as customer_code",
@@ -435,13 +440,17 @@ class CustomerController extends Controller
                 "$this->customersTable.city",
                 "$this->customersTable.country",
                 "$this->customersTable.telnrs1 as customer_phone",
+                DB::raw("(SELECT TOP 1 date_ FROM $this->invoicesTable WHERE clientref=$this->customersTable.logicalref ORDER BY date_ DESC) as last_invoice_date"),
+                DB::raw("(SELECT TOP 1 date_ FROM $this->customersTransactionsTable WHERE clientref=$this->customersTable.logicalref and trcode=1 ORDER BY date_ DESC) as last_payment_date"),
                 DB::raw("COALESCE($this->customersView.debit, 0) as debit"),
                 DB::raw("COALESCE($this->customersView.credit, 0) as credit"),
                 "$this->payplansTable.definition_ as payment_plan",
                 DB::raw("COALESCE($this->customersLimitTable.accrisklimit, 0) as limit"),
-                "$this->specialcodesTable.definition_ as price_group"
+                DB::raw("COALESCE($this->specialcodesTable.definition_, '') as price_group"),
             )
-            ->where(["$this->customersSalesmansRelationsTable.salesmanref" => $this->salesman_id, "$this->customersTable.active" => $this->isactive, "$this->specialcodesTable.codetype" => 1, "$this->specialcodesTable.specodetype" => 26]);
+            ->where([
+                "$this->customersSalesmansRelationsTable.salesmanref" => $this->salesman_id, "$this->customersTable.active" => $this->isactive, "$this->specialcodesTable.codetype" => 1, "$this->specialcodesTable.specodetype" => 26
+            ]);
         $result = $data->paginate($this->perpage);
         if ($result->isEmpty()) {
             return response()->json([
