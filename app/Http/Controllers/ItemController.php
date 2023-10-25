@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\LOG;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
 use App\Traits\Filterable;
@@ -225,7 +226,7 @@ class ItemController extends Controller
             ], 422);
         }
 
-        log()->debug('data', ['item' => $itemId, 'last_customer' => $last_customer]);
+        LOG::debug('data', ['item' => $itemId, 'last_customer' => $last_customer]);
 
         $data = DB::select("
             select
