@@ -209,13 +209,11 @@ class ItemController extends Controller
 
     public function getUnitWithPrice()
     {
-        request()->validate([
-            'item_id'  => ['required', 'numeric']
-        ]);
+      
 
-        $itemId = request()->get('item_id');
+        $itemId = request()->header('item_id') ?? 0;
 
-        $customer = request()->header("customer");
+        $customer = request()->header("customer") ?? 0;
 
         $last_customer = DB::table($this->customersTable)->where('logicalref', $customer)->value('specode2');
 
