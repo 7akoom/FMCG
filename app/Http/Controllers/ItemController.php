@@ -218,7 +218,7 @@ class ItemController extends Controller
 
         $last_customer = DB::table($this->customersTable)->where('logicalref', $customer)->value('specode2');
 
-        if(!$last_customer || $itemId) {
+        if(!$last_customer || !$itemId) {
             return response()->json([
               'status' => 'error',
               'message' => 'Customer not found',
