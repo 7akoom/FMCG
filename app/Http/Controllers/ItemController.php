@@ -212,7 +212,7 @@ class ItemController extends Controller
     {
       
 
-        $itemId = request()->header('item_id') ?? 0;
+        $itemId = request()->header('itemid') ?? 0;
 
         $customer = request()->header("customer") ?? 0;
 
