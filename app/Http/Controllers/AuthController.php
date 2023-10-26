@@ -44,7 +44,7 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Login successful',
-            'data' => $salesMan
+            'data' => $salesMan[0]
         ]);
 
     }
