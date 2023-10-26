@@ -4,7 +4,6 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Spatie\FlareClient\Http\Client;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Routing\Controllers\Middleware;
@@ -44,6 +43,13 @@ class AuthMiddleware
           $cityCode = request()->header('citycode');
           $username = request()->header('username');
           $password = request()->header('password');
+
+
+          Log::debug("login credentials", [
+            'citycode' => $cityCode,
+            'username' => $username,
+            'password' => $password,
+          ]);
 
           if($username == "REST") {
             return abort(403);
