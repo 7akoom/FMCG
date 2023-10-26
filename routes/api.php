@@ -12,7 +12,6 @@ use App\Http\Controllers\ItemDefController;
 use App\Http\Controllers\PayPlanController;
 use App\Http\Controllers\CurrencyController;
 use App\Http\Controllers\CustomerController;
-use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\SalesManController;
 use App\Http\Controllers\WareHouseController;
 use App\Http\Controllers\AuthController;
