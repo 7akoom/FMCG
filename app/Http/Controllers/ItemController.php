@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\LOG;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
 use App\Traits\Filterable;
@@ -209,17 +210,15 @@ class ItemController extends Controller
 
     public function getUnitWithPrice()
     {
-        request()->validate([
-            'item_id'  => ['required', 'numeric']
-        ]);
+      
 
-        $itemId = request()->get('item_id');
+        $itemId = request()->header('itemid') ?? 0;
 
-        $customer = request()->header("customer");
+        $customer = request()->header("customer") ?? 0;
 
         $last_customer = DB::table($this->customersTable)->where('logicalref', $customer)->value('specode2');
 
-        if(!$last_customer) {
+        if(!$last_customer || !$itemId) {
             return response()->json([
               'status' => 'error',
               'message' => 'Customer not found',
