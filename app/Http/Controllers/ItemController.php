@@ -226,8 +226,6 @@ class ItemController extends Controller
             ], 422);
         }
 
-        LOG::debug('data', ['item' => $itemId, 'last_customer' => $last_customer]);
-
         $data = DB::select("
             select
                 LG_888_UNITSETL.LOGICALREF as id,
