@@ -21,13 +21,33 @@ class AuthController extends Controller
         $username = request()->input('username');
         $password = request()->input('password');
 
-        $row = DB::connection('sqlsrv2')->select("
+        $isExists = DB::connection('sqlsrv2')->select("
             select * from TNM_KULLANICILAR where KullaniciAdi = '$username' and Sifre = '$password';
         ");
 
-        return response()->json([
-            'data' => $row
-        ]);
+        if(!$isExists){
+            return response()->json([
+                'message' => 'Login failed',
+            ], 422);
+        }
+
         
+        $salesMan = DB::select("
+            select * from LG_slsman where active = 0 and firmnr = 888 and DEFINITION_ = '$username'; 
+        ");
+
+        if(!$salesMan){
+            return response()->json([
+                'message' => 'Login failed',
+            ], 422);
+        }
+
+        return response()->json([
+            'message' => 'Login successful',
+            'data' => [
+                'salesman_id' => $salesMan['LOGICALREF']
+            ]
+        ]);
+
     }
 }
