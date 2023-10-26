@@ -14,7 +14,7 @@ class AuthController extends Controller
         ]);
     }
 
-    public function login2()
+    public function salesManLogin()
     {
         request()->validate([ 'username' => 'required','password' => 'required']);
            
