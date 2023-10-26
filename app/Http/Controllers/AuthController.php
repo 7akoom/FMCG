@@ -26,9 +26,10 @@ class AuthController extends Controller
         ");
 
         if(!$isExists){
-            return response()->json([
-                'message' => 'Login failed',
-            ], 422);
+                return response()->json([
+                'message' => 'login failed',
+                'data' => []
+            ]);
         }
 
         
@@ -38,8 +39,9 @@ class AuthController extends Controller
 
         if(!$salesMan || !isset($salesMan[0]->LOGICALREF)){
             return response()->json([
-                'message' => 'Login failed',
-            ], 422);
+                'message' => 'login failed',
+                'data' => []
+            ]);
         }
 
         return response()->json([
