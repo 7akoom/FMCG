@@ -74,7 +74,7 @@ class AuthMiddleware
 
         $cityCode = request()->header('citycode');
 
-        return Cache::remember('', 60 * 20, function () use ($cityCode) {
+        return Cache::remember("token:$cityCode", 60 * 20, function () use ($cityCode) {
                     $response = Http::withOptions(['verify' => false])
                         ->withHeaders([
                             'Authorization' => 'basic TUVGQVBFWDpGWEh4VGV4NThWd0pwbXNaSC9sSHVybkQ1elAwWVo3Tm14M0xZaDF1SFVvPQ==',
