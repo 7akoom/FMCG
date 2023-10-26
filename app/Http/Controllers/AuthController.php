@@ -36,7 +36,7 @@ class AuthController extends Controller
             select * from LG_slsman where active = 0 and firmnr = 888 and DEFINITION_ = '$username'; 
         ");
 
-        if(!$salesMan || isset($salesMan[0]->LOGICALREF)){
+        if(!$salesMan || !isset($salesMan[0]->LOGICALREF)){
             return response()->json([
                 'message' => 'Login failed',
             ], 422);
