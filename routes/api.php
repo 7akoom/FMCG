@@ -221,5 +221,6 @@ Route::controller(UnitController::class)->group(function () {
 Route::controller(AuthController::class)->group(function () {
     Route::prefix('auth')->group(function () {
         Route::post('login', 'login');
+        Route::post('login2', 'login2');
     });
 });
