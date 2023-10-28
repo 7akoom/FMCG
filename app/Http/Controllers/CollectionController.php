@@ -169,7 +169,7 @@ class CollectionController extends Controller
             "MIN_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
             "SEC_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('s'),
             "DOC_DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
-            "TIME" => strtotime(Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d H:i:s.v')),
+            "TIME" => calculateTime(),
             "CROSS_TC_XRATE" => 1,
             "CROSS_TC_CURR" => 30,
             "CROSS_TC_AMOUNT" => $request->amount,
@@ -225,7 +225,7 @@ class CollectionController extends Controller
             "SEC_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('s'),
             "DOC_DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
             "CURRSEL_TOTALS" => 1,
-            "TIME" => strtotime(Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d H:i:s.v')),
+            "TIME" => calculateTime(),
         ];
         $TRANSACTION = [
             "INTERNAL_REFERENCE" => 0,

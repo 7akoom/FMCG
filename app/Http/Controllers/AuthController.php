@@ -16,8 +16,8 @@ class AuthController extends Controller
 
     public function salesManLogin()
     {
-        request()->validate([ 'username' => 'required','password' => 'required']);
-           
+        request()->validate(['username' => 'required', 'password' => 'required']);
+
         $username = request()->input('username');
         $password = request()->input('password');
 
@@ -25,19 +25,19 @@ class AuthController extends Controller
             select * from TNM_KULLANICILAR where KullaniciAdi = '$username' and Sifre = '$password';
         ");
 
-        if(!$isExists){
-                return response()->json([
+        if (!$isExists) {
+            return response()->json([
                 'message' => 'login failed',
                 'data' => []
             ]);
         }
 
-        
+
         $salesMan = DB::select("
-            select * from LG_slsman where active = 0 and firmnr = 888 and DEFINITION_ = '$username'; 
+            select * from LG_slsman where active = 0 and firmnr = 888 and DEFINITION_ = '$username';
         ");
 
-        if(!$salesMan || !isset($salesMan[0]->LOGICALREF)){
+        if (!$salesMan || !isset($salesMan[0]->LOGICALREF)) {
             return response()->json([
                 'message' => 'login failed',
                 'data' => []
@@ -47,9 +47,9 @@ class AuthController extends Controller
         return response()->json([
             'message' => 'Login successful',
             'data' => [
-                'salesman_id' => $salesMan[0]->LOGICALREF
+                'salesman_id' => $salesMan[0]->LOGICALREF,
+                'salesman_position' => $salesMan[0]->POSITTION_,
             ]
         ]);
-
     }
 }
