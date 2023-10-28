@@ -65,7 +65,11 @@ class AuthController extends Controller
     {
         $username = request()->input('username');
 
-        $deviceId = $request()->header('deviceid');
+        $deviceId = request()->header('deviceid');
+
+        if(!$deviceId) {
+            return false;
+        }
 
         Log::debug("checking logging for user $username and device id $deviceId");
 
