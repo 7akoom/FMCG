@@ -7,6 +7,8 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use App\Traits\Filterable;
+
 
 
 class OrderController extends Controller
@@ -74,17 +76,44 @@ class OrderController extends Controller
             )
             ->where(["$this->ordersTable.trcode" => $this->type]);
 
-        if ($request->input('start_date') && $request->input('end_date')) {
-            if ($this->start_date != '-1' && $this->end_date != '-1') {
-                $order->whereBetween(DB::raw("CONVERT(date, $this->ordersTable.CAPIBLOCK_CREADEDDATE)"), [$this->start_date, $this->end_date]);
-            }
-        }
+        $this->applyFilters($order, [
+            "$this->customersTable.code" => [
+                'value' => '%' . $request->input('customer_code') . '%',
+                'operator' => 'LIKE',
+            ],
+            "$this->customersTable.definition_" => [
+                'value' => '%' . $request->input('customer_name') . '%',
+                'operator' => 'LIKE',
+            ],
+            "$this->ordersTable.ficheno" => [
+                'value' => '%' . $request->input('order_number') . '%',
+                'operator' => 'LIKE',
+            ],
+            "$this->ordersTable.sourceindex" => [
+                'value' => $request->input('warehouse_number'),
+                'operator' => '=',
+            ],
+            "$this->ordersTable.capiblock_createdby" => [
+                'value' => $request->input('added_by'),
+                'operator' => '=',
+            ],
+            "$this->ordersTable.capiblock_modifiedby" => [
+                'value' => $request->input('modified_by'),
+                'operator' => '=',
+            ],
+        ]);
 
-        if ($request->input('status')) {
-            if ($this->status != '-1') {
-                $order->where('status', $this->status);
-            }
-        }
+        // if ($request->input('start_date') && $request->input('end_date')) {
+        //     if ($this->start_date != '-1' && $this->end_date != '-1') {
+        //         $order->whereBetween(DB::raw("CONVERT(date, $this->ordersTable.CAPIBLOCK_CREADEDDATE)"), [$this->start_date, $this->end_date]);
+        //     }
+        // }
+
+        // if ($request->input('status')) {
+        //     if ($this->status != '-1') {
+        //         $order->where('status', $this->status);
+        //     }
+        // }
 
         $data = $order->orderBy("$this->ordersTable.capiblock_creadeddate", "desc")->paginate($this->perpage);
 
