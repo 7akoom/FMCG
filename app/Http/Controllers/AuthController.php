@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\LOG;
 
 class AuthController extends Controller
 {
@@ -37,9 +38,16 @@ class AuthController extends Controller
             select * from LG_slsman where active = 0 and firmnr = 888 and DEFINITION_ = '$username';
         ");
 
-        if (!$salesMan || !isset($salesMan[0]->LOGICALREF)) {
+        if (!$salesMan || !isset($salesMan[0])) {
             return response()->json([
                 'message' => 'login failed',
+                'data' => []
+            ]);
+        }
+
+        if(!$this->checkSalesManDevice()) {
+              return response()->json([
+                'message' => 'invalid device for the salesman',
                 'data' => []
             ]);
         }
@@ -51,5 +59,27 @@ class AuthController extends Controller
                 'salesman_position' => $salesMan[0]->POSITION_,
             ]
         ]);
+    }
+
+    private function checkSalesManDevice()
+    {
+        $username = request()->input('username');
+
+        $deviceId = $request()->header('deviceid');
+
+        Log::debug("checking logging for user $username and device id $deviceId");
+
+        $row =  DB::connection('sqlite')->select("SELECT * from users where username = '$username'");
+
+        if(!$row) {
+            DB::connection('sqlite')->select("Insert into users (username,device_id) values('$username', '$deviceId')");
+            return true;
+        }
+
+        if($row[0]->device_id == $deviceId) {
+            return true;
+        }
+
+        return false;
     }
 }
