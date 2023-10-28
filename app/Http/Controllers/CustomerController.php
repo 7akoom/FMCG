@@ -95,6 +95,33 @@ class CustomerController extends Controller
         ], 200);
     }
 
+    public function addCustomerData()
+    {
+        $salesmans = DB::table($this->salesmansTable)
+            ->select('logicalref as salesmsna_id', 'definition_ as salesman_name')
+            ->where(['firmnr' => $this->code, 'active' => 0])
+            ->get();
+        $payplans = DB::table($this->payplansTable)
+            ->select('logicalref as payplan_id', 'definition_ as payplan_name')
+            ->where(['active' => 0])
+            ->get();
+        $customers_types = DB::table($this->specialcodesTable)
+            ->select(
+                'logicalref as type_id',
+                'definition_ as type_name',
+                'specode as special_code'
+            )
+            ->where(['codetype' => 1, 'specodetype' => 26, 'spetyp2' => 1])
+            ->get();
+
+        return response()->json([
+            'status' => 'success',
+            'salesmans' => $salesmans,
+            'payplans' => $payplans,
+            'customers_types' => $customers_types,
+        ]);
+    }
+
     public function store(Request $request)
     {
         try {

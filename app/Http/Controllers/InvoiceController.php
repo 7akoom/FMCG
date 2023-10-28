@@ -109,6 +109,11 @@ class InvoiceController extends Controller
                 'operator' => '=',
             ],
         ]);
+        if ($request->input('start_date') && $request->input('end_date')) {
+            if ($this->start_date != '-1' && $this->end_date != '-1') {
+                $invoices->whereBetween(DB::raw("CONVERT(date, $this->invoicesTable.CAPIBLOCK_CREADEDDATE)"), [$this->start_date, $this->end_date]);
+            }
+        }
         $invoicesData = $invoices->orderBy("$this->invoicesTable.capiblock_creadeddate", "desc")->paginate($this->perpage);
         if ($invoicesData->isEmpty()) {
             return response()->json([
