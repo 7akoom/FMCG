@@ -13,6 +13,8 @@ use App\Traits\Filterable;
 
 class OrderController extends Controller
 {
+    use Filterable;
+
     protected $code;
     protected $salesman_id;
     protected $type;
