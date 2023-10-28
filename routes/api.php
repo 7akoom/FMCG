@@ -38,6 +38,8 @@ Route::controller(CustomerController::class)->group(function () {
             Route::post('/updatecustomerstatus/{id}', 'UpdatePendingCustomer');
             Route::post('/salesmancustomers', 'accountingSalesmanCustomers');
             Route::post('/allcustomers', 'allCustomers');
+            Route::post('/newcustomer', 'store');
+            Route::post('/addCustomerData', 'addCustomerData');
         });
         Route::prefix('salesman')->group(function () {
             Route::post('/customers', 'salesmancustomers');

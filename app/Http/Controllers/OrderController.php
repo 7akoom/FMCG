@@ -77,6 +77,14 @@ class OrderController extends Controller
                 "$this->ordersTable.status as order_status"
             )
             ->where(["$this->ordersTable.trcode" => $this->type]);
+        if ($request->input('start_date')) {
+            $start_date = Carbon::parse($request->input('start_date'))
+                ->format('Y-m-d H:i:s');
+        }
+
+        if ($request->input('end_date')) {
+            $end_date = Carbon::parse($request->input('end_date'))->format('Y-m-d H:i:s');
+        }
 
         $this->applyFilters($order, [
             "$this->customersTable.code" => [
@@ -103,13 +111,25 @@ class OrderController extends Controller
                 'value' => $request->input('modified_by'),
                 'operator' => '=',
             ],
+            "$this->ordersTable.status" => [
+                'value' => $request->input('status'),
+                'operator' => '=',
+            ],
+            //     "$this->ordersTable.date_" => [
+            //         'value' => strtotime($start_date),
+            //         'operator' => '>=',
+            //     ],
+            //     "$this->ordersTable.date_" => [
+            //         'value' => strtotime($end_date),
+            //         'operator' => '<=',
+            //     ],
         ]);
 
-        // if ($request->input('start_date') && $request->input('end_date')) {
-        //     if ($this->start_date != '-1' && $this->end_date != '-1') {
-        //         $order->whereBetween(DB::raw("CONVERT(date, $this->ordersTable.CAPIBLOCK_CREADEDDATE)"), [$this->start_date, $this->end_date]);
-        //     }
-        // }
+        if ($request->input('start_date') && $request->input('end_date')) {
+            if ($this->start_date != '-1' && $this->end_date != '-1') {
+                $order->whereBetween(DB::raw("CONVERT(date, $this->ordersTable.CAPIBLOCK_CREADEDDATE)"), [$this->start_date, $this->end_date]);
+            }
+        }
 
         // if ($request->input('status')) {
         //     if ($this->status != '-1') {
@@ -118,7 +138,6 @@ class OrderController extends Controller
         // }
 
         $data = $order->orderBy("$this->ordersTable.capiblock_creadeddate", "desc")->paginate($this->perpage);
-
         if ($data->isEmpty()) {
             return response()->json([
                 'status' => 'success',
