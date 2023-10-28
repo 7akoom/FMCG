@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\LOG;
+use Illuminate\Support\Facades\Log;
 
 class AuthController extends Controller
 {
