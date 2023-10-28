@@ -48,7 +48,7 @@ class AuthController extends Controller
             'message' => 'Login successful',
             'data' => [
                 'salesman_id' => $salesMan[0]->LOGICALREF,
-                'salesman_position' => $salesMan[0]->POSITTION_,
+                'salesman_position' => $salesMan[0]->POSITION_,
             ]
         ]);
     }
