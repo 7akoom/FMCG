@@ -76,7 +76,7 @@ class OrderController extends Controller
             )
             ->where(["$this->ordersTable.trcode" => $this->type]);
 
-        $this->applyFilters($order, [
+        $order->applyFilters($order, [
             "$this->customersTable.code" => [
                 'value' => '%' . $request->input('customer_code') . '%',
                 'operator' => 'LIKE',
