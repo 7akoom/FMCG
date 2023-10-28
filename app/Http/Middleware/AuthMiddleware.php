@@ -55,6 +55,21 @@ class AuthMiddleware
             return abort(403);
           }
 
+            return Cache::remember("token:$username:$cityCode", 60 * 20, function () use ($username, $password ,$cityCode) {
+                    $response = Http::withOptions(['verify' => false])
+                        ->withHeaders([
+                            'Authorization' => 'basic TUVGQVBFWDpGWEh4VGV4NThWd0pwbXNaSC9sSHVybkQ1elAwWVo3Tm14M0xZaDF1SFVvPQ==',
+                            'Accept' => 'application/json',
+                            'Content-Type' => 'application/json'
+                        ])
+                        ->withBody("grant_type=password&username=REST&firmno=$cityCode&password=REST454545", 'text/plain')
+                        ->post('https://10.27.0.109:32002/api/v1/token');
+            
+                Log::debug('response', ['data' => $response->json()]);
+            
+                return $response['access_token'] ?? abort(403);
+        });
+
            $response = Http::withOptions(['verify' => false])
                 ->withHeaders([
                     'Authorization' => 'basic TUVGQVBFWDpGWEh4VGV4NThWd0pwbXNaSC9sSHVybkQ1elAwWVo3Tm14M0xZaDF1SFVvPQ==',
