@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use App\Traits\Filterable;
 use Illuminate\Database\Query\Builder;
+use Illuminate\Support\Facades\Auth;
 
 class InvoiceController extends Controller
 {
@@ -673,7 +674,7 @@ class InvoiceController extends Controller
             "RC_NET" => $request->net_total,
             "NOTES1" => $request->notes,
             "PAYMENT_CODE" => $request->payment_code,
-            "CREATED_BY" => 137,
+            "CREATED_BY" => request()->header('username'),
             "DATE_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
             "HOUR_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('H'),
             "MIN_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
@@ -696,8 +697,7 @@ class InvoiceController extends Controller
             "RC_RATE" => 1,
             "RC_NET" => $request->net_total,
             "PAYMENT_CODE" => $request->payment_code,
-            "CREATED_BY" => 137,
-            "DATE_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "CREATED_BY" => request()->header('username'),            "DATE_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
             "HOUR_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('H'),
             "MIN_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
             "SEC_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
@@ -831,8 +831,7 @@ class InvoiceController extends Controller
             "RC_XRATE" => 1,
             "PAYMENT_CODE" => $request->payment_code,
             // "PAYDEFREF" => $request->customer_payplan,
-            "CREATED_BY" => 137,
-            "DATE_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d H:i:s.v'),
+            "CREATED_BY" => request()->header('username'),            "DATE_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d H:i:s.v'),
             "HOUR_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('H'),
             "MIN_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
             "SEC_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
@@ -857,8 +856,7 @@ class InvoiceController extends Controller
             "RC_RATE" => 1,
             "RC_NET" => $request->net_total,
             "PAYMENT_CODE" => $request->payment_code,
-            "CREATED_BY" => 137,
-            "DATE_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d H:i:s.v'),
+            "CREATED_BY" => request()->header('username'),            "DATE_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d H:i:s.v'),
             "HOUR_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('H'),
             "MIN_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
             "SEC_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
@@ -1410,8 +1408,7 @@ class InvoiceController extends Controller
             "RC_NET" => $request->net_total,
             "NOTES1" => $request->notes,
             "PAYMENT_CODE" => $request->payment_code,
-            "CREATED_BY" => 137,
-            "DATE_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "CREATED_BY" => request()->header('username'),            "DATE_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
             "HOUR_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('H'),
             "MIN_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
             "SEC_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
@@ -1433,8 +1430,7 @@ class InvoiceController extends Controller
             "RC_RATE" => 1,
             "RC_NET" => $request->net_total,
             "PAYMENT_CODE" => $request->payment_code,
-            "CREATED_BY" => 137,
-            "DATE_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "CREATED_BY" => request()->header('username'),            "DATE_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
             "HOUR_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('H'),
             "MIN_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
             "SEC_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
