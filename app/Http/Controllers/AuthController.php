@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\LOG;
+use Illuminate\Support\Facades\Log;
 
 class AuthController extends Controller
 {
@@ -66,12 +66,12 @@ class AuthController extends Controller
         $username = request()->input('username');
 
         $deviceId = request()->header('deviceid');
+        
+        Log::debug("checking logging for user $username and device id $deviceId");
 
         if(!$deviceId) {
             return false;
         }
-
-        Log::debug("checking logging for user $username and device id $deviceId");
 
         $row =  DB::connection('sqlite')->select("SELECT * from users where username = '$username'");
 
