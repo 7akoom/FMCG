@@ -415,7 +415,7 @@ class OrderController extends Controller
             "RC_NET" => $request->net_total,
             "PAYMENT_CODE" => $request->payment_code,
             "ORDER_STATUS" => 1,
-            "CREATED_BY" => 141,
+            "CREATED_BY" => request()->header('username'),
             "DATE_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d H:i:s.v'),
             "HOUR_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('H'),
             "MIN_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('i'),

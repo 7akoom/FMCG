@@ -158,6 +158,7 @@ class SafeController extends Controller
 
     public function addSafe(Request $request)
     {
+        $creator = $this->fetchValueFromTable('l_capiuser', 'name', request()->header('username'), 'nr');
         $currency = DB::table($this->currenciesTable)
             ->select('logicalref as id', 'curcode as currency_code', 'curname as currency_name')
             ->where('firmnr', 500)
@@ -177,6 +178,7 @@ class SafeController extends Controller
             'DEFINITION_' => $request->safe_code,
             'RECSTATUS' => 1,
         ];
+
         $mergedDefaultValues = array_merge($defaultValues, $overrides);
         $safeColumns = Schema::getColumnListing($this->safesTable);
         $defaultSafeValues = array_fill_keys($safeColumns, 0);
@@ -203,7 +205,7 @@ class SafeController extends Controller
             'CCURRENCY' => $request->currency_type,
             'CURRATETYPE' => $request->exchange_price_type,
             'FIXEDCURRTYPE' => $request->is_currency_type_changable,
-            'CAPIBLOCK_CREATEDBY' => 0,
+            "CAPIBLOCK_CREATEDBY" => $creator,
             'CAPIBLOCK_CREADEDDATE' => DB::raw("convert(datetime,'$now',101)"),
             'CAPIBLOCK_CREATEDHOUR' => Carbon::now()->timezone('Asia/Baghdad')->format('H'),
             'CAPIBLOCK_CREATEDMIN' => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
