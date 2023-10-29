@@ -98,6 +98,6 @@ class AuthMiddleware
         request()->debug('logging request', [
             'data' => request()->all(),
             'url' => request()->url()
-        ])
+        ]);
     }
 }
