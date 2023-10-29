@@ -7,6 +7,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use App\Traits\Filterable;
 
 
@@ -63,6 +64,8 @@ class OrderController extends Controller
     // retrieve orders list
     public function index(Request $request)
     {
+        Log::debug('request list', ['data' => $request->all()]);
+        
         $order = DB::table("$this->salesmansTable")
             ->join("$this->ordersTable", "$this->ordersTable.salesmanref", "=", "lg_slsman.logicalref")
             ->join("$this->customersTable", "$this->customersTable.logicalref", "=", "$this->ordersTable.clientref")
