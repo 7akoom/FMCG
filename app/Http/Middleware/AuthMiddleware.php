@@ -58,6 +58,7 @@ class AuthMiddleware
 
         return Cache::remember("token:$username:$cityCode", 60 * 20, function () use ($username, $password, $cityCode) {
             $response = Http::withOptions(['verify' => false])
+                ->timeout(1000)
                 ->withHeaders([
                     'Authorization' => 'basic TUVGQVBFWDpGWEh4VGV4NThWd0pwbXNaSC9sSHVybkQ1elAwWVo3Tm14M0xZaDF1SFVvPQ==',
                     'Accept' => 'application/json',
@@ -79,6 +80,7 @@ class AuthMiddleware
 
         return Cache::remember("token:$cityCode", 60 * 20, function () use ($cityCode) {
                     $response = Http::withOptions(['verify' => false])
+                     ->timeout(1000)
                         ->withHeaders([
                             'Authorization' => 'basic TUVGQVBFWDpGWEh4VGV4NThWd0pwbXNaSC9sSHVybkQ1elAwWVo3Tm14M0xZaDF1SFVvPQ==',
                             'Accept' => 'application/json',
