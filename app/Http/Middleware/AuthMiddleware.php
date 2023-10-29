@@ -33,6 +33,7 @@ class AuthMiddleware
             'Authorization' => 'Bearer ' . $token,
         ]);
 
+        $this->logRequest();
 
         return $next($request);
     }
@@ -90,6 +91,13 @@ class AuthMiddleware
             
                 return $response['access_token'] ?? abort(403);
         });
-       
-}
+    }
+
+    private function logRequest()
+    {
+        request()->debug('logging request', [
+            'data' => request()->all(),
+            'url' => request()->url()
+        ])
+    }
 }
