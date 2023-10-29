@@ -95,7 +95,7 @@ class AuthMiddleware
 
     private function logRequest()
     {
-        request()->debug('logging request', [
+        Log::debug('logging request', [
             'data' => request()->all(),
             'url' => request()->url()
         ]);
