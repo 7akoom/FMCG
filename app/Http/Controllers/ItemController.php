@@ -2,12 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use Throwable;
+use App\Traits\Filterable;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\LOG;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
-use App\Traits\Filterable;
 use Illuminate\Database\Query\Builder;
 
 
@@ -15,6 +16,8 @@ use Illuminate\Database\Query\Builder;
 class ItemController extends Controller
 {
     protected $code;
+    protected $username;
+    protected $usersTable;
     protected $customersTable;
     protected $specialcodesTable;
     protected $brandsTable;
@@ -30,9 +33,18 @@ class ItemController extends Controller
     protected $brand;
     protected $paginate;
 
+    private function fetchValueFromTable($table, $column, $value1, $value2)
+    {
+        return DB::table($table)
+            ->where($column, $value1)
+            ->value($value2);
+    }
+
     public function __construct(Request $request)
     {
         $this->code = $request->header('citycode');
+        $this->username = $request->header('username');
+        $this->usersTable = 'L_CAPIUSER';
         $this->customersTable = 'LG_' . $this->code . '_CLCARD';
         $this->specialcodesTable = 'LG_' . $this->code . '_SPECODES';
         $this->brandsTable = 'LG_' . $this->code . '_MARK';
@@ -210,7 +222,7 @@ class ItemController extends Controller
 
     public function getUnitWithPrice()
     {
-      
+
 
         $itemId = request()->header('itemid') ?? 0;
 
@@ -218,10 +230,10 @@ class ItemController extends Controller
 
         $last_customer = DB::table($this->customersTable)->where('logicalref', $customer)->value('specode2');
 
-        if(!$last_customer || !$itemId) {
+        if (!$last_customer || !$itemId) {
             return response()->json([
-              'status' => 'error',
-              'message' => 'Customer not found',
+                'status' => 'error',
+                'message' => 'Customer not found',
                 'data' => []
             ], 422);
         }
@@ -241,7 +253,7 @@ class ItemController extends Controller
                         and cardref = $itemId
                         and active = 0
                         and ptype = 2
-                    ) / lg_888_itmunita.convfact1 as price 
+                    ) / lg_888_itmunita.convfact1 as price
             from
                 lg_888_itmunita
                 join LG_888_UNITSETL on lg_888_itmunita.unitlineref = LG_888_UNITSETL.LOGICALREF
@@ -330,5 +342,75 @@ class ItemController extends Controller
             'message' => 'Items list',
             'data' => $items,
         ], 200);
+    }
+    public function scrapSlip()
+    {
+        $user_nr = $this->fetchValueFromTable($this->usersTable, 'name', $this->username, 'nr');
+        $data = [
+            "LOGICALREF" => 0,
+            "GROUP" => 3,
+            "TYPE" => 11,
+            "NUMBER" => "~",
+            "DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "TIME" => calculateTime(),
+            "DOC_NUMBER" => request()->documnet_number,
+            "SOURCE_WH" => request()->source_warehouse,
+            "TOTAL_DISCOUNTED" => request()->amount,
+            "TOTAL_GROSS" => request()->amount,
+            "TOTAL_NET" => request()->amount,
+            "RC_RATE" => 1,
+            "RC_NET" => request()->amount,
+            "CREATED_BY" => $user_nr,
+            "DATE_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "HOUR_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('h'),
+            "MIN_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
+            "SEC_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('s'),
+            "CURRSEL_TOTALS" => 1,
+            "SHIP_DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "SHIP_TIME" => calculateTime(),
+            "DOC_DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "DOC_TIME" => calculateTime(),
+        ];
+        $transactions = request()->input('TRANSACTIONS.items');
+        foreach ($transactions as $item) {
+            $itemData = [
+                "INTERNAL_REFERENCE" => 0,
+                "ITEM_CODE" => $item['item_code'],
+                "LINE_TYPE" => $item['item_type'],
+                "SOURCEINDEX" => $data['SOURCE_WH'],
+                "QUANTITY" => $item['item_quantity'],
+                "PRICE" => $item['item_price'],
+                "TOTAL" => $item['item_total'],
+                "NET_TOTAL" => $item['item_total'],
+                "RC_XRATE" => 1,
+                "UNIT_CONV1" => 1,
+                "UNIT_CONV2" => 1,
+                "VAT_BASE" => $item['item_total'],
+            ];
+            $data['TRANSACTIONS']['items'][] = $itemData;
+        }
+        dd(request()->header('authorization'));
+        try {
+            $response = Http::withOptions([
+                'verify' => false,
+            ])
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                    'Authorization' => request()->header('authorization')
+                ])
+                ->withBody(json_encode($data), 'application/json')
+                ->post('https://10.27.0.109:32002/api/v1/salesInvoices');
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Invoice saved successfully',
+                'invoice' => json_decode($response),
+            ], 200);
+        } catch (Throwable $e) {
+            return response()->json([
+                'status' => 'Invoice failed',
+                'message' => $e->getMessage(),
+            ], 422);
+        }
     }
 }
