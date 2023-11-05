@@ -22,16 +22,16 @@ class AuthController extends Controller
         $username = request()->input('username');
         $password = request()->input('password');
 
-        $isExists = DB::connection('sqlsrv2')->select("
-            select * from TNM_KULLANICILAR where KullaniciAdi = '$username' and Sifre = '$password';
-        ");
+        // $isExists = DB::connection('sqlsrv2')->select("
+        //     select * from TNM_KULLANICILAR where KullaniciAdi = '$username' and Sifre = '$password';
+        // ");
 
-        if (!$isExists) {
-            return response()->json([
-                'message' => 'login failed',
-                'data' => []
-            ]);
-        }
+        // if (!$isExists) {
+        //     return response()->json([
+        //         'message' => 'login failed',
+        //         'data' => []
+        //     ]);
+        // }
 
 
         $salesMan = DB::select("
