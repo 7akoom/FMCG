@@ -73,9 +73,9 @@ class AuthController extends Controller
             return false;
         }
 
-        $user =  DB::connection('sqlite')->select("SELECT * from users where username = '$username' and device_id = '$deviceId");
+        $user =  DB::connection('sqlite')->select("SELECT * from users where username = '$username' and device_id = '$deviceId'");
 
-        // $device = DB::connection('sqlite')->select("SELECT * from users where device_id = '$deviceId'");
+        //   $device = DB::connection('sqlite')->select("SELECT * from users where device_id = '$deviceId'");
 
         if(!count($user)) {
             DB::connection('sqlite')->select("Insert into users (username,device_id) values('$username', '$deviceId')");
