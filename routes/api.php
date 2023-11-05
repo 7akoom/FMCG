@@ -65,6 +65,7 @@ Route::controller(ItemController::class)->group(function () {
             Route::post('/item', 'finalItem');
             Route::post('/filterbybrand', 'searchbybrand');
             Route::post('/itemdetails', 'getItemDetails');
+            Route::post('/scrap-slip', 'scrapSlip');
         });
     });
 });
@@ -163,6 +164,7 @@ Route::controller(WareHouseController::class)->group(function () {
         Route::post('/merkez', 'mainWHouse');
         Route::post('/cashvan', 'cashvanWHouse');
         Route::post('/wastage', 'wastageWHouse');
+        Route::post('/whlist', 'wHouseList');
     });
 });
 
@@ -192,6 +194,7 @@ Route::controller(CollectionController::class)
         Route::prefix('collection')
             ->group(function () {
                 Route::prefix('accounting')->group(function () {
+                    Route::post('/addtransactiondata', 'addTransactionData');
                     Route::post('/transferofreceivables', 'transferFromSalesmanToAccountant');
                     Route::post('/newcurrentaccountcollection', 'currentAccountCollections');
                     Route::post('/newcurrentaccountpayment', 'currentAccountPayment');
@@ -199,6 +202,7 @@ Route::controller(CollectionController::class)
                 Route::prefix('salesman')
                     ->group(function () {
                         Route::post('/newcurrentaccountcollection', 'currentAccountCollections');
+                        Route::post('/makeinvoice', '64499');
                     });
             });
     });

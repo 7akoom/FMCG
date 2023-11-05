@@ -130,13 +130,6 @@ class OrderController extends Controller
                 $order->whereBetween(DB::raw("CONVERT(date, $this->ordersTable.CAPIBLOCK_CREADEDDATE)"), [$this->start_date, $this->end_date]);
             }
         }
-
-        // if ($request->input('status')) {
-        //     if ($this->status != '-1') {
-        //         $order->where('status', $this->status);
-        //     }
-        // }
-
         $data = $order->orderBy("$this->ordersTable.capiblock_creadeddate", "desc")->paginate($this->perpage);
         if ($data->isEmpty()) {
             return response()->json([

@@ -21,6 +21,7 @@ class WareHouseController extends Controller
     protected $weightsTable;
     protected $unitsTable;
     protected $stocksTable;
+    protected $wareHousesTable;
 
     public function __construct(Request $request)
     {
@@ -32,6 +33,7 @@ class WareHouseController extends Controller
         $this->brand = $request->header('brand');
         $this->perpage = $request->input('per_page', 50);
         $this->page = $request->input('page', 1);
+        $this->wareHousesTable = 'L_CAPIWHOUSE';
         $this->itemsTable = 'LG_' . $this->code . '_ITEMS';
         $this->specialCodesTable = 'LG_' . $this->code . '_SPECODES';
         $this->brandsTable = 'LG_' . $this->code . '_MARK';
@@ -39,7 +41,7 @@ class WareHouseController extends Controller
         $this->unitsTable = 'LG_' . $this->code . '_UNITSETF';
         $this->stocksTable = 'LV_' . $this->code . '_01_STINVTOT';
     }
-    // retrieve items by stock (0 => merkez, 9 => wastage, 10 => cashvan)
+
     public function mainWHouse(Request $request)
     {
         $items = DB::table("$this->itemsTable as item")
@@ -134,7 +136,6 @@ class WareHouseController extends Controller
             if ($this->brand == -1) {
                 $items->get();
             } else {
-                // $items->where("$itemsTable.markerf", $brand);
                 $items->where("$this->brandsTable.logicalref", $this->brand);
             }
         }
@@ -159,7 +160,6 @@ class WareHouseController extends Controller
         ], 200);
     }
 
-    // retrieve cashvan items
     public function cashvanWHouse(Request $request)
     {
         $items = DB::table("{$this->itemsTable} as item")
@@ -252,7 +252,6 @@ class WareHouseController extends Controller
             if ($this->brand == -1) {
                 $items->get();
             } else {
-                // $items->where("item.markerf", $brand);
                 $items->where("$this->brandsTable.logicalref", $this->brand);
             }
         }
@@ -276,7 +275,7 @@ class WareHouseController extends Controller
             'total' => $result->total(),
         ], 200);
     }
-    //retrieve wastage items
+
     public function wastageWHouse(Request $request)
     {
         $items = DB::table("$this->itemsTable as item")
@@ -369,7 +368,6 @@ class WareHouseController extends Controller
             if ($this->brand == -1) {
                 $items->get();
             } else {
-                // $items->where("item.markerf", $brand);
                 $items->where("$this->brandsTable.logicalref", $this->brand);
             }
         }
@@ -391,6 +389,17 @@ class WareHouseController extends Controller
             'per_page' => $result->perPage(),
             'last_page' => $result->lastPage(),
             'total' => $result->total(),
+        ], 200);
+    }
+    public function wHouseList()
+    {
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Warehoues lists',
+            'data' => DB::table($this->wareHousesTable)
+                ->where('firmnr', $this->code)
+                ->select('logicalref as id', 'nr as number', 'name')
+                ->get(),
         ], 200);
     }
 }
