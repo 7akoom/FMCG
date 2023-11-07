@@ -63,7 +63,7 @@ class AuthController extends Controller
 
     private function checkSalesManDevice()
     {
-        $username = request()->input('username');
+        $username = strtolower(request()->input('username'));
 
         $deviceId = request()->header('deviceid');
         
@@ -83,7 +83,7 @@ class AuthController extends Controller
         if($user[0]->device_id == $deviceId) {
             return true;
         }
-        
+
         return false;
     }
 }
