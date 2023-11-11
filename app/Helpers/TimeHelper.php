@@ -1,5 +1,7 @@
 <?php
 
+
+
 function calculateTime()
 {
     $milliseconds = now()->format('v');
