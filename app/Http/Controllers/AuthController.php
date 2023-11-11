@@ -22,16 +22,16 @@ class AuthController extends Controller
         $username = request()->input('username');
         $password = request()->input('password');
 
-        $isExists = DB::connection('sqlsrv2')->select("
-            select * from TNM_KULLANICILAR where KullaniciAdi = '$username' and Sifre = '$password';
-        ");
+        // $isExists = DB::connection('sqlsrv2')->select("
+        //     select * from TNM_KULLANICILAR where KullaniciAdi = '$username' and Sifre = '$password';
+        // ");
 
-        if (!$isExists) {
-            return response()->json([
-                'message' => 'login failed',
-                'data' => []
-            ]);
-        }
+        // if (!$isExists) {
+        //     return response()->json([
+        //         'message' => 'login failed',
+        //         'data' => []
+        //     ]);
+        // }
 
 
         $salesMan = DB::select("
@@ -63,7 +63,7 @@ class AuthController extends Controller
 
     private function checkSalesManDevice()
     {
-        $username = request()->input('username');
+        $username = strtolower(request()->input('username'));
 
         $deviceId = request()->header('deviceid');
         
@@ -73,16 +73,14 @@ class AuthController extends Controller
             return false;
         }
 
-        $user =  DB::connection('sqlite')->select("SELECT * from users where username = '$username'");
+        $user =  DB::connection('sqlite')->select("SELECT * from users where username = '$username' order by id desc limit 1 ");
 
-        $device = DB::connection('sqlite')->select("SELECT * from users where device_id = '$deviceId'");
-
-        if(!count($user) && !count($device)) {
+        if(!count($user)) {
             DB::connection('sqlite')->select("Insert into users (username,device_id) values('$username', '$deviceId')");
             return true;
         }
 
-        if($user[0]->device_id == $deviceId && $device[0]->username == $username) {
+        if($user[0]->device_id == $deviceId) {
             return true;
         }
 
