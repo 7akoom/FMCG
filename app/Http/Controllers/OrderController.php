@@ -404,7 +404,7 @@ class OrderController extends Controller
             "RC_RATE" => 1,
             "RC_NET" => $request->net_total,
             "PAYMENT_CODE" => $request->payment_code,
-            "ORDER_STATUS" => 1,
+            "ORDER_STATUS" => 4,
             "CREATED_BY" => request()->header('username'),
             "DATE_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d H:i:s.v'),
             "HOUR_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('H'),
@@ -447,7 +447,7 @@ class OrderController extends Controller
             if ($item['item_type'] == 0) {
                 $itemData["UNIT_CONV1"] = 1;
                 $itemData["UNIT_CONV2"] = 1;
-                $itemData["ORDER_RESERVE"] = 1;
+                // $itemData["ORDER_RESERVE"] = 1;
                 $itemData["RESERVE_DATE"] = Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d');
                 $itemData["RESERVE_AMOUNT"] = $quantity;
             } else {
