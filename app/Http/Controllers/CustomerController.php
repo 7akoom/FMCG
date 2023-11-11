@@ -378,22 +378,24 @@ class CustomerController extends Controller
     {
         $customer = $request->header('customer');
         $data = DB::table("{$this->customersSalesmansRelationsTable}")
-            ->join('lg_slsman', "{$this->customersSalesmansRelationsTable}.salesmanref", '=', 'lg_slsman.logicalref')
-            ->join("{$this->customersTable}", "{$this->customersSalesmansRelationsTable}.clientref", '=', "{$this->customersTable}.logicalref")
+            ->join('lg_slsman', "$this->customersSalesmansRelationsTable.salesmanref", '=', 'lg_slsman.logicalref')
+            ->join("$this->customersTable", "$this->customersSalesmansRelationsTable.clientref", '=', "$this->customersTable.logicalref")
+            ->join("$this->payplansTable", "$this->payplansTable.logicalref", '=', "$this->customersTable.paymentref")
             ->select(
-                "{$this->customersSalesmansRelationsTable}.salesmanref",
+                "$this->customersSalesmansRelationsTable.salesmanref",
                 'lg_slsman.code as salesman_code',
                 'lg_slsman.definition_ as salesman_name',
-                "{$this->customersTable}.logicalref as customer_id",
-                "{$this->customersTable}.definition2 as customer_name",
-                "{$this->customersTable}.code as customer_code",
-                "{$this->customersTable}.definition_ as market_name",
-                "{$this->customersTable}.addr1 as customer_address",
-                "{$this->customersTable}.PPGROUPCODE as group",
-                "{$this->customersTable}.telnrs1 as customer_phone",
-                "{$this->customersTable}.telnrs2 as second_customer_phone",
-                "{$this->customersTable}.longitude",
-                "{$this->customersTable}.latitute as latitude"
+                "$this->customersTable.logicalref as customer_id",
+                "$this->customersTable.definition2 as customer_name",
+                "$this->customersTable.code as customer_code",
+                "$this->payplansTable.code as payplan_code",
+                "$this->customersTable.definition_ as market_name",
+                "$this->customersTable.addr1 as customer_address",
+                "$this->customersTable.PPGROUPCODE as group",
+                "$this->customersTable.telnrs1 as customer_phone",
+                "$this->customersTable.telnrs2 as second_customer_phone",
+                "$this->customersTable.longitude",
+                "$this->customersTable.latitute as latitude"
             )
             ->where([
                 "{$this->customersTable}.code" => $customer,
@@ -461,6 +463,7 @@ class CustomerController extends Controller
         $data = DB::table($this->customersSalesmansRelationsTable)
             ->join("$this->salesmansTable", "$this->customersSalesmansRelationsTable.salesmanref", '=', "$this->salesmansTable.logicalref")
             ->join("$this->customersTable", "$this->customersSalesmansRelationsTable.clientref", '=', "$this->customersTable.logicalref")
+            ->join("$this->payplansTable", "$this->payplansTable.logicalref", '=', "$this->customersTable.paymentref")
             ->select(
                 "$this->customersSalesmansRelationsTable.salesmanref as salesman_id",
                 "$this->salesmansTable.code as salesman_code",
@@ -468,6 +471,7 @@ class CustomerController extends Controller
                 "$this->customersTable.logicalref as customer_id",
                 "$this->customersTable.definition2 as customer_name",
                 "$this->customersTable.code as customer_code",
+                "$this->payplansTable.code as payplan_code",
                 "$this->customersTable.definition_ as market_name",
                 "$this->customersTable.addr1 as customer_address",
                 "$this->customersTable.PPGROUPCODE as group",
