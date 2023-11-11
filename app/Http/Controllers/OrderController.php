@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use App\Traits\Filterable;
+use App\Helpers\TimeHelper;
 
 
 
@@ -396,7 +397,8 @@ class OrderController extends Controller
             'INTERNAL_REFERENCE' => 0,
             'NUMBER' => '~',
             'DATE' => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d H:i:s.v'),
-            'TIME' => calculateTime(),            'ARP_CODE' => $customer,
+            'TIME' => TimeHelper::calculateTime(),
+            'ARP_CODE' => $customer,
             "TOTAL_DISCOUNTS" => $request->total_discounts,
             "TOTAL_DISCOUNTED" => $request->after_discount,
             "TOTAL_GROSS" => $request->before_discount,

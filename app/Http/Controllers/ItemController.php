@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Throwable;
 use App\Traits\Filterable;
+use App\Helpers\TimeHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -352,7 +353,7 @@ class ItemController extends Controller
             "TYPE" => 11,
             "NUMBER" => "~",
             "DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
-            "TIME" => calculateTime(),
+            "TIME" => TimeHelper::calculateTime(),
             "DOC_NUMBER" => request()->documnet_number,
             "SOURCE_WH" => request()->source_warehouse,
             "TOTAL_DISCOUNTED" => request()->amount,
@@ -367,9 +368,9 @@ class ItemController extends Controller
             "SEC_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('s'),
             "CURRSEL_TOTALS" => 1,
             "SHIP_DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
-            "SHIP_TIME" => calculateTime(),
+            "SHIP_TIME" => TimeHelper::calculateTime(),
             "DOC_DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
-            "DOC_TIME" => calculateTime(),
+            "DOC_TIME" => TimeHelper::calculateTime(),
         ];
         $transactions = request()->input('TRANSACTIONS.items');
         foreach ($transactions as $item) {

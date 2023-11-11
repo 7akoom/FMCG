@@ -4,9 +4,10 @@ namespace App\Http\Controllers;
 
 use Throwable;
 use Carbon\Carbon;
+use App\Helpers\TimeHelper;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 
 
 class CollectionController extends Controller
@@ -81,7 +82,7 @@ class CollectionController extends Controller
             "POS_TRANSFER_INFO" => $salesman_code,
             "DOC_DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
             "SALESMANREF" => $this->salesman_id,
-            'TIME' => calculateTime(),
+            'TIME' => TimeHelper::calculateTime(),
         ];
         $ATTACHMENT_ARP = [
             "INTERNAL_REFERENCE" => 0,
@@ -175,7 +176,7 @@ class CollectionController extends Controller
             "MIN_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
             "SEC_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('s'),
             "DOC_DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
-            "TIME" => calculateTime(),
+            "TIME" => TimeHelper::calculateTime(),
             "CROSS_TC_XRATE" => 1,
             "CROSS_TC_CURR" => 30,
             "CROSS_TC_AMOUNT" => $request->amount,
@@ -229,7 +230,7 @@ class CollectionController extends Controller
             "SEC_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('s'),
             "DOC_DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
             "CURRSEL_TOTALS" => 1,
-            "TIME" => calculateTime(),
+            "TIME" => TimeHelper::calculateTime(),
         ];
         $TRANSACTION = [
             "INTERNAL_REFERENCE" => 0,
@@ -300,131 +301,132 @@ class CollectionController extends Controller
             'safes' => $safes,
         ], 200);
     }
-    // public function cashVan()
-    // {
-    //     $salesman_specode = $this->fetchValueFromTable($this->salesmansTable, 'definition_', $this->username, 'specode');
-    //     $safe_code = $this->fetchValueFromTable($this->safesTable, 'specode', $salesman_specode, 'code');
-    //     $salesman_code = $this->fetchValueFromTable($this->salesmansTable, 'definition_', $this->username, 'code');
-    //     $customer_name = $this->fetchValueFromTable($this->customersTable, 'code', $this->customer, 'definition_');
-    //     $number = $salesman_code . '-' . calculateTime();
-    //     $data = [
-    //         "LOGICALREF" => 0,
-    //         "TYPE" => 37,
-    //         "SD_CODE" => $safe_code,
-    //         "DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
-    //         "NUMBER" => $number,
-    //         "MASTER_TITLE" => $customer_name,
-    //         "DESCRIPTION" => request()->description,
-    //         "AMOUNT" => request()->amount,
-    //         "TC_AMOUNT" => request()->amount,
-    //         "CREATED_BY" => 139,
-    //         "DATE_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
-    //         "HOUR_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('h'),
-    //         "MIN_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
-    //         "SEC_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('m'),
-    //         "DOC_DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
-    //     ];
-    //     $ATTACHMENT_INVOICE = [
-    //         "LOGICALREF" => 0,
-    //         "TYPE" => 8,
-    //         "NUMBER" => '~',
-    //         "DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
-    //         "TIME" => calculateTime(),
-    //         "ARP_CODE" => $this->customer,
-    //         "SOURCE_WH" => 10,
-    //         "POST_FLAGS" => 247,
-    //         "TOTAL_DISCOUNTED" => request()->amount,
-    //         "TOTAL_GROSS" => request()->amount,
-    //         "TOTAL_NET" => request()->amount,
-    //         "NOTES1" => request()->description,
-    //         "CREATED_BY" => 139,
-    //         "DATE_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
-    //         "HOUR_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('h'),
-    //         "MIN_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
-    //         "SEC_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('m'),
-    //         "SALESMAN_CODE" => $salesman_code,
-    //         "EDURATION_TYPE" => 0,
-    //         "EXIMVAT" => 0,
-    //         "EARCHIVEDETR_INTPAYMENTTYPE" => 0,
-    //     ];
-    //     $DISPATCHES = [
-    //         "INTERNAL_REFERENCE" => 0,
-    //         "TYPE" => 8,
-    //         "NUMBER" => '~',
-    //         "DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
-    //         "TIME" => calculateTime(),
-    //         "INVOICE_NUMBER" => $ATTACHMENT_INVOICE['NUMBER'],
-    //         "ARP_CODE" => $this->customer,
-    //         "SOURCE_WH" => 10,
-    //         "INVOICED" => 1,
-    //         "TOTAL_DISCOUNTED" => request()->amount,
-    //         "TOTAL_GROSS" => request()->amount,
-    //         "TOTAL_NET" => request()->amount,
-    //         "CREATED_BY" => 139,
-    //         "DATE_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
-    //         "HOUR_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('h'),
-    //         "MIN_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
-    //         "SEC_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('m'),
-    //         "SALESMAN_CODE" => $salesman_code,
-    //         "DEDUCTIONPART1" => 0,
-    //         "DEDUCTIONPART2" => 0,
-    //         "AFFECT_RISK" => 1,
-    //         "DISP_STATUS" => 1,
-    //         "DOC_DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
-    //         "DOC_TIME" => calculateTime(),
-    //     ];
-    //     $ATTACHMENT_INVOICE['DISPATCHES'] = $DISPATCHES;
-    //     $transactions = request()->input('TRANSACTIONS.items');
-    //     foreach ($transactions as $item) {
-    //         $itemData = [
-    //             "INTERNAL_REFERENCE" => 0,
-    //             "TYPE" => 0,
-    //             "MASTER_CODE" => $item['item_code'],
-    //             "SOURCEINDEX" => 10,
-    //             "QUANTITY" => $item['item_quantity'],
-    //             "PRICE" => $item['item_price'],
-    //             "TOTAL" => $item['item_total'],
-    //             "UNIT_CODE" => $item['item_unit'],
-    //             "UNIT_CONV1" => 1,
-    //             "UNIT_CONV2" => 1,
-    //             "VAT_BASE" => $item['item_total'],
-    //             "BILLED" => 1,
-    //             "DISPATCH_NUMBER" => $DISPATCHES['NUMBER'],
-    //             "MULTI_ADD_TAX" => 0,
-    //             "EDT_CURR" => 30,
-    //             "SALESMANCODE" => $salesman_code,
-    //             "MONTH" => Carbon::now()->timezone('Asia/Baghdad')->format('m'),
-    //             "YEAR" => Carbon::now()->timezone('Asia/Baghdad')->format('Y'),
-    //             "AFFECT_RISK" => 1,
-    //             "FOREIGN_TRADE_TYPE" => 0,
-    //             "DISTRIBUTION_TYPE_WHS" => 0,
-    //             "DISTRIBUTION_TYPE_FNO" => 0,
-    //         ];
-    //         $ATTACHMENT_INVOICE['TRANSACTIONS']['items'][] = $itemData;
-    //     }
-    //     $data['ATTACHMENT_INVOICE'] = $ATTACHMENT_INVOICE;
-    //     dd(json_encode($data));
-    //     try {
-    //         $response = Http::withOptions([
-    //             'verify' => false,
-    //         ])
-    //             ->withHeaders([
-    //                 'Accept' => 'application/json',
-    //                 'Content-Type' => 'application/json',
-    //                 'Authorization' => request()->header('authorization')
-    //             ])
-    //             ->withBody(json_encode($data), 'application/json')
-    //             ->post('https://10.27.0.109:32002/api/v1/safeDepositSlips');
-    //         return response()->json([
-    //             'status' => 'success',
-    //             'message' => 'Order sent successfully',
-    //             'Order' => json_decode($response),
-    //         ], 200);
-    //     } catch (Throwable $e) {
-    //         return response()->json([
-    //             'status' => 'Payment failed',
-    //             'message' => $e->getMessage(),
-    //         ], 422);
-    //     }
-    // }
+    public function cashVan()
+    {
+        $salesman_specode = $this->fetchValueFromTable($this->salesmansTable, 'definition_', $this->username, 'specode');
+        $safe_code = $this->fetchValueFromTable($this->safesTable, 'specode', $salesman_specode, 'code');
+        $salesman_code = $this->fetchValueFromTable($this->salesmansTable, 'definition_', $this->username, 'code');
+        $customer_name = $this->fetchValueFromTable($this->customersTable, 'code', $this->customer, 'definition_');
+        $number = $salesman_code . '-' . TimeHelper::calculateTime();
+        $data = [
+            "LOGICALREF" => 0,
+            "TYPE" => 37,
+            "SD_CODE" => $safe_code,
+            "DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "NUMBER" => $number,
+            "MASTER_TITLE" => $customer_name,
+            "DESCRIPTION" => request()->description,
+            "AMOUNT" => request()->amount,
+            "TC_AMOUNT" => request()->amount,
+            "CREATED_BY" => 139,
+            "DATE_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "HOUR_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('h'),
+            "MIN_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
+            "SEC_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('m'),
+            "DOC_DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+        ];
+        $ATTACHMENT_INVOICE = [
+            "LOGICALREF" => 0,
+            "TYPE" => 8,
+            "NUMBER" => '~',
+            "DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "TIME" => TimeHelper::calculateTime(),
+            "ARP_CODE" => $this->customer,
+            "SOURCE_WH" => 10,
+            "POST_FLAGS" => 247,
+            "TOTAL_DISCOUNTED" => request()->amount,
+            "TOTAL_GROSS" => request()->amount,
+            "TOTAL_NET" => request()->amount,
+            "NOTES1" => request()->description,
+            "CREATED_BY" => 139,
+            "DATE_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "HOUR_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('h'),
+            "MIN_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
+            "SEC_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('m'),
+            "SALESMAN_CODE" => $salesman_code,
+            "EDURATION_TYPE" => 0,
+            "EXIMVAT" => 0,
+            "EARCHIVEDETR_INTPAYMENTTYPE" => 0,
+        ];
+        $DISPATCHES = [
+            "INTERNAL_REFERENCE" => 0,
+            "TYPE" => 8,
+            "NUMBER" => '~',
+            "DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "TIME" => TimeHelper::calculateTime(),
+            "INVOICE_NUMBER" => $ATTACHMENT_INVOICE['NUMBER'],
+            "ARP_CODE" => $this->customer,
+            "SOURCE_WH" => 10,
+            "INVOICED" => 1,
+            "TOTAL_DISCOUNTED" => request()->amount,
+            "TOTAL_GROSS" => request()->amount,
+            "TOTAL_NET" => request()->amount,
+            "CREATED_BY" => 139,
+            "DATE_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "HOUR_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('h'),
+            "MIN_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
+            "SEC_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('m'),
+            "SALESMAN_CODE" => $salesman_code,
+            "DEDUCTIONPART1" => 0,
+            "DEDUCTIONPART2" => 0,
+            "AFFECT_RISK" => 1,
+            "DISP_STATUS" => 1,
+            "DOC_DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "DOC_TIME" => TimeHelper::calculateTime(),
+        ];
+
+        $transactions = request()->input('TRANSACTIONS.items');
+        foreach ($transactions as $item) {
+            $itemData = [
+                "INTERNAL_REFERENCE" => 0,
+                "TYPE" => 0,
+                "MASTER_CODE" => $item['item_code'],
+                "SOURCEINDEX" => 10,
+                "QUANTITY" => $item['item_quantity'],
+                "PRICE" => $item['item_price'],
+                "TOTAL" => $item['item_total'],
+                "UNIT_CODE" => $item['item_unit'],
+                "UNIT_CONV1" => 1,
+                "UNIT_CONV2" => 1,
+                "VAT_BASE" => $item['item_total'],
+                "BILLED" => 1,
+                "DISPATCH_NUMBER" => $DISPATCHES['NUMBER'],
+                "MULTI_ADD_TAX" => 0,
+                "EDT_CURR" => 30,
+                "SALESMANCODE" => $salesman_code,
+                "MONTH" => Carbon::now()->timezone('Asia/Baghdad')->format('m'),
+                "YEAR" => Carbon::now()->timezone('Asia/Baghdad')->format('Y'),
+                "AFFECT_RISK" => 1,
+                "FOREIGN_TRADE_TYPE" => 0,
+                "DISTRIBUTION_TYPE_WHS" => 0,
+                "DISTRIBUTION_TYPE_FNO" => 0,
+            ];
+            $DISPATCHES['TRANSACTIONS']['items'][] = $itemData;
+        }
+        $ATTACHMENT_INVOICE['items']['DISPATCHES'] = $DISPATCHES;
+        $data['ATTACHMENT_INVOICE'] = $ATTACHMENT_INVOICE;
+        // dd($data);
+        try {
+            $response = Http::withOptions([
+                'verify' => false,
+            ])
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                    'Authorization' => request()->header('authorization')
+                ])
+                ->withBody(json_encode($data), 'application/json')
+                ->post('https://10.27.0.109:32002/api/v1/safeDepositSlips');
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Order sent successfully',
+                'Order' => json_decode($response),
+            ], 200);
+        } catch (Throwable $e) {
+            return response()->json([
+                'status' => 'Payment failed',
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
 }

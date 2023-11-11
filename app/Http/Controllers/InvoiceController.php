@@ -3,13 +3,14 @@
 namespace App\Http\Controllers;
 
 use Throwable;
+use App\Traits\Filterable;
+use App\Helpers\TimeHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Http;
-use App\Traits\Filterable;
-use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Database\Query\Builder;
 
 class InvoiceController extends Controller
 {
@@ -662,7 +663,7 @@ class InvoiceController extends Controller
             "TYPE" => 8,
             "NUMBER" => '~',
             "DATE" =>  Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
-            'TIME' => calculateTime(),            "ARP_CODE" => $request->customer_code,
+            'TIME' => TimeHelper::calculateTime(),            "ARP_CODE" => $request->customer_code,
             "POST_FLAGS" => 247,
             "VAT_RATE" => 18,
             "TOTAL_DISCOUNTS" => $request->total_discounts,
@@ -687,7 +688,7 @@ class InvoiceController extends Controller
             "TYPE" => 8,
             "NUMBER" => '~',
             "DATE" =>  Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
-            'TIME' => calculateTime(),            "INVOICE_NUMBER" => $data['NUMBER'],
+            'TIME' => TimeHelper::calculateTime(),            "INVOICE_NUMBER" => $data['NUMBER'],
             "ARP_CODE" => $request->customer_code,
             "INVOICED" => 1,
             "TOTLA_DISCOUNTS" => $request->total_discounts,
@@ -818,7 +819,8 @@ class InvoiceController extends Controller
             "TYPE" => 3,
             "NUMBER" => '~',
             "DATE" =>  Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d H:i:s.v'),
-            'TIME' => calculateTime(),            "DOC_NUMBER" => $request->document_number,
+            'TIME' => TimeHelper::calculateTime(),
+            "DOC_NUMBER" => $request->document_number,
             "ARP_CODE" => $request->customer_code,
             "POST_FLAGS" => 247,
             "VAT_RATE" => 18,
@@ -846,7 +848,8 @@ class InvoiceController extends Controller
             "TYPE" => 3,
             "NUMBER" => '~',
             "DATE" =>  Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d H:i:s.v'),
-            'TIME' => calculateTime(),            "DOC_NUMBER" => $request->document_number,
+            'TIME' => TimeHelper::calculateTime(),
+            "DOC_NUMBER" => $request->document_number,
             "ARP_CODE" => $request->customer_code,
             "INVOICED" => 1,
             "TOTLA_DISCOUNTS" => $request->total_discounts,
@@ -1396,7 +1399,8 @@ class InvoiceController extends Controller
             "TYPE" => 1,
             "NUMBER" => '~',
             "DATE" =>  Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
-            'TIME' => calculateTime(),            "ARP_CODE" => $request->customer_code,
+            'TIME' => TimeHelper::calculateTime(),
+            "ARP_CODE" => $request->customer_code,
             "POST_FLAGS" => 247,
             "VAT_RATE" => 18,
             "TOTAL_DISCOUNTS" => $request->total_discounts,
@@ -1420,7 +1424,8 @@ class InvoiceController extends Controller
             "TYPE" => 1,
             "NUMBER" => '~',
             "DATE" =>  Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
-            'TIME' => calculateTime(),            "INVOICE_NUMBER" => $data['NUMBER'],
+            'TIME' => TimeHelper::calculateTime(),
+            "INVOICE_NUMBER" => $data['NUMBER'],
             "ARP_CODE" => $request->customer_code,
             "INVOICED" => 1,
             "TOTLA_DISCOUNTS" => $request->total_discounts,

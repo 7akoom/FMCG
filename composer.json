@@ -27,9 +27,7 @@
     },
     "autoload-dev": {
         "psr-4": {},
-        "files": [
-            "app/Helpers/TimeHelper.php"
-        ]
+        "App\\Helpers\\": "app/Helpers/"
     },
     "scripts": {
         "post-autoload-dump": [

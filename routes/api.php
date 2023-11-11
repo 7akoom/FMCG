@@ -202,7 +202,7 @@ Route::controller(CollectionController::class)
                 Route::prefix('salesman')
                     ->group(function () {
                         Route::post('/newcurrentaccountcollection', 'currentAccountCollections');
-                        Route::post('/makeinvoice', '64499');
+                        Route::post('/makeinvoice', 'cashVan');
                     });
             });
     });

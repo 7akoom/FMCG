@@ -1,15 +1,20 @@
 <?php
 
+namespace App\Helpers;
 
-
-function calculateTime()
+class TimeHelper
 {
-    $milliseconds = now()->format('v');
-    $seconds = now()->format('s');
-    $minutes = now()->format('i');
-    $hours = now()->format('h');
-    return $milliseconds + (256 * $seconds) + (65536 * $minutes) + (16777216 * $hours);
+    public static  function calculateTime()
+    {
+        $milliseconds = now()->format('v');
+        $seconds = now()->format('s');
+        $minutes = now()->format('i');
+        $hours = now()->format('h');
+        return $milliseconds + (256 * $seconds) + (65536 * $minutes) + (16777216 * $hours);
+    }
 }
+
+
 
 
 

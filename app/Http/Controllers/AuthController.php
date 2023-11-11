@@ -45,8 +45,8 @@ class AuthController extends Controller
             ]);
         }
 
-        if(!$this->checkSalesManDevice()) {
-              return response()->json([
+        if (!$this->checkSalesManDevice()) {
+            return response()->json([
                 'message' => 'invalid device for the salesman',
                 'data' => []
             ]);
@@ -66,21 +66,21 @@ class AuthController extends Controller
         $username = strtolower(request()->input('username'));
 
         $deviceId = request()->header('deviceid');
-        
+
         Log::debug("checking logging for user $username and device id $deviceId");
 
-        if(!$deviceId) {
+        if (!$deviceId) {
             return false;
         }
 
         $user =  DB::connection('sqlite')->select("SELECT * from users where username = '$username' order by id desc limit 1 ");
 
-        if(!count($user)) {
+        if (!count($user)) {
             DB::connection('sqlite')->select("Insert into users (username,device_id) values('$username', '$deviceId')");
             return true;
         }
 
-        if($user[0]->device_id == $deviceId) {
+        if ($user[0]->device_id == $deviceId) {
             return true;
         }
 
