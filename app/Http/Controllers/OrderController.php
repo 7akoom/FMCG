@@ -480,10 +480,10 @@ class OrderController extends Controller
                 ->post('https://10.27.0.109:32002/api/v1/salesOrders');
 
             return response()->json([
-                'status' => $response->successful() ? 'success' : 'faild',
+                'status' => $response->successful() ? 'success' : 'failed',
                 'data' => $response->json(),
             ], $response->status());
-            
+
         } catch (Throwable $e) {
             return response()->json([
                 'status' => 'failed',
