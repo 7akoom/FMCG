@@ -464,6 +464,8 @@ class OrderController extends Controller
             }
             $data['TRANSACTIONS']['items'][] = $itemData;
         }
+
+
         try {
             $response = Http::withOptions([
                 'verify' => false,
@@ -476,11 +478,12 @@ class OrderController extends Controller
                 ->withBody(json_encode($data), 'application/json')
 
                 ->post('https://10.27.0.109:32002/api/v1/salesOrders');
+
             return response()->json([
-                'status' => 'success',
-                'message' => 'Order sent successfully',
-                'Order' => json_decode($response),
-            ], 200);
+                'status' => $response->successful() ? 'success' : 'failed',
+                'data' => $response->json(),
+            ], $response->status());
+
         } catch (Throwable $e) {
             return response()->json([
                 'status' => 'failed',

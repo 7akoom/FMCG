@@ -66,33 +66,30 @@ class AuthMiddleware
                 ])
                 ->withBody("grant_type=password&username=$username&firmno=$cityCode&password=$password", 'text/plain')
                 ->post('https://10.27.0.109:32002/api/v1/token');
-        
+
             Log::debug('response', ['data' => $response->json()]);
-        
+
             return $response['access_token'] ?? abort(403);
         });
     }
 
     private function getSalesManToken()
     {
-
         $cityCode = request()->header('citycode');
 
-        return Cache::remember("token:$cityCode", 60 * 20, function () use ($cityCode) {
-                    $response = Http::withOptions(['verify' => false])
-                     ->timeout(1000)
-                        ->withHeaders([
-                            'Authorization' => 'basic TUVGQVBFWDpGWEh4VGV4NThWd0pwbXNaSC9sSHVybkQ1elAwWVo3Tm14M0xZaDF1SFVvPQ==',
-                            'Accept' => 'application/json',
-                            'Content-Type' => 'application/json'
-                        ])
-                        ->withBody("grant_type=password&username=REST&firmno=$cityCode&password=REST454545", 'text/plain')
-                        ->post('https://10.27.0.109:32002/api/v1/token');
-            
-                Log::debug('response', ['data' => $response->json()]);
-            
-                return $response['access_token'] ?? abort(403);
-        });
+        $response = Http::withOptions(['verify' => false])
+            ->timeout(1000)
+            ->withHeaders([
+                'Authorization' => 'basic TUVGQVBFWDpGWEh4VGV4NThWd0pwbXNaSC9sSHVybkQ1elAwWVo3Tm14M0xZaDF1SFVvPQ==',
+                'Accept' => 'application/json',
+                'Content-Type' => 'application/json'
+            ])
+            ->withBody("grant_type=password&username=REST&firmno=$cityCode&password=REST454545", 'text/plain')
+            ->post('https://10.27.0.109:32002/api/v1/token');
+
+        Log::debug('response', ['data' => $response->json()]);
+
+        return $response['access_token'];
     }
 
     private function logRequest()
