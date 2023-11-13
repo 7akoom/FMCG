@@ -64,16 +64,16 @@ class ItemController extends Controller
 
     public function index(Request $request)
     {
-        $customer = $request->header("customer");
+        // $customer = $request->header("customer");
 
 
-        $last_customer = DB::table($this->customersTable)->where('logicalref', $customer)->value('specode2');
+        // $last_customer = DB::table($this->customersTable)->where('logicalref', $customer)->value('specode2');
 
         $items = DB::table("{$this->itemsTable}")
-            ->leftJoin("$this->pricesTable", function ($join) use ($last_customer) {
-                $join->on("$this->pricesTable.cardref", "=", "$this->itemsTable.logicalref")
-                    ->where(["$this->pricesTable.active" => 0, "$this->pricesTable.clspecode2" => $last_customer, "$this->pricesTable.ptype" => 2]);
-            })
+            // ->leftJoin("$this->pricesTable", function ($join) use ($last_customer) {
+            //     $join->on("$this->pricesTable.cardref", "=", "$this->itemsTable.logicalref")
+            //         ->where(["$this->pricesTable.active" => 0, "$this->pricesTable.clspecode2" => $last_customer, "$this->pricesTable.ptype" => 2]);
+            // })
             ->join("$this->unitsTable", "{$this->itemsTable}.unitsetref", "=", "$this->unitsTable.logicalref")
             ->join("$this->brandsTable", "{$this->itemsTable}.markref", "=", "$this->brandsTable.logicalref")
             ->join("$this->specialcodesTable as sub", "{$this->itemsTable}.specode2", "=", "sub.specode")
@@ -95,7 +95,7 @@ class ItemController extends Controller
                 'sub.logicalref as subcategory_id',
                 DB::raw("CASE WHEN '$this->lang' = 'ar' THEN sub.definition_  WHEN '$this->lang' = 'en' THEN sub.definition2
                 WHEN '$this->lang' = 'tr' THEN sub.definition3 ELSE sub.definition_ END as subcategory_name"),
-                DB::raw("COALESCE($this->pricesTable.price, '0') as price"),
+                // DB::raw("COALESCE($this->pricesTable.price, '0') as price"),
                 "$this->unitsTable.logicalref as unit_id",
                 "$this->unitsTable.code as unit",
                 "weights.logicalref as weight_id",
@@ -120,7 +120,7 @@ class ItemController extends Controller
                 'sub.definition2',
                 'sub.definition3',
                 "$this->itemsTable.markref",
-                "$this->pricesTable.price",
+                // "$this->pricesTable.price",
                 "$this->unitsTable.logicalref",
                 "$this->unitsTable.code",
                 "$this->brandsTable.code",
