@@ -270,11 +270,7 @@ class ItemController extends Controller
     public function getItemDetails(Request $request)
     {
         $itemCode = $request->input('item_code');
-        $customer = $request->header("customer");
-        $last_customer = DB::table($this->customersTable)->where('logicalref', $customer)->value('specode2');
         $result = DB::table("$this->itemsTable")
-            ->join("$this->pricesTable", "{$this->pricesTable}.cardref", "=", "{$this->itemsTable}.logicalref")
-            ->where(["{$this->pricesTable}.active" => 0, "{$this->pricesTable}.clspecode2" => $last_customer, "$this->pricesTable.ptype" => 2,])
             ->join("$this->unitsTable", "$this->itemsTable.unitsetref", "=", "$this->unitsTable.logicalref")
             ->join("$this->brandsTable", "$this->itemsTable.markref", "=", "$this->brandsTable.logicalref")
             ->join("$this->specialcodesTable as cat", "$this->itemsTable.specode", "=", "cat.specode")
@@ -290,9 +286,8 @@ class ItemController extends Controller
                 DB::raw("CASE WHEN '{$this->lang}' = 'ar' THEN cat.definition_  WHEN '{$this->lang}' = 'en' THEN cat.definition2 WHEN '{$this->lang}' = 'tr' THEN cat.definition3 ELSE cat.definition_ END as category"),
                 DB::raw("CASE WHEN '{$this->lang}' = 'ar' THEN sub.definition_  WHEN '{$this->lang}' = 'en' THEN sub.definition2 WHEN '{$this->lang}' = 'tr' THEN sub.definition3 ELSE sub.definition_ END as subcategory"),
                 "$this->itemsTable.stgrpcode as group",
-                "$this->pricesTable.price",
-                "$this->unitsTable.code as unit",
-                "$this->weightsTable.grossweight as weight"
+                "$this->weightsTable.grossweight as weight",
+                "$this->brandsTable.code as brand"
             )
             ->where(["$this->itemsTable.active" => 0, "$this->itemsTable.code" => $itemCode])
             ->groupBy(
@@ -310,25 +305,24 @@ class ItemController extends Controller
                 'sub.definition2',
                 'sub.definition3',
                 "$this->itemsTable.markref",
-                "$this->pricesTable.price",
                 "$this->unitsTable.code",
                 "$this->weightsTable.grossweight"
             );
-        if ($request->hasHeader('type')) {
-            $result->where("$this->itemsTable.classtype", $this->type);
-        }
+        // if ($request->hasHeader('type')) {
+        //     $result->where("$this->itemsTable.classtype", $this->type);
+        // }
 
-        if ($request->hasHeader('category')) {
-            $result->where("$this->itemsTable.speocde", $this->category);
-        }
+        // if ($request->hasHeader('category')) {
+        //     $result->where("$this->itemsTable.speocde", $this->category);
+        // }
 
-        if ($request->hasHeader('subcategory')) {
-            $result->where("$this->itemsTable.specode2", $this->subcategory);
-        }
+        // if ($request->hasHeader('subcategory')) {
+        //     $result->where("$this->itemsTable.specode2", $this->subcategory);
+        // }
 
-        if ($request->hasHeader('brand')) {
-            $result->where("$this->itemsTable.markref", $this->brand);
-        }
+        // if ($request->hasHeader('brand')) {
+        //     $result->where("$this->itemsTable.markref", $this->brand);
+        // }
 
         $items = $result->get();
         if ($items->isEmpty()) {
@@ -384,13 +378,16 @@ class ItemController extends Controller
                 "TOTAL" => $item['item_total'],
                 "NET_TOTAL" => $item['item_total'],
                 "RC_XRATE" => 1,
+                "UNIT_CODE" => $item['item_unit'],
                 "UNIT_CONV1" => 1,
                 "UNIT_CONV2" => 1,
                 "VAT_BASE" => $item['item_total'],
+                "EU_VAT_STATUS" => 4,
+                "EDT_CURR" => 30,
             ];
             $data['TRANSACTIONS']['items'][] = $itemData;
         }
-        dd(request()->header('authorization'));
+        // dd(request()->header('authorization'));
         try {
             $response = Http::withOptions([
                 'verify' => false,
