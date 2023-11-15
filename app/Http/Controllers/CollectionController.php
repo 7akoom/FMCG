@@ -135,10 +135,9 @@ class CollectionController extends Controller
                 ->withBody(json_encode($data), 'application/json')
                 ->post('https://10.27.0.109:32002/api/v1/safeDepositSlips');
             return response()->json([
-                'status' => 'success',
-                'message' => 'Order sent successfully',
-                'Order' => json_decode($response),
-            ], 200);
+                'status' => $response->successful() ? 'success' : 'failed',
+                'Order' => $response->json(),
+            ], $response->status());
         } catch (Throwable $e) {
             return response()->json([
                 'status' => 'Payment failed',
@@ -193,10 +192,9 @@ class CollectionController extends Controller
                 ->withBody(json_encode($data), 'application/json')
                 ->post('https://10.27.0.109:32002/api/v1/safeDepositSlips');
             return response()->json([
-                'status' => 'success',
-                'message' => 'Transaction completed successfully',
-                'transaction' => json_decode($response),
-            ], 200);
+                'status' => $response->successful() ? 'success' : 'failed',
+                'transaction' => $response->json(),
+            ], $response->status());
         } catch (Throwable $e) {
             return response()->json([
                 'status' => 'Payment failed',
@@ -274,10 +272,9 @@ class CollectionController extends Controller
                 ->withBody(json_encode($data), 'application/json')
                 ->post('https://10.27.0.109:32002/api/v1/safeDepositSlips');
             return response()->json([
-                'status' => 'success',
-                'message' => 'Order sent successfully',
-                'Order' => json_decode($response),
-            ], 200);
+                'status' => $response->successful() ? 'success' : 'failed',
+                'Order' => $response->json(),
+            ], $response->status());
         } catch (Throwable $e) {
             return response()->json([
                 'status' => 'Payment failed',
@@ -309,7 +306,7 @@ class CollectionController extends Controller
         $customer_name = $this->fetchValueFromTable($this->customersTable, 'code', $this->customer, 'definition_');
         $number = $salesman_code . '-' . TimeHelper::calculateTime();
         $data = [
-            "LOGICALREF" => 0,
+            "INTERNAL_REFERENCE" => 0,
             "TYPE" => 37,
             "SD_CODE" => $safe_code,
             "DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
@@ -326,7 +323,7 @@ class CollectionController extends Controller
             "DOC_DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
         ];
         $ATTACHMENT_INVOICE = [
-            "LOGICALREF" => 0,
+            "INTERNAL_REFERENCE" => 0,
             "TYPE" => 8,
             "NUMBER" => '~',
             "DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
@@ -401,11 +398,12 @@ class CollectionController extends Controller
                 "DISTRIBUTION_TYPE_WHS" => 0,
                 "DISTRIBUTION_TYPE_FNO" => 0,
             ];
-            $DISPATCHES['TRANSACTIONS']['items'][] = $itemData;
+            $ATTACHMENT_INVOICE['INVOICE']['TRANSACTIONS']['items'][] = $itemData;
         }
-        $ATTACHMENT_INVOICE['items']['DISPATCHES'] = $DISPATCHES;
+        $ATTACHMENT_INVOICE['INVOICE']['DESPATCHES'] = $DISPATCHES;
         $data['ATTACHMENT_INVOICE'] = $ATTACHMENT_INVOICE;
-        // dd($data);
+        dd(json_encode($data));
+
         try {
             $response = Http::withOptions([
                 'verify' => false,
@@ -418,10 +416,9 @@ class CollectionController extends Controller
                 ->withBody(json_encode($data), 'application/json')
                 ->post('https://10.27.0.109:32002/api/v1/safeDepositSlips');
             return response()->json([
-                'status' => 'success',
-                'message' => 'Order sent successfully',
-                'Order' => json_decode($response),
-            ], 200);
+                'status' => $response->successful() ? 'success' : 'failed',
+                'Order' => $response->json(),
+            ], $response->status());
         } catch (Throwable $e) {
             return response()->json([
                 'status' => 'Payment failed',

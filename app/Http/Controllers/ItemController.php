@@ -154,6 +154,104 @@ class ItemController extends Controller
         ], 200);
     }
 
+    public function itemMap()
+    {
+        $customer = request()->header("customer");
+        $last_customer = DB::table($this->customersTable)->where('logicalref', $customer)->value('specode2');
+        $categories = DB::table("$this->specialcodesTable as cat")
+            ->select("logicalref as id", "definition_ as category_name")
+            ->where(["cat.codetype" => 1, "cat.specodetype" => 1, "cat.spetyp1" => 1])
+            ->get();
+
+        $categoryIds = $categories->pluck('id');
+
+        $subcategories = DB::table("$this->specialcodesTable as sub")
+            ->select(
+                "definition_ as subcategory_name",
+                "specode",
+                'globalid as category_id'
+            )
+            ->whereIn('globalid', $categoryIds)
+            ->where(['codetype' => 1, 'specodetype' => 1, 'spetyp2' => 1])
+            ->get();
+
+        $items = DB::table("{$this->itemsTable}")
+            ->leftJoin("$this->pricesTable", function ($join) use ($last_customer) {
+                $join->on("$this->pricesTable.cardref", "=", "$this->itemsTable.logicalref")
+                    ->where(["$this->pricesTable.active" => 0, "$this->pricesTable.clspecode2" => $last_customer, "$this->pricesTable.ptype" => 2]);
+            })
+            ->join("$this->unitsTable", "{$this->itemsTable}.unitsetref", "=", "$this->unitsTable.logicalref")
+            ->join("$this->brandsTable", "{$this->itemsTable}.markref", "=", "$this->brandsTable.logicalref")
+            ->join("$this->weightsTable as weights", "weights.itemref", "=", "{$this->itemsTable}.logicalref")
+            ->where("weights.linenr", "=", 1)
+            ->join("$this->weightsTable as number", "number.itemref", "=", "{$this->itemsTable}.logicalref")
+            ->where("number.linenr", "=", 2)
+            ->select(
+                "$this->itemsTable.logicalref as id",
+                "$this->itemsTable.code as code",
+                "$this->brandsTable.logicalref as brand_id",
+                "$this->brandsTable.code as brand",
+                DB::raw("REVERSE(SUBSTRING(REVERSE($this->brandsTable.descr), 1, CHARINDEX('/', REVERSE($this->brandsTable.descr)) - 1)) as brand_image"),
+                DB::raw("CASE WHEN '$this->lang' = 'ar' THEN {$this->itemsTable}.name
+            WHEN '$this->lang' = 'en' THEN $this->itemsTable.name3 WHEN '$this->lang' = 'tr' THEN {$this->itemsTable}.name4 ELSE $this->itemsTable.name END as name"),
+                "$this->itemsTable.stgrpcode as group",
+                "$this->unitsTable.logicalref as unit_id",
+                "$this->unitsTable.code as unit",
+                "weights.logicalref as weight_id",
+                "weights.grossweight as weight",
+                "number.convfact1 as pieces_number",
+                DB::raw("COALESCE($this->pricesTable.price, '0') as price"),
+                "$this->itemsTable.specode2 as subcategory_code"
+            )
+            ->where([
+                "$this->itemsTable.active" => 0
+            ])
+            ->get();
+        $categoriesWithSubcategories = [];
+        foreach ($categories as $category) {
+            $categoryData = [
+                'category_name' => $category->category_name,
+                'subcategories' => $subcategories
+                    ->where('category_id', $category->id)
+                    ->map(function ($subcategory) use ($items) {
+                        $subcategoryItems = $items
+                            ->where('subcategory_code', $subcategory->specode)
+                            ->map(function ($item) {
+                                return [
+                                    'id' => $item->id,
+                                    'code' => $item->code,
+                                    'name' => $item->name,
+                                    'brand_id' => $item->brand_id,
+                                    'brand_name' => $item->brand,
+                                    'brand_image' => $item->brand_image,
+                                    'group' => $item->group,
+                                    'weight' => $item->weight,
+                                    'pieces_number' => $item->pieces_number,
+                                    'price' => $item->price,
+                                ];
+                            })
+                            ->values()
+                            ->toArray();
+                        unset($subcategory->specode);
+                        unset($subcategory->category_id);
+
+                        $subcategory->items = $subcategoryItems;
+                        return $subcategory;
+                    })
+                    ->values()
+                    ->toArray(),
+            ];
+
+            $categoriesWithSubcategories[$category->category_name] = $categoryData['subcategories'];
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Categories with subcategories and items list',
+            'data' => $categoriesWithSubcategories,
+        ], 200);
+    }
+
     public function finalItem(Request $request)
     {
 
@@ -367,11 +465,13 @@ class ItemController extends Controller
             "DOC_TIME" => TimeHelper::calculateTime(),
         ];
         $transactions = request()->input('TRANSACTIONS.items');
+        $i = 1;
         foreach ($transactions as $item) {
             $itemData = [
                 "INTERNAL_REFERENCE" => 0,
                 "ITEM_CODE" => $item['item_code'],
                 "LINE_TYPE" => $item['item_type'],
+                "LINE_NUMBER" => $i,
                 "SOURCEINDEX" => $data['SOURCE_WH'],
                 "QUANTITY" => $item['item_quantity'],
                 "PRICE" => $item['item_price'],
@@ -386,6 +486,7 @@ class ItemController extends Controller
                 "EDT_CURR" => 30,
             ];
             $data['TRANSACTIONS']['items'][] = $itemData;
+            $i++;
         }
         // dd(request()->header('authorization'));
         try {
@@ -398,12 +499,352 @@ class ItemController extends Controller
                     'Authorization' => request()->header('authorization')
                 ])
                 ->withBody(json_encode($data), 'application/json')
-                ->post('https://10.27.0.109:32002/api/v1/salesInvoices');
+                ->post('https://10.27.0.109:32002/api/v1/itemSlips');
             return response()->json([
-                'status' => 'success',
-                'message' => 'Invoice saved successfully',
-                'invoice' => json_decode($response),
-            ], 200);
+                'status' => $response->successful() ? 'success' : 'failed',
+                'data' => $response->json(),
+            ], $response->status());
+        } catch (Throwable $e) {
+            return response()->json([
+                'status' => 'Invoice failed',
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    public function wHouseTransferNoticSlip()
+    {
+        $user_nr = $this->fetchValueFromTable($this->usersTable, 'name', $this->username, 'nr');
+        $data = [
+            "GROUP" => 3,
+            "TYPE" => 25,
+            "NUMBER" => "~",
+            "DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "TIME" => TimeHelper::calculateTime(),
+            "DOC_NUMBER" => request()->document_number,
+            "SOURCE_WH" => request()->warehouse_source,
+            "DEST_WH" => request()->warehouse_destination,
+            "RC_RATE" => 1,
+            "PRINT_COUNTER" => 1,
+            "PRINT_DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "CREATED_BY" => $user_nr,
+            "DATE_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "HOUR_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('h'),
+            "MIN_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
+            "SEC_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('s'),
+            "CURRSEL_TOTALS" => 1,
+            "SHIP_DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "SHIP_TIME" => TimeHelper::calculateTime(),
+            "DOC_DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "DOC_TIME" => TimeHelper::calculateTime(),
+        ];
+        $transactions = request()->input('TRANSACTIONS.items');
+        $i = 1;
+        foreach ($transactions as $item) {
+            $itemData = [
+                "INTERNAL_REFERENCE" => 0,
+                "ITEM_CODE" => $item['item_code'],
+                "LINE_TYPE" => $item['item_type'],
+                "SOURCEINDEX" => $data['SOURCE_WH'],
+                "DESTINDEX" => $data['DEST_WH'],
+                "LINE_NUMBER" => $i,
+                "QUANTITY" => $item['item_quantity'],
+                "RC_XRATE" => 1,
+                "UNIT_CODE" => $item['item_unit'],
+                "UNIT_CONV1" => 1,
+                "UNIT_CONV2" => 1,
+                "EU_VAT_STATUS" => 4,
+                "EDT_CURR" => 30,
+            ];
+            $data['TRANSACTIONS']['items'][] = $itemData;
+            $i++;
+        }
+        try {
+            $response = Http::withOptions([
+                'verify' => false,
+            ])
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                    'Authorization' => request()->header('authorization')
+                ])
+                ->withBody(json_encode($data), 'application/json')
+                ->post('https://10.27.0.109:32002/api/v1/itemSlips');
+            return response()->json([
+                'status' => $response->successful() ? 'success' : 'failed',
+                'data' => $response->json(),
+            ], $response->status());
+        } catch (Throwable $e) {
+            return response()->json([
+                'status' => 'Invoice failed',
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    public function noticOfUseSlip()
+    {
+        $user_nr = $this->fetchValueFromTable($this->usersTable, 'name', $this->username, 'nr');
+        $data = [
+            "GROUP" => 3,
+            "TYPE" => 12,
+            "NUMBER" => "~",
+            "DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "TIME" => TimeHelper::calculateTime(),
+            "DOC_NUMBER" => request()->document_number,
+            "SOURCE_WH" => request()->source_warehouse,
+            "TOTAL_DISCOUNTED" => request()->total,
+            "TOTAL_GROSS" => request()->total,
+            "TOTAL_NET" => request()->total,
+            "RC_RATE" => 1,
+            "RC_NET" => request()->total,
+            "PRINT_COUNTER" => 1,
+            "PRINT_DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "CREATED_BY" => $user_nr,
+            "DATE_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "HOUR_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('h'),
+            "MIN_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
+            "SEC_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('s'),
+            "CURRSEL_TOTALS" => 1,
+            "SHIP_DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "SHIP_TIME" => TimeHelper::calculateTime(),
+            "DOC_DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "DOC_TIME" => TimeHelper::calculateTime(),
+        ];
+        $transactions = request()->input('TRANSACTIONS.items');
+        $i = 1;
+        foreach ($transactions as $item) {
+            $itemData = [
+                "INTERNAL_REFERENCE" => 0,
+                "ITEM_CODE" => $item['item_code'],
+                "LINE_TYPE" => $item['item_type'],
+                "SOURCEINDEX" => $data['SOURCE_WH'],
+                "LINE_NUMBER" => $i,
+                "QUANTITY" => $item['item_quantity'],
+                "PRICE" => $item['item_price'],
+                "TOTAL" => $item['item_total'],
+                "NET_TOTAL" => $item['item_total'],
+                "RC_XRATE" => 1,
+                "UNIT_CODE" => $item['item_unit'],
+                "UNIT_CONV1" => 1,
+                "UNIT_CONV2" => 1,
+                "EU_VAT_STATUS" => 4,
+                "EDT_CURR" => 30,
+            ];
+            $data['TRANSACTIONS']['items'][] = $itemData;
+            $i++;
+        }
+        try {
+            $response = Http::withOptions([
+                'verify' => false,
+            ])
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                    'Authorization' => request()->header('authorization')
+                ])
+                ->withBody(json_encode($data), 'application/json')
+                ->post('https://10.27.0.109:32002/api/v1/itemSlips');
+            return response()->json([
+                'status' => $response->successful() ? 'success' : 'failed',
+                'data' => $response->json(),
+            ], $response->status());
+        } catch (Throwable $e) {
+            return response()->json([
+                'status' => 'Invoice failed',
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    public function beginningBalanceNoteSlip()
+    {
+        $user_nr = $this->fetchValueFromTable($this->usersTable, 'name', $this->username, 'nr');
+        $data = [
+            "GROUP" => 3,
+            "TYPE" => 14,
+            "NUMBER" => "~",
+            "DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "TIME" => TimeHelper::calculateTime(),
+            "DOC_NUMBER" => request()->document_number,
+            "SOURCE_WH" => request()->warehouse_source,
+            "RC_RATE" => 1,
+            "CREATED_BY" => $user_nr,
+            "DATE_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "HOUR_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('h'),
+            "MIN_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
+            "SEC_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('s'),
+            "CURRSEL_TOTALS" => 1,
+            "SHIP_DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "SHIP_TIME" => TimeHelper::calculateTime(),
+            "DOC_DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "DOC_TIME" => TimeHelper::calculateTime(),
+        ];
+        $transactions = request()->input('TRANSACTIONS.items');
+        $i = 1;
+        foreach ($transactions as $item) {
+            $itemData = [
+                "INTERNAL_REFERENCE" => 0,
+                "ITEM_CODE" => $item['item_code'],
+                "LINE_TYPE" => $item['item_type'],
+                "SOURCEINDEX" => $data['SOURCE_WH'],
+                "LINE_NUMBER" => $i,
+                "QUANTITY" => $item['item_quantity'],
+                "RC_XRATE" => 1,
+                "UNIT_CODE" => $item['item_unit'],
+                "UNIT_CONV1" => 1,
+                "UNIT_CONV2" => 1,
+                "EU_VAT_STATUS" => 4,
+                "EDT_CURR" => 30,
+            ];
+            $data['TRANSACTIONS']['items'][] = $itemData;
+            $i++;
+        }
+        try {
+            $response = Http::withOptions([
+                'verify' => false,
+            ])
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                    'Authorization' => request()->header('authorization')
+                ])
+                ->withBody(json_encode($data), 'application/json')
+                ->post('https://10.27.0.109:32002/api/v1/itemSlips');
+            return response()->json([
+                'status' => $response->successful() ? 'success' : 'failed',
+                'data' => $response->json(),
+            ], $response->status());
+        } catch (Throwable $e) {
+            return response()->json([
+                'status' => 'Invoice failed',
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    public function inventoryExcessVoucherSlip()
+    {
+        $user_nr = $this->fetchValueFromTable($this->usersTable, 'name', $this->username, 'nr');
+        $data = [
+            "GROUP" => 3,
+            "TYPE" => 50,
+            "NUMBER" => "~",
+            "DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "TIME" => TimeHelper::calculateTime(),
+            "DOC_NUMBER" => request()->document_number,
+            "SOURCE_WH" => request()->warehouse_source,
+            "RC_RATE" => 1,
+            "CREATED_BY" => $user_nr,
+            "DATE_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "HOUR_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('h'),
+            "MIN_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
+            "SEC_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('s'),
+            "CURRSEL_TOTALS" => 1,
+            "SHIP_DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "SHIP_TIME" => TimeHelper::calculateTime(),
+            "DOC_DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "DOC_TIME" => TimeHelper::calculateTime(),
+        ];
+        $transactions = request()->input('TRANSACTIONS.items');
+        $i = 1;
+        foreach ($transactions as $item) {
+            $itemData = [
+                "INTERNAL_REFERENCE" => 0,
+                "ITEM_CODE" => $item['item_code'],
+                "LINE_TYPE" => $item['item_type'],
+                "SOURCEINDEX" => $data['SOURCE_WH'],
+                "LINE_NUMBER" => $i,
+                "QUANTITY" => $item['item_quantity'],
+                "RC_XRATE" => 1,
+                "UNIT_CODE" => $item['item_unit'],
+                "UNIT_CONV1" => 1,
+                "UNIT_CONV2" => 1,
+                "EU_VAT_STATUS" => 4,
+                "EDT_CURR" => 30,
+            ];
+            $data['TRANSACTIONS']['items'][] = $itemData;
+            $i++;
+        }
+        try {
+            $response = Http::withOptions([
+                'verify' => false,
+            ])
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                    'Authorization' => request()->header('authorization')
+                ])
+                ->withBody(json_encode($data), 'application/json')
+                ->post('https://10.27.0.109:32002/api/v1/itemSlips');
+            return response()->json([
+                'status' => $response->successful() ? 'success' : 'failed',
+                'data' => $response->json(),
+            ], $response->status());
+        } catch (Throwable $e) {
+            return response()->json([
+                'status' => 'Invoice failed',
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    public function inventoryDeficiencyVoucherSlip()
+    {
+        $user_nr = $this->fetchValueFromTable($this->usersTable, 'name', $this->username, 'nr');
+        $data = [
+            "GROUP" => 3,
+            "TYPE" => 51,
+            "NUMBER" => "~",
+            "DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "TIME" => TimeHelper::calculateTime(),
+            "DOC_NUMBER" => request()->document_number,
+            "RC_RATE" => 1,
+            "CREATED_BY" => $user_nr,
+            "DATE_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "HOUR_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('h'),
+            "MIN_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
+            "SEC_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('s'),
+            "CURRSEL_TOTALS" => 1,
+            "SHIP_DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "SHIP_TIME" => TimeHelper::calculateTime(),
+            "DOC_DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "DOC_TIME" => TimeHelper::calculateTime(),
+        ];
+        $transactions = request()->input('TRANSACTIONS.items');
+        $i = 1;
+        foreach ($transactions as $item) {
+            $itemData = [
+                "INTERNAL_REFERENCE" => 0,
+                "ITEM_CODE" => $item['item_code'],
+                "LINE_TYPE" => $item['item_type'],
+                "LINE_NUMBER" => $i,
+                "QUANTITY" => $item['item_quantity'],
+                "RC_XRATE" => 1,
+                "UNIT_CODE" => $item['item_unit'],
+                "UNIT_CONV1" => 1,
+                "UNIT_CONV2" => 1,
+                "EU_VAT_STATUS" => 4,
+                "EDT_CURR" => 30,
+            ];
+            $data['TRANSACTIONS']['items'][] = $itemData;
+            $i++;
+        }
+        try {
+            $response = Http::withOptions([
+                'verify' => false,
+            ])
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                    'Authorization' => request()->header('authorization')
+                ])
+                ->withBody(json_encode($data), 'application/json')
+                ->post('https://10.27.0.109:32002/api/v1/itemSlips');
+            return response()->json([
+                'status' => $response->successful() ? 'success' : 'failed',
+                'data' => $response->json(),
+            ], $response->status());
         } catch (Throwable $e) {
             return response()->json([
                 'status' => 'Invoice failed',

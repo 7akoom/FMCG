@@ -15,6 +15,12 @@ class ItemDefController extends Controller
     protected $type;
     protected $category;
     protected $specialcodesTable;
+    protected $itemsTable;
+    protected $brandsTable;
+    protected $weightsTable;
+    protected $unitsTable;
+    protected $customersTable;
+    protected $pricesTable;
 
     public function __construct(Request $request)
     {
@@ -23,6 +29,12 @@ class ItemDefController extends Controller
         $this->type = $request->header("type");
         $this->category = $request->header("category");
         $this->specialcodesTable = 'LG_' . $this->code . '_SPECODES';
+        $this->itemsTable = 'LG_' . $this->code . '_ITEMS';
+        $this->brandsTable = 'LG_' . $this->code . '_MARK';
+        $this->weightsTable = 'LG_' . $this->code . '_ITMUNITA';
+        $this->unitsTable = 'LG_' . $this->code . '_UNITSETF';
+        $this->customersTable = 'LG_' . $this->code . '_CLCARD';
+        $this->pricesTable = 'LG_' . $this->code . '_PRCLIST';
     }
 
     public function categories(Request $request)

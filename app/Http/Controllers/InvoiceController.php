@@ -796,10 +796,9 @@ class InvoiceController extends Controller
                 ->withBody(json_encode($data), 'application/json')
                 ->post('https://10.27.0.109:32002/api/v1/salesInvoices');
             return response()->json([
-                'status' => 'success',
-                'message' => 'Invoice saved successfully',
-                'invoice' => json_decode($response),
-            ], 200);
+                'status' => $response->successful() ? 'success' : 'failed',
+                'invoice' => $response->json(),
+            ], $response->status());
         } catch (Throwable $e) {
             return response()->json([
                 'status' => 'Invoice failed',
@@ -965,10 +964,9 @@ class InvoiceController extends Controller
                 ->withBody(json_encode($data), 'application/json')
                 ->post('https://10.27.0.109:32002/api/v1/salesInvoices');
             return response()->json([
-                'status' => 'success',
-                'message' => 'Invoice saved successfully',
-                'invoice' => json_decode($response),
-            ], 200);
+                'status' => $response->successful() ? 'success' : 'failed',
+                'invoice' => $response->json(),
+            ], $response->status());
         } catch (Throwable $e) {
             return response()->json([
                 'status' => 'Invoice failed',
@@ -1528,10 +1526,9 @@ class InvoiceController extends Controller
                 ->withBody(json_encode($data), 'application/json')
                 ->post('https://10.27.0.109:32002/api/v1/purchaseInvoices');
             return response()->json([
-                'status' => 'success',
-                'message' => 'Invoice saved successfully',
-                'invoice' => json_decode($response),
-            ], 200);
+                'status' => $response->successful() ? 'success' : 'failed',
+                'invoice' => $response->json(),
+            ], $response->status());
         } catch (Throwable $e) {
             return response()->json([
                 'status' => 'Invoice failed',

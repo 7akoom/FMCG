@@ -56,7 +56,7 @@ Route::controller(CustomerController::class)->group(function () {
 Route::controller(ItemController::class)->group(function () {
     Route::prefix('item')->group(function () {
         Route::prefix('salesman')->group(function () {
-            Route::post('/items', 'index');
+            Route::post('/items', 'itemMap');
             Route::post('getUnitWithPrice', 'getUnitWithPrice');
             Route::post('/itemdetails', 'getItemDetails');
         });
@@ -66,6 +66,11 @@ Route::controller(ItemController::class)->group(function () {
             Route::post('/filterbybrand', 'searchbybrand');
             Route::post('/itemdetails', 'getItemDetails');
             Route::post('/scrap-slip', 'scrapSlip');
+            Route::post('/whouse-transfer-notic-slip', 'wHouseTransferNoticSlip');
+            Route::post('/notic-of-use-slip', 'noticOfUseSlip');
+            Route::post('/beginning-balance-note-slip', 'beginningBalanceNoteSlip');
+            Route::post('/inventory-excess-voucher-slip', 'inventoryExcessVoucherSlip');
+            Route::post('/inventory-deficiency-voucher-slip', 'inventoryDeficiencyVoucherSlip');
         });
     });
 });
@@ -75,6 +80,7 @@ Route::controller(ItemDefController::class)->group(function () {
         Route::prefix('salesman')->group(function () {
             Route::post('/category', 'categories');
             Route::post('/subcategory', 'subcategories');
+            Route::post('/test', 'itemMap');
         });
         Route::prefix('accounting')->group(function () {
             Route::post('/categoriestree', 'catAndSubCategory');
