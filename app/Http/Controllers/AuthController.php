@@ -86,4 +86,13 @@ class AuthController extends Controller
 
         return false;
     }
+
+    public function check()
+    {
+        return response()->json([
+            'message' => 'check successful',
+            'data' => []
+        ]);
+    }
+
 }
