@@ -15,6 +15,14 @@ class AuthController extends Controller
         ]);
     }
 
+    public function check()
+    {
+        return response()->json([
+            'message' => 'check successful',
+            'data' => []
+        ]);
+    }
+
     public function salesManLogin()
     {
         request()->validate(['username' => 'required', 'password' => 'required']);
