@@ -122,6 +122,8 @@ Route::controller(OrderController::class)
                     Route::post('/orderdetails', 'orderdetails');
                     Route::post('/previousorderdetails', 'previousorderdetails');
                     Route::patch('/orders/update-status/{orderId}', 'updateOrderStatus');
+                    Route::post('/orders/update/{orderId}', 'update');
+                    Route::post('/orders/delete/{orderId}', 'destroy');
                     // Route::post('/customercurrentorder', 'customerCurrentOrder');
                 });
                 Route::prefix('salesman')

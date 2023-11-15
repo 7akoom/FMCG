@@ -483,7 +483,6 @@ class OrderController extends Controller
                 'status' => $response->successful() ? 'success' : 'failed',
                 'data' => $response->json(),
             ], $response->status());
-
         } catch (Throwable $e) {
             return response()->json([
                 'status' => 'failed',
@@ -491,6 +490,119 @@ class OrderController extends Controller
             ], 422);
         }
     }
+
+    public function update(Request $request, $id)
+    {
+        $customer = $request->header('customer');
+        $salesman = $request->header('salesman');
+        $salesman_code = $this->fetchValueFromTable($this->salesmansTable, 'logicalref', $salesman, 'code');
+        $payment_ref = $this->fetchValueFromTable($this->customersTable, 'code', $customer, 'paymentref');
+        $existingRecord = DB::table($this->ordersTable)->where('logicalref', $id)->first();
+
+
+        if (!$existingRecord) {
+            return response()->json([
+                'status' => 'failed',
+                'message' => 'Record not found',
+            ], 404);
+        }
+        $data = [
+            'INTERNAL_REFERENCE' => $existingRecord->LOGICALREF,
+            'NUMBER' => $existingRecord->FICHENO,
+            'ARP_CODE' => $customer,
+            'TOTAL_DISCOUNTS' => $request->total_discounts,
+            'TOTAL_DISCOUNTED' => $request->after_discount,
+            'TOTAL_GROSS' => $request->before_discount,
+            'TOTAL_NET' => $request->net_total,
+            'RC_RATE' => 1,
+            'RC_NET' => $request->net_total,
+            'PAYMENT_CODE' => $request->payment_code,
+            'ORDER_STATUS' => 4,
+            'DATE' => $existingRecord->DATE_,
+            'CREATED_BY' => $existingRecord->CAPIBLOCK_CREATEDBY,
+            'DATE_CREATED' => $existingRecord->CAPIBLOCK_CREADEDDATE,
+            'HOUR_CREATED' => $existingRecord->CAPIBLOCK_CREATEDHOUR,
+            'MIN_CREATED' => $existingRecord->CAPIBLOCK_CREATEDMIN,
+            'SEC_CREATED' => $existingRecord->CAPIBLOCK_CREATEDSEC,
+            'MODIFIED_BY' => request()->header('username'),
+            'DATE_MODIFIED' => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            'HOUR_MODIFIED' => Carbon::now()->timezone('Asia/Baghdad')->format('h'),
+            'MIN_MODIFIED' => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
+            'SEC_MODIFIED' => Carbon::now()->timezone('Asia/Baghdad')->format('s'),
+            'SALESMAN_CODE' => $salesman_code,
+            'AFFECT_RISK' => 1,
+            'DEDUCTIONPART1' => 2,
+            'DEDUCTIONPART2' => 3,
+            'CURRSEL_TOTAL' => 1,
+        ];
+        // dd($data['DATE_CREATED']);
+
+        $transactions = $request->input('TRANSACTIONS.items');
+        foreach ($transactions as $item) {
+            $item_type = $item['item_type'];
+            $master_code = $item['item_code'];
+            $quantity = $item['item_quantity'];
+            $price = $item['item_price'];
+            $total = $item['item_total'];
+            $unit = isset($item['item_unit']) ? $item['item_unit'] : '';
+            $itemData = [
+                "INTERNAL_REFERENCE" => 0,
+                "TYPE" => $item_type,
+                "MASTER_CODE" => $master_code,
+                "QUANTITY" => $quantity,
+                "PRICE" => $price,
+                "TOTAL" => $total,
+                "VAT_BASE" => $total,
+                // "DUE_DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+                "TOTAL_NET" => $total,
+                "SALESMAN_CODE" => $salesman_code,
+                "MULTI_ADD_TAX" => 0,
+                "AFFECT_RISK" => 1,
+                "EDT_PRICE" => $total,
+                "EDT_CURR" => 30,
+            ];
+            if ($item['item_type'] == 0) {
+                $itemData["UNIT_CONV1"] = 1;
+                $itemData["UNIT_CONV2"] = 1;
+                $itemData["RESERVE_DATE"] = Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d');
+                $itemData["RESERVE_AMOUNT"] = $quantity;
+            } else {
+                $itemData["UNIT_CONV1"] = 0;
+                $itemData["UNIT_CONV2"] = 0;
+                $itemData["CALC_TYPE"] = 1;
+            }
+            if ($unit) {
+                $itemData["UNIT_CODE"] = $unit;
+            } else {
+                $itemData["UNIT_CODE"] = 0;
+            }
+            $data['TRANSACTIONS']['items'][] = $itemData;
+        }
+
+        try {
+            $response = Http::withOptions([
+                'verify' => false,
+            ])
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                    'Authorization' => $request->header('authorization')
+                ])
+                ->withBody(json_encode($data), 'application/json')
+                ->put("https://10.27.0.109:32002/api/v1/salesOrders/{$id}");
+
+            return response()->json([
+                'status' => $response->successful() ? 'success' : 'failed',
+                'data' => $response->json(),
+            ], $response->status());
+        } catch (Throwable $e) {
+            return response()->json([
+                'status' => 'failed',
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
 
     public function updateOrderStatus(Request $request, $order)
     {
@@ -518,6 +630,31 @@ class OrderController extends Controller
                 'message' => 'Order updated succssfully',
                 'data' => $item,
             ], 200);
+        } catch (Throwable $e) {
+            return response()->json([
+                'status' => 'failed',
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    public function destroy($id)
+    {
+        try {
+            $response = Http::withOptions([
+                'verify' => false,
+            ])
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                    'Authorization' => request()->header('authorization')
+                ])
+                ->delete("https://10.27.0.109:32002/api/v1/salesOrders/{$id}");
+
+            return response()->json([
+                'status' => $response->successful() ? 'success' : 'failed',
+                'data' => $response->json(),
+            ], $response->status());
         } catch (Throwable $e) {
             return response()->json([
                 'status' => 'failed',
