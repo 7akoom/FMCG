@@ -124,6 +124,7 @@ Route::controller(OrderController::class)
                     Route::patch('/orders/update-status/{orderId}', 'updateOrderStatus');
                     Route::post('/orders/update/{orderId}', 'update');
                     Route::post('/orders/delete/{orderId}', 'destroy');
+                    Route::get('/orders/{orderId}', 'getOrderToBill');
                     // Route::post('/customercurrentorder', 'customerCurrentOrder');
                 });
                 Route::prefix('salesman')

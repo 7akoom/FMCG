@@ -195,6 +195,7 @@ class ItemController extends Controller
                 DB::raw("CASE WHEN '$this->lang' = 'ar' THEN {$this->itemsTable}.name
             WHEN '$this->lang' = 'en' THEN $this->itemsTable.name3 WHEN '$this->lang' = 'tr' THEN {$this->itemsTable}.name4 ELSE $this->itemsTable.name END as name"),
                 "$this->itemsTable.stgrpcode as group",
+                "$this->itemsTable.classtype as type",
                 "$this->unitsTable.logicalref as unit_id",
                 "$this->unitsTable.code as unit",
                 "weights.logicalref as weight_id",
@@ -224,6 +225,7 @@ class ItemController extends Controller
                                     'brand_id' => $item->brand_id,
                                     'brand_name' => $item->brand,
                                     'brand_image' => $item->brand_image,
+                                    'type' => $item->type,
                                     'group' => $item->group,
                                     'weight' => $item->weight,
                                     'pieces_number' => $item->pieces_number,

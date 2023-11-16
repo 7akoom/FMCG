@@ -30,8 +30,11 @@ class OrderController extends Controller
     protected $ordersTransactionsTable;
     protected $itemsTable;
     protected $weightsTable;
+    protected $unitsTable;
     protected $payplansTable;
     protected $cutoemrsView;
+    protected $whousesTable;
+    protected $invoicesTable;
 
     private function fetchValueFromTable($table, $column, $value1, $value2)
     {
@@ -53,12 +56,15 @@ class OrderController extends Controller
         $this->status = $request->input('status');
         $this->customersTable = 'LG_' . $this->code . '_CLCARD';
         $this->salesmansTable = 'LG_SLSMAN';
+        $this->whousesTable = 'L_CAPIWHOUSE';
         $this->ordersTable = 'LG_' . $this->code . '_01_ORFICHE';
+        $this->unitsTable = 'LG_' . $this->code . '_UNITSETL';
         $this->ordersTransactionsTable = 'LG_' . $this->code . '_01_ORFLINE';
         $this->itemsTable = 'LG_' . $this->code . '_ITEMS';
         $this->weightsTable = 'LG_' . $this->code . '_ITMUNITA';
         $this->payplansTable = 'LG_' . $this->code . '_PAYPLANS';
         $this->cutoemrsView = 'LV_' . $this->code . '_01_CLCARD';
+        $this->invoicesTable = 'LG_' . $this->code . '_01_INVOICE';
     }
 
     // retrieve orders list
@@ -181,7 +187,7 @@ class OrderController extends Controller
                 "$this->ordersTable.totaldiscounts as order_discount",
                 "$this->ordersTable.nettotal as order_net",
             )
-            ->where(["$this->ordersTable.ficheno" => $order])
+            ->where(["$this->ordersTable.logicalref" => $order])
             ->distinct()
             ->first();
         $item = DB::table("$this->ordersTransactionsTable")
@@ -216,6 +222,97 @@ class OrderController extends Controller
             'order_info' => $info = (array) $info,
             'data' => $item,
         ]);
+    }
+
+    public function getOrderToBill($id)
+    {
+        $last_invoice_num = DB::table("$this->invoicesTable")->where("trcode", 8)->orderby("logicalref", "desc")->value("ficheno");
+        $is_exist = DB::table("$this->ordersTable")->where('logicalref', $id)->first();
+        if (!$is_exist) {
+            return response()->json([
+                'status' => 'failed',
+                'status' => 'Order not found',
+                'data' => [],
+            ], 404);
+        } else {
+            $order = DB::table("$this->ordersTransactionsTable")
+                ->join("$this->itemsTable", "$this->ordersTransactionsTable.stockref", "=", "$this->itemsTable.logicalref")
+                ->join("$this->salesmansTable", "$this->ordersTransactionsTable.salesmanref", "=", "$this->salesmansTable.logicalref")
+                ->join("$this->weightsTable", "$this->weightsTable.itemref", "=", "$this->itemsTable.logicalref")
+                ->join("$this->ordersTable", "$this->ordersTransactionsTable.ordficheref", "=", "$this->ordersTable.logicalref")
+                ->join("$this->customersTable", "$this->ordersTransactionsTable.clientref", "=", "$this->customersTable.logicalref")
+                ->join("$this->cutoemrsView", "$this->cutoemrsView.logicalref", "=", "$this->customersTable.logicalref")
+                ->join("$this->payplansTable", "$this->payplansTable.logicalref", '=', "$this->customersTable.paymentref")
+                ->join("$this->whousesTable", "$this->whousesTable.nr", '=', "$this->ordersTable.sourceindex")
+                ->select(
+                    "$this->customersTable.code as customer_code",
+                    "$this->customersTable.definition_ as customer_name",
+                    "$this->payplansTable.code as payment_code",
+                    "$this->whousesTable.name as warehouse",
+                    "$this->ordersTable.date_ as order_date",
+                    "$this->ordersTable.ficheno as order_number",
+                    "$this->ordersTable.docode as document_number",
+                    "$this->salesmansTable.definition_ as salesman_name",
+                    "$this->ordersTable.grosstotal as order_total",
+                    "$this->ordersTable.totaldiscounts as order_discount",
+                    "$this->ordersTable.nettotal as order_net"
+                )
+                ->where("$this->ordersTable.logicalref", $id)
+                ->first();
+            $item = DB::table("$this->ordersTransactionsTable")
+                ->leftjoin("$this->unitsTable", "$this->unitsTable.logicalref", "=", "$this->ordersTransactionsTable.uomref")
+                ->leftjoin("$this->itemsTable", "$this->ordersTransactionsTable.stockref", "=", "$this->itemsTable.logicalref")
+                ->select(
+                    "$this->ordersTransactionsTable.lineno_ as line",
+                    DB::raw("COALESCE($this->itemsTable.code, '') as code"),
+                    DB::raw("COALESCE($this->itemsTable.name, '') as name"),
+                    "$this->ordersTransactionsTable.amount as quantity",
+                    DB::raw("COALESCE($this->unitsTable.name, '') as unit"),
+                    "$this->ordersTransactionsTable.price as price",
+                    "$this->ordersTransactionsTable.total as total",
+                )
+                ->where(["$this->ordersTransactionsTable.ordficheref" => $id])
+                ->get();
+            $data = [
+                "invoice_number" => str_pad((int)$last_invoice_num + 1, strlen($last_invoice_num), '0', STR_PAD_LEFT),
+                "date" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+                "time" => TimeHelper::calculateTime(),
+                "document_number" => $order->document_number,
+                "customer_code" => $order->customer_code,
+                "customer_name" => $order->customer_name,
+                "payment_paln" => $order->payment_code,
+                "warehouse" => $order->warehouse,
+                "salesman_name" => $order->salesman_name,
+                "due_date" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+                "items" => $item
+            ];
+            return response()->json([
+                'status' => 'success',
+                'data' => $data,
+            ], 200);
+        }
+
+        // try {
+        //     $response = Http::withOptions([
+        //         'verify' => false,
+        //     ])
+        //         ->withHeaders([
+        //             'Accept' => 'application/json',
+        //             'Content-Type' => 'application/json',
+        //             'Authorization' => request()->header('authorization')
+        //         ])
+        //         ->get("https://10.27.0.109:32002/api/v1/salesOrders/{$id}");
+        //     dd($response->json());
+        //     return response()->json([
+        //         'status' => $response->successful() ? 'success' : 'failed',
+        //         'data' => $response->json(),
+        //     ], $response->status());
+        // } catch (Throwable $e) {
+        //     return response()->json([
+        //         'status' => 'failed',
+        //         'message' => $e->getMessage(),
+        //     ], 422);
+        // }
     }
 
     // retrieve orders based on status
