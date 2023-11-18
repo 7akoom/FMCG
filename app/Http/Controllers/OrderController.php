@@ -164,6 +164,7 @@ class OrderController extends Controller
     public function orderdetails(Request $request)
     {
         $order = $request->header('order');
+        $order_id = $this->fetchValueFromTable("$this->ordersTable", "FICHENO", $order, "LOGICALREF");
         $info = DB::table("$this->ordersTransactionsTable")
             ->join("$this->itemsTable", "$this->ordersTransactionsTable.stockref", "=", "$this->itemsTable.logicalref")
             ->join("$this->salesmansTable", "$this->ordersTransactionsTable.salesmanref", "=", "$this->salesmansTable.logicalref")
@@ -187,28 +188,31 @@ class OrderController extends Controller
                 "$this->ordersTable.totaldiscounts as order_discount",
                 "$this->ordersTable.nettotal as order_net",
             )
-            ->where(["$this->ordersTable.logicalref" => $order])
+            ->where(["$this->ordersTable.ficheno" => $order])
             ->distinct()
             ->first();
         $item = DB::table("$this->ordersTransactionsTable")
-            ->join("$this->itemsTable", "$this->ordersTransactionsTable.stockref", "=", "$this->itemsTable.logicalref")
-            ->join("$this->salesmansTable", "$this->ordersTransactionsTable.salesmanref", "=", "$this->salesmansTable.logicalref")
-            ->join("$this->weightsTable", "$this->weightsTable.itemref", "=", "$this->itemsTable.logicalref")
-            ->join("$this->ordersTable", "$this->ordersTransactionsTable.ordficheref", "=", "$this->ordersTable.logicalref")
-            ->join("$this->customersTable", "$this->ordersTransactionsTable.clientref", "=", "$this->customersTable.logicalref")
+            ->leftjoin("$this->itemsTable", "$this->ordersTransactionsTable.stockref", "=", "$this->itemsTable.logicalref")
+            ->leftjoin("$this->weightsTable", "$this->weightsTable.itemref", "=", "$this->ordersTransactionsTable.ordficheref")
             ->select(
-                "$this->ordersTransactionsTable.lineno_ as line",
-                "$this->ordersTable.capiblock_creadeddate as date",
-                "$this->itemsTable.code as code",
-                "$this->itemsTable.name as name",
+                DB::raw("COALESCE($this->ordersTransactionsTable.lineno_, '') as line"),
+                "$this->ordersTransactionsTable.date_ as date",
+                DB::raw("COALESCE($this->itemsTable.code, '') as code"),
+                DB::raw("COALESCE($this->itemsTable.name, '') as name"),
                 "$this->ordersTransactionsTable.amount as quantity",
                 "$this->ordersTransactionsTable.price as price",
                 "$this->ordersTransactionsTable.total as total",
                 "$this->ordersTransactionsTable.distdisc as discount",
-                "$this->weightsTable.grossweight as weight"
+                DB::raw("CASE WHEN $this->ordersTransactionsTable.stockref = 0 THEN 0
+                ELSE $this->weightsTable.grossweight END as weight"),
+
             )
-            ->where(["$this->ordersTable.ficheno" => $order, "$this->weightsTable.linenr" => 1])
+            ->where([
+                "$this->ordersTransactionsTable.ordficheref" => $order_id,
+                "$this->weightsTable.convfact1" => 1
+            ])
             ->get();
+
         if ($item->isEmpty()) {
             return response()->json([
                 'status' => 'success',
@@ -237,7 +241,7 @@ class OrderController extends Controller
         } else {
             $order = DB::table("$this->ordersTransactionsTable")
                 ->join("$this->itemsTable", "$this->ordersTransactionsTable.stockref", "=", "$this->itemsTable.logicalref")
-                ->join("$this->salesmansTable", "$this->ordersTransactionsTable.salesmanref", "=", "$this->salesmansTable.logicalref")
+                ->leftjoin("$this->salesmansTable", "$this->ordersTransactionsTable.salesmanref", "=", "$this->salesmansTable.logicalref")
                 ->join("$this->weightsTable", "$this->weightsTable.itemref", "=", "$this->itemsTable.logicalref")
                 ->join("$this->ordersTable", "$this->ordersTransactionsTable.ordficheref", "=", "$this->ordersTable.logicalref")
                 ->join("$this->customersTable", "$this->ordersTransactionsTable.clientref", "=", "$this->customersTable.logicalref")
@@ -252,7 +256,8 @@ class OrderController extends Controller
                     "$this->ordersTable.date_ as order_date",
                     "$this->ordersTable.ficheno as order_number",
                     "$this->ordersTable.docode as document_number",
-                    "$this->salesmansTable.definition_ as salesman_name",
+                    DB::raw("COALESCE($this->salesmansTable.definition_, '') as salesman_name"),
+                    // "$this->salesmansTable.definition_ as salesman_name",
                     "$this->ordersTable.grosstotal as order_total",
                     "$this->ordersTable.totaldiscounts as order_discount",
                     "$this->ordersTable.nettotal as order_net"
@@ -291,28 +296,6 @@ class OrderController extends Controller
                 'data' => $data,
             ], 200);
         }
-
-        // try {
-        //     $response = Http::withOptions([
-        //         'verify' => false,
-        //     ])
-        //         ->withHeaders([
-        //             'Accept' => 'application/json',
-        //             'Content-Type' => 'application/json',
-        //             'Authorization' => request()->header('authorization')
-        //         ])
-        //         ->get("https://10.27.0.109:32002/api/v1/salesOrders/{$id}");
-        //     dd($response->json());
-        //     return response()->json([
-        //         'status' => $response->successful() ? 'success' : 'failed',
-        //         'data' => $response->json(),
-        //     ], $response->status());
-        // } catch (Throwable $e) {
-        //     return response()->json([
-        //         'status' => 'failed',
-        //         'message' => $e->getMessage(),
-        //     ], 422);
-        // }
     }
 
     // retrieve orders based on status
@@ -436,37 +419,45 @@ class OrderController extends Controller
     public function previousorderdetails(Request $request)
     {
         $order = $request->header('order');
+        $order_id = $this->fetchValueFromTable("$this->ordersTable", "FICHENO", $order, "LOGICALREF");
         $info = DB::table("$this->ordersTransactionsTable")
             ->join("$this->itemsTable", "$this->ordersTransactionsTable.stockref", "=", "$this->itemsTable.logicalref")
             ->join("$this->weightsTable", "$this->weightsTable.itemref", "=", "$this->itemsTable.logicalref")
             ->join("$this->ordersTable", "$this->ordersTransactionsTable.ordficheref", "=", "$this->ordersTable.logicalref")
+            ->leftjoin("$this->payplansTable", "$this->payplansTable.logicalref", "=", "$this->ordersTable.paydefref")
             ->select(
                 "$this->ordersTable.ficheno as number",
                 "$this->ordersTable.grosstotal as order_amount",
                 "$this->ordersTable.totaldiscounts as order_discount",
                 "$this->ordersTable.nettotal as order_total",
                 "$this->ordersTable.genexp1 as approved_by",
-                "$this->ordersTable.genexp2 as payment_type"
+                "$this->ordersTable.printcnt as print_counter",
+                "$this->ordersTable.printdate as print_date",
+                "$this->payplansTable.code as payment_type"
             )
             ->where(["$this->ordersTable.ficheno" => $order])
             ->distinct()
             ->first();
         $item = DB::table("$this->ordersTransactionsTable")
-            ->join("$this->itemsTable", "$this->ordersTransactionsTable.stockref", "=", "$this->itemsTable.logicalref")
-            ->join("$this->weightsTable", "$this->weightsTable.itemref", "=", "$this->itemsTable.logicalref")
-            ->join("$this->ordersTable", "$this->ordersTransactionsTable.ordficheref", "=", "$this->ordersTable.logicalref")
+            ->leftjoin("$this->itemsTable", "$this->ordersTransactionsTable.stockref", "=", "$this->itemsTable.logicalref")
+            ->leftjoin("$this->weightsTable", "$this->weightsTable.itemref", "=", "$this->ordersTransactionsTable.ordficheref")
             ->select(
-                "$this->ordersTransactionsTable.lineno_ as line",
-                "$this->ordersTable.capiblock_creadeddate as date",
-                "$this->itemsTable.code as code",
-                "$this->itemsTable.name as name",
+                DB::raw("COALESCE($this->ordersTransactionsTable.lineno_, '') as line"),
+                "$this->ordersTransactionsTable.date_ as date",
+                DB::raw("COALESCE($this->itemsTable.code, '') as code"),
+                DB::raw("COALESCE($this->itemsTable.name, '') as name"),
                 "$this->ordersTransactionsTable.amount as quantity",
                 "$this->ordersTransactionsTable.price as price",
                 "$this->ordersTransactionsTable.total as total",
                 "$this->ordersTransactionsTable.distdisc as discount",
-                "$this->weightsTable.grossweight as weight"
+                DB::raw("CASE WHEN $this->ordersTransactionsTable.stockref = 0 THEN 0
+                ELSE $this->weightsTable.grossweight END as weight"),
+
             )
-            ->where(["$this->ordersTable.ficheno" => $order, "$this->weightsTable.linenr" => 1])
+            ->where([
+                "$this->ordersTransactionsTable.ordficheref" => $order_id,
+                "$this->weightsTable.convfact1" => 1
+            ])
             ->get();
         if ($item->isEmpty()) {
             return response()->json([
@@ -575,10 +566,10 @@ class OrderController extends Controller
                 ->withBody(json_encode($data), 'application/json')
 
                 ->post('https://10.27.0.109:32002/api/v1/salesOrders');
-
+            $order_number = DB::table($this->ordersTable)->select("FICHENO")->where("SALESMANREF", $salesman)->orderby("LOGICALREF", "DESC")->first();
             return response()->json([
                 'status' => $response->successful() ? 'success' : 'failed',
-                'data' => $response->json(),
+                'data' => $order_number,
             ], $response->status());
         } catch (Throwable $e) {
             return response()->json([

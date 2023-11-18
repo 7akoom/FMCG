@@ -1120,6 +1120,7 @@ class InvoiceController extends Controller
     public function accountingSalesmanInvoiceDetails(Request $request)
     {
         $invoice = $request->header('invoice');
+        $invoice_id = $this->fetchValueFromTable("$this->invoicesTable", "FICHENO", $invoice, "LOGICALREF");
         $info = DB::table("$this->stocksTransactionsTable")
             ->join("$this->itemsTable", "$this->stocksTransactionsTable.stockref", "=", "$this->itemsTable.logicalref")
             ->join("$this->salesmansTable", "$this->stocksTransactionsTable.salesmanref", "=", "$this->salesmansTable.logicalref")
@@ -1151,23 +1152,25 @@ class InvoiceController extends Controller
             ->distinct()
             ->first();
         $item = DB::table("$this->stocksTransactionsTable")
-            ->join("$this->itemsTable", "$this->stocksTransactionsTable.stockref", "=", "$this->itemsTable.logicalref")
-            ->join("$this->salesmansTable", "$this->stocksTransactionsTable.salesmanref", "=", "$this->salesmansTable.logicalref")
-            ->join("$this->weightsTable", "$this->weightsTable.itemref", "=", "$this->itemsTable.logicalref")
-            ->join("$this->invoicesTable", "$this->stocksTransactionsTable.invoiceref", "=", "$this->invoicesTable.logicalref")
-            ->join("$this->customersTable", "$this->stocksTransactionsTable.clientref", "=", "$this->customersTable.logicalref")
+            ->leftjoin("$this->itemsTable", "$this->stocksTransactionsTable.stockref", "=", "$this->itemsTable.logicalref")
+            ->leftjoin("$this->salesmansTable", "$this->stocksTransactionsTable.salesmanref", "=", "$this->salesmansTable.logicalref")
+            ->leftjoin("$this->weightsTable", "$this->weightsTable.itemref", "=", "$this->stocksTransactionsTable.logicalref")
+            ->leftjoin("$this->invoicesTable", "$this->stocksTransactionsTable.invoiceref", "=", "$this->invoicesTable.logicalref")
             ->select(
                 "$this->stocksTransactionsTable.invoicelnno as line",
-                "$this->itemsTable.code as code",
-                "$this->itemsTable.name as name",
+                DB::raw("COALESCE($this->itemsTable.code, '') as code"),
+                DB::raw("COALESCE($this->itemsTable.name, '') as name"),
                 "$this->stocksTransactionsTable.amount as quantity",
                 "$this->stocksTransactionsTable.price as price",
                 "$this->stocksTransactionsTable.total as total",
                 "$this->stocksTransactionsTable.distdisc as discount",
-                "$this->weightsTable.grossweight as weight"
+                DB::raw("CASE WHEN $this->stocksTransactionsTable.stockref = 0 THEN 0
+                ELSE $this->weightsTable.grossweight END as weight"),
             )
             ->where([
-                "$this->invoicesTable.ficheno" => $invoice, "$this->salesmansTable.logicalref" => $this->salesman_id, "$this->weightsTable.linenr" => 1, "$this->stocksTransactionsTable.iocode" => 4,
+                "$this->stocksTransactionsTable.invoiceref" => $invoice_id,
+                "$this->salesmansTable.logicalref" => $this->salesman_id,
+                "$this->weightsTable.linenr" => 1,
             ])
             ->orderby("$this->stocksTransactionsTable.invoicelnno", "asc")
             ->get();

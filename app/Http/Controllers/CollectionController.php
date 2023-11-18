@@ -134,9 +134,12 @@ class CollectionController extends Controller
                 ])
                 ->withBody(json_encode($data), 'application/json')
                 ->post('https://10.27.0.109:32002/api/v1/safeDepositSlips');
+            $payment_number = DB::table($this->safesTransactionsTable)->select("FICHENO")
+                ->where("SALESMANREF", $this->salesman_id)
+                ->orderby("LOGICALREF", "DESC")->first();
             return response()->json([
                 'status' => $response->successful() ? 'success' : 'failed',
-                'Order' => $response->json(),
+                'Order' => $payment_number,
             ], $response->status());
         } catch (Throwable $e) {
             return response()->json([
