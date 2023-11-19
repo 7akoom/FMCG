@@ -18,6 +18,7 @@ class CollectionController extends Controller
     protected $username;
     protected $salesmansTable;
     protected $customersTable;
+    protected $customersViewsTable;
     protected $safesTransactionsTable;
     protected $safesTable;
     protected $url;
@@ -32,6 +33,7 @@ class CollectionController extends Controller
         $this->customer = $request->header('customer-code');
         $this->salesmansTable = 'LG_SLSMAN';
         $this->customersTable = 'LG_' . $this->code . '_CLCARD';
+        $this->customersViewsTable = 'LV_' . $this->code . '_01_CLCARD';
         $this->safesTransactionsTable = 'LG_' . $this->code . '_01_KSLINES';
         $this->safesTable = 'LG_' . $this->code . '_KSCARD';
         $this->url = '/safeDepositSlips';
@@ -134,12 +136,24 @@ class CollectionController extends Controller
                 ])
                 ->withBody(json_encode($data), 'application/json')
                 ->post('https://10.27.0.109:32002/api/v1/safeDepositSlips');
-            $payment_number = DB::table($this->safesTransactionsTable)->select("FICHENO")
-                ->where("SALESMANREF", $this->salesman_id)
-                ->orderby("LOGICALREF", "DESC")->first();
+            $responseData = $response->json();
+            $payment = DB::table("$this->safesTransactionsTable")
+                ->leftjoin("$this->customersViewsTable", "$this->customersViewsTable.definition_", "=", "$this->safesTransactionsTable.custtitle")
+                ->select(
+                    "$this->safesTransactionsTable.CAPIBLOCK_CREADEDDATE as date",
+                    "$this->safesTransactionsTable.CUSTTITLE as customer_name",
+                    "$this->safesTransactionsTable.FICHENO as payment_number",
+                    "$this->safesTransactionsTable.AMOUNT",
+                    "$this->customersViewsTable.debit",
+                    "$this->customersViewsTable.credit"
+                )
+                ->where([
+                    "$this->safesTransactionsTable.logicalref" => $responseData['INTERNAL_REFERENCE'],
+                ])
+                ->first();
             return response()->json([
                 'status' => $response->successful() ? 'success' : 'failed',
-                'Order' => $payment_number,
+                'Order' => $payment,
             ], $response->status());
         } catch (Throwable $e) {
             return response()->json([
