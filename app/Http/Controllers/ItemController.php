@@ -233,7 +233,6 @@ class ItemController extends Controller
                                     })
                                     ->all();
 
-                                // Ensure all group numbers have a price, set to 0 if missing
                                 for ($i = 1; $i <= 3; $i++) {
                                     if (!isset($itemPrices[$i])) {
                                         $itemPrices[$i] = 0;
