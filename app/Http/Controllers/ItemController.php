@@ -228,10 +228,18 @@ class ItemController extends Controller
                                     ->where('item_id', $item->id)
                                     ->mapWithKeys(function ($price) {
                                         return [
-                                            $price->group_number => $price->price,
+                                            $price->group_number => $price->price ?: 0, // Set to 0 if the price is null
                                         ];
                                     })
                                     ->all();
+
+                                // Ensure all group numbers have a price, set to 0 if missing
+                                for ($i = 1; $i <= 3; $i++) {
+                                    if (!isset($itemPrices[$i])) {
+                                        $itemPrices[$i] = 0;
+                                    }
+                                }
+
                                 return [
                                     'id' => $item->id,
                                     'code' => $item->code,
@@ -243,15 +251,16 @@ class ItemController extends Controller
                                     'group' => $item->group,
                                     'weight' => $item->weight,
                                     'pieces_number' => $item->pieces_number,
-                                    'price' => $itemPrices,
+                                    'prices' => $itemPrices,
                                 ];
                             })
                             ->values()
                             ->toArray();
+
                         unset($subcategory->specode);
 
                         return [
-                            'category_id' => $subcategory->category_id, // Use 'category_id' instead of 'globalid'
+                            'category_id' => $subcategory->category_id,
                             'subcategory_name' => $subcategory->subcategory_name,
                             'items' => $subcategoryItems,
                         ];

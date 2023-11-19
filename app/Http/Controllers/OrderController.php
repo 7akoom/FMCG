@@ -564,7 +564,6 @@ class OrderController extends Controller
                     'Authorization' => $request->header('authorization')
                 ])
                 ->withBody(json_encode($data), 'application/json')
-
                 ->post('https://10.27.0.109:32002/api/v1/salesOrders');
             $order_number = DB::table($this->ordersTable)
                 ->select("FICHENO", "DATE_")
