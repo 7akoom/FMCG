@@ -566,7 +566,11 @@ class OrderController extends Controller
                 ->withBody(json_encode($data), 'application/json')
 
                 ->post('https://10.27.0.109:32002/api/v1/salesOrders');
-            $order_number = DB::table($this->ordersTable)->select("FICHENO")->where("SALESMANREF", $salesman)->orderby("LOGICALREF", "DESC")->first();
+            $order_number = DB::table($this->ordersTable)
+                ->select("FICHENO", "DATE_")
+                ->where("SALESMANREF", $salesman)
+                ->orderby("LOGICALREF", "DESC")
+                ->first();
             return response()->json([
                 'status' => $response->successful() ? 'success' : 'failed',
                 'data' => $order_number,
