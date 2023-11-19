@@ -156,8 +156,6 @@ class ItemController extends Controller
 
     public function itemMap()
     {
-        $customer = request()->header("customer");
-        $last_customer = DB::table($this->customersTable)->where('logicalref', $customer)->value('specode2');
         $categories = DB::table("$this->specialcodesTable as cat")
             ->select("logicalref as id", "definition_ as category_name")
             ->where(["cat.codetype" => 1, "cat.specodetype" => 1, "cat.spetyp1" => 1])
@@ -176,15 +174,11 @@ class ItemController extends Controller
             ->get();
 
         $items = DB::table("{$this->itemsTable}")
-            ->leftJoin("$this->pricesTable", function ($join) use ($last_customer) {
-                $join->on("$this->pricesTable.cardref", "=", "$this->itemsTable.logicalref")
-                    ->where(["$this->pricesTable.active" => 0, "$this->pricesTable.clspecode2" => $last_customer, "$this->pricesTable.ptype" => 2]);
-            })
-            ->join("$this->unitsTable", "{$this->itemsTable}.unitsetref", "=", "$this->unitsTable.logicalref")
-            ->join("$this->brandsTable", "{$this->itemsTable}.markref", "=", "$this->brandsTable.logicalref")
-            ->join("$this->weightsTable as weights", "weights.itemref", "=", "{$this->itemsTable}.logicalref")
+            ->leftjoin("$this->unitsTable", "{$this->itemsTable}.unitsetref", "=", "$this->unitsTable.logicalref")
+            ->leftjoin("$this->brandsTable", "{$this->itemsTable}.markref", "=", "$this->brandsTable.logicalref")
+            ->leftjoin("$this->weightsTable as weights", "weights.itemref", "=", "{$this->itemsTable}.logicalref")
             ->where("weights.linenr", "=", 1)
-            ->join("$this->weightsTable as number", "number.itemref", "=", "{$this->itemsTable}.logicalref")
+            ->leftjoin("$this->weightsTable as number", "number.itemref", "=", "{$this->itemsTable}.logicalref")
             ->where("number.linenr", "=", 2)
             ->select(
                 "$this->itemsTable.logicalref as id",
@@ -201,23 +195,43 @@ class ItemController extends Controller
                 "weights.logicalref as weight_id",
                 "weights.grossweight as weight",
                 "number.convfact1 as pieces_number",
-                DB::raw("COALESCE($this->pricesTable.price, '0') as price"),
                 "$this->itemsTable.specode2 as subcategory_code"
             )
             ->where([
                 "$this->itemsTable.active" => 0
             ])
+            ->distinct()
             ->get();
+
+        $itemIds = $items->pluck('id');
+        $prices = DB::table("$this->pricesTable")
+            ->select(
+                "cardref as item_id",
+                "clspecode2 as group_number",
+                'price'
+            )
+            ->whereIn('cardref', $itemIds)
+            ->where(['active' => 0, 'ptype' => 2])
+            ->get();
+
         $categoriesWithSubcategories = [];
         foreach ($categories as $category) {
             $categoryData = [
                 'category_name' => $category->category_name,
                 'subcategories' => $subcategories
                     ->where('category_id', $category->id)
-                    ->map(function ($subcategory) use ($items) {
+                    ->map(function ($subcategory) use ($items, $prices) {
                         $subcategoryItems = $items
                             ->where('subcategory_code', $subcategory->specode)
-                            ->map(function ($item) {
+                            ->map(function ($item) use ($prices) {
+                                $itemPrices = $prices
+                                    ->where('item_id', $item->id)
+                                    ->mapWithKeys(function ($price) {
+                                        return [
+                                            $price->group_number => $price->price,
+                                        ];
+                                    })
+                                    ->all();
                                 return [
                                     'id' => $item->id,
                                     'code' => $item->code,
@@ -229,16 +243,18 @@ class ItemController extends Controller
                                     'group' => $item->group,
                                     'weight' => $item->weight,
                                     'pieces_number' => $item->pieces_number,
-                                    'price' => $item->price,
+                                    'price' => $itemPrices,
                                 ];
                             })
                             ->values()
                             ->toArray();
                         unset($subcategory->specode);
-                        unset($subcategory->category_id);
 
-                        $subcategory->items = $subcategoryItems;
-                        return $subcategory;
+                        return [
+                            'category_id' => $subcategory->category_id, // Use 'category_id' instead of 'globalid'
+                            'subcategory_name' => $subcategory->subcategory_name,
+                            'items' => $subcategoryItems,
+                        ];
                     })
                     ->values()
                     ->toArray(),
@@ -253,6 +269,7 @@ class ItemController extends Controller
             'data' => $categoriesWithSubcategories,
         ], 200);
     }
+
 
     public function finalItem(Request $request)
     {
