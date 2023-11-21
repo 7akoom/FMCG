@@ -1050,11 +1050,10 @@ class InvoiceController extends Controller
     public function salesmaninvoicedetails(Request $request)
     {
         $invoice = $request->header('invoice');
+        $invoice_id = $this->fetchValueFromTable($this->invoicesTable, "FICHENO", $invoice, "LOGICALREF");
         $info = DB::table("$this->stocksTransactionsTable")
-            ->join("$this->itemsTable", "$this->stocksTransactionsTable.stockref", "=", "$this->itemsTable.logicalref")
             ->join("$this->salesmansTable", "$this->stocksTransactionsTable.salesmanref", "=", "$this->salesmansTable.logicalref")
-            ->join("$this->weightsTable", "$this->weightsTable.itemref", "=", "$this->itemsTable.logicalref")
-            ->join("$this->invoicesTable", "$this->stocksTransactionsTable.invoiceref", "=", "$this->invoicesTable.logicalref")
+            ->leftjoin("$this->invoicesTable", "$this->stocksTransactionsTable.invoiceref", "=", "$this->invoicesTable.logicalref")
             ->join("$this->customersTable", "$this->stocksTransactionsTable.clientref", "=", "$this->customersTable.logicalref")
             ->join("$this->cutomersView", "$this->cutomersView.logicalref", "=", "$this->customersTable.logicalref")
             ->join("$this->payplansTable", "$this->payplansTable.logicalref", '=', "$this->invoicesTable.paydefref")
@@ -1076,40 +1075,31 @@ class InvoiceController extends Controller
                 "$this->invoicesTable.genexp2 as payment_type"
             )
             ->where([
-                "$this->invoicesTable.ficheno" => $invoice,
-                "$this->salesmansTable.logicalref" => $this->salesman_id,
-                // "$this->stocksTransactionsTable.iocode" => 4,
+                "$this->invoicesTable.logicalref" => $invoice_id,
+                "$this->invoicesTable.salesmanref" => $this->salesman_id,
                 "$this->invoicesTable.clientref" => $this->customer_id,
             ])
-            ->distinct()
+            // ->distinct()
             ->first();
+        // dd($info);
         $item = DB::table("$this->stocksTransactionsTable")
-            ->leftjoin("$this->itemsTable", "$this->stocksTransactionsTable.stockref", "=", "$this->itemsTable.logicalref")
-            ->leftjoin("$this->salesmansTable", "$this->stocksTransactionsTable.salesmanref", "=", "$this->salesmansTable.logicalref")
-            ->leftjoin("$this->weightsTable", "$this->weightsTable.itemref", "=", "$this->itemsTable.logicalref")
-            ->leftjoin("$this->invoicesTable", "$this->stocksTransactionsTable.invoiceref", "=", "$this->invoicesTable.logicalref")
-            ->leftjoin("$this->customersTable", "$this->stocksTransactionsTable.clientref", "=", "$this->customersTable.logicalref")
             ->select(
                 "$this->stocksTransactionsTable.invoicelnno as line",
-                DB::raw("COALESCE($this->itemsTable.code, 0) as code"),
-                DB::raw("COALESCE($this->itemsTable.name, 0) as name"),
-                // "$this->itemsTable.code as code",
-                // "$this->itemsTable.name as name",
+                DB::raw("COALESCE($this->itemsTable.code, '0') as code"),
+                DB::raw("COALESCE($this->itemsTable.name, '0') as name"),
                 "$this->stocksTransactionsTable.amount as quantity",
-                "$this->stocksTransactionsTable.price as price",
-                "$this->stocksTransactionsTable.total as total",
-                "$this->stocksTransactionsTable.distdisc as discount",
-                "$this->weightsTable.grossweight as weight"
+                "$this->stocksTransactionsTable.price",
+                "$this->stocksTransactionsTable.total",
+                "$this->weightsTable.grossweight as weight",
             )
-            ->where([
-                "$this->invoicesTable.ficheno" => $invoice,
-                "$this->salesmansTable.logicalref" => $this->salesman_id,
-                "$this->weightsTable.linenr" => 1,
-                "$this->stocksTransactionsTable.iocode" => 4,
-                "$this->invoicesTable.clientref" => $this->customer_id,
-            ])
-            ->orderby("$this->stocksTransactionsTable.invoicelnno", "asc")
+            ->leftJoin("$this->itemsTable", "$this->itemsTable.logicalref", '=', "$this->stocksTransactionsTable.stockref")
+            ->leftJoin("$this->weightsTable", function ($join) {
+                $join->on("$this->stocksTransactionsTable.stockref", '=', "$this->weightsTable.itemref")
+                    ->where("$this->weightsTable.linenr", '=', 1);
+            })
+            ->where("$this->stocksTransactionsTable.invoiceref", '=', $invoice_id)
             ->get();
+        dd($item);
         if ($item->isEmpty()) {
             return response()->json([
                 'status' => 'success',

@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use App\Traits\Filterable;
 use App\Helpers\TimeHelper;
+use App\Helpers\PaperLimit;
 
 
 
@@ -191,28 +192,44 @@ class OrderController extends Controller
             ->where(["$this->ordersTable.ficheno" => $order])
             ->distinct()
             ->first();
+        // $item = DB::table("$this->ordersTransactionsTable")
+        //     ->leftjoin("$this->itemsTable", "$this->ordersTransactionsTable.stockref", "=", "$this->itemsTable.logicalref")
+        //     ->leftjoin("$this->weightsTable", "$this->weightsTable.itemref", "=", "$this->ordersTransactionsTable.stockref")
+        //     ->select(
+        //         DB::raw("COALESCE($this->ordersTransactionsTable.lineno_, '') as line"),
+        //         DB::raw("COALESCE($this->ordersTransactionsTable.linetype, '') as type"),
+        //         "$this->ordersTransactionsTable.date_ as date",
+        //         DB::raw("COALESCE($this->itemsTable.code, '') as code"),
+        //         DB::raw("COALESCE($this->itemsTable.name, '') as name"),
+        //         "$this->ordersTransactionsTable.amount as quantity",
+        //         "$this->ordersTransactionsTable.price as price",
+        //         "$this->ordersTransactionsTable.total as total",
+        //         "$this->ordersTransactionsTable.distdisc as discount",
+        //         DB::raw("CASE WHEN $this->ordersTransactionsTable.stockref = 0 THEN 0
+        //         ELSE $this->weightsTable.grossweight END as weight"),
+        //     )
+        //     ->where([
+        //         "$this->ordersTransactionsTable.ordficheref" => $order_id,
+        //         "$this->weightsTable.linenr" => 1,
+        //     ])
+        //     ->get();
         $item = DB::table("$this->ordersTransactionsTable")
-            ->leftjoin("$this->itemsTable", "$this->ordersTransactionsTable.stockref", "=", "$this->itemsTable.logicalref")
-            ->leftjoin("$this->weightsTable", "$this->weightsTable.itemref", "=", "$this->ordersTransactionsTable.ordficheref")
             ->select(
-                DB::raw("COALESCE($this->ordersTransactionsTable.lineno_, '') as line"),
-                "$this->ordersTransactionsTable.date_ as date",
-                DB::raw("COALESCE($this->itemsTable.code, '') as code"),
-                DB::raw("COALESCE($this->itemsTable.name, '') as name"),
+                "$this->ordersTransactionsTable.lineno_ as line",
+                DB::raw("COALESCE($this->itemsTable.code, '0') as code"),
+                DB::raw("COALESCE($this->itemsTable.name, '0') as name"),
                 "$this->ordersTransactionsTable.amount as quantity",
-                "$this->ordersTransactionsTable.price as price",
-                "$this->ordersTransactionsTable.total as total",
-                "$this->ordersTransactionsTable.distdisc as discount",
-                DB::raw("CASE WHEN $this->ordersTransactionsTable.stockref = 0 THEN 0
-                ELSE $this->weightsTable.grossweight END as weight"),
-
+                "$this->ordersTransactionsTable.price",
+                "$this->ordersTransactionsTable.total",
+                "$this->weightsTable.grossweight as weight",
             )
-            ->where([
-                "$this->ordersTransactionsTable.ordficheref" => $order_id,
-                "$this->weightsTable.convfact1" => 1
-            ])
+            ->leftJoin("$this->itemsTable", "$this->itemsTable.logicalref", '=', "$this->ordersTransactionsTable.stockref")
+            ->leftJoin("$this->weightsTable", function ($join) {
+                $join->on("$this->ordersTransactionsTable.stockref", '=', "$this->weightsTable.itemref")
+                    ->where("$this->weightsTable.linenr", '=', 1);
+            })
+            ->where("$this->ordersTransactionsTable.ordficheref", '=', $order_id)
             ->get();
-
         if ($item->isEmpty()) {
             return response()->json([
                 'status' => 'success',
@@ -472,6 +489,26 @@ class OrderController extends Controller
             'order_info' => $info = (array) $info,
             'data' => $item,
         ]);
+    }
+
+    public function increasePaper()
+    {
+        $id = request()->order_id;
+        $number = request()->print_number;
+        $date = request()->print_date;
+        $tableName = $this->ordersTable;
+        try {
+            $result = PaperLimit::increaseNumber($tableName, $id, $number, $date);
+            return response()->json([
+                'status' => 'success',
+                'data' => $result,
+            ], 200);
+        } catch (Throwable $e) {
+            return response()->json([
+                'status' => 'failed',
+                'message' => $e->getMessage(),
+            ], 422);
+        }
     }
 
     public function store(Request $request)

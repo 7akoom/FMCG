@@ -132,6 +132,7 @@ Route::controller(OrderController::class)
                         Route::post('/previousorder', 'salesmanlacurrentmonthorder');
                         Route::post('/previousorderdetails', 'previousorderdetails');
                         Route::post('/neworder', 'store');
+                        Route::post('/paper-limit', 'increasePaper');
                     });
             });
     });
