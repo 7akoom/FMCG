@@ -392,6 +392,8 @@ class SafeController extends Controller
                 "$this->safesTransactionsTable.docdate",
                 "$this->safesTransactionsTable.projectref",
                 "$this->safesTransactionsTable.salesmanref",
+                DB::raw("(SELECT TOP 1 CODE  FROM $this->salesmansTable WHERE $this->safesTransactionsTable.salesmanref = $this->salesmansTable.logicalref and active=0) as salesman_code"),
+                DB::raw("(SELECT TOP 1 DEFINITION_  FROM $this->salesmansTable WHERE $this->safesTransactionsTable.salesmanref = $this->salesmansTable.logicalref and active=0) as salesman_name"),
                 "$this->safesTransactionsTable.amount",
                 "$this->safesTransactionsTable.lineexp as safe_description",
                 "$this->customersTable.code as customer_code",
