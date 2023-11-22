@@ -68,6 +68,7 @@ class InvoiceController extends Controller
         $this->stocksTransactionsTable = 'LG_' . $this->code . '_01_STLINE';
     }
 
+    /* Index */
     public function InvoicesList(Request $request)
     {
         $invoices = DB::table("$this->invoicesTable")
@@ -84,7 +85,10 @@ class InvoiceController extends Controller
                 "$this->invoicesTable.nettotal as total_amount",
                 "$this->invoicesTable.docode as from_p_invoice"
             )
-            ->where(["$this->invoicesTable.grpcode" => $this->group_code, "$this->invoicesTable.trcode" => $this->transaction_code]);
+            ->where([
+                "$this->invoicesTable.grpcode" => 2,
+                "$this->invoicesTable.trcode" => $this->transaction_code
+            ]);
         $this->applyFilters($invoices, [
             "$this->customersTable.code" => [
                 'value' => '%' . $request->input('customer_code') . '%',
@@ -136,6 +140,263 @@ class InvoiceController extends Controller
             'total' => $invoicesData->total(),
         ]);
     }
+
+
+    public function accountingSalesmanInvoiceDetails(Request $request)
+    {
+        $invoice = $request->header('invoice');
+        $invoice_id = $this->fetchValueFromTable("$this->invoicesTable", "FICHENO", $invoice, "LOGICALREF");
+        $info = DB::table("$this->stocksTransactionsTable")
+            ->join("$this->itemsTable", "$this->stocksTransactionsTable.stockref", "=", "$this->itemsTable.logicalref")
+            ->join("$this->salesmansTable", "$this->stocksTransactionsTable.salesmanref", "=", "$this->salesmansTable.logicalref")
+            ->join("$this->weightsTable", "$this->weightsTable.itemref", "=", "$this->itemsTable.logicalref")
+            ->join("$this->invoicesTable", "$this->stocksTransactionsTable.invoiceref", "=", "$this->invoicesTable.logicalref")
+            ->join("$this->customersTable", "$this->stocksTransactionsTable.clientref", "=", "$this->customersTable.logicalref")
+            ->join("$this->cutomersView", "$this->cutomersView.logicalref", "=", "$this->customersTable.logicalref")
+            ->join("$this->payplansTable", "$this->payplansTable.logicalref", '=', "$this->invoicesTable.paydefref")
+            ->select(
+                "$this->invoicesTable.capiblock_creadeddate as date",
+                "$this->invoicesTable.ficheno as number",
+                "$this->invoicesTable.genexp1 as approved_by",
+                "$this->invoicesTable.grosstotal as invoice_amount",
+                "$this->invoicesTable.totaldiscounts as invoice_discount",
+                "$this->invoicesTable.nettotal as invoice_total",
+                "$this->salesmansTable.definition_ as salesman_name",
+                "$this->customersTable.code as customer_code",
+                "$this->customersTable.definition_ as customer_name",
+                "$this->customersTable.addr1 as customer_address",
+                "$this->customersTable.telnrs1 as customer_phone",
+                "$this->cutomersView.debit as customer_debit",
+                "$this->cutomersView.credit as customer_credit",
+                "$this->payplansTable.code as payment_plan",
+                "$this->invoicesTable.genexp2 as payment_type"
+            )
+            ->where([
+                "$this->invoicesTable.ficheno" => $invoice, "$this->salesmansTable.logicalref" => $this->salesman_id, "$this->stocksTransactionsTable.iocode" => 4,
+            ])
+            ->distinct()
+            ->first();
+        $item = DB::table("$this->stocksTransactionsTable")
+            ->select(
+                "$this->stocksTransactionsTable.invoicelnno as line",
+                DB::raw("COALESCE($this->itemsTable.code, '') as code"),
+                DB::raw("COALESCE($this->itemsTable.name, '') as name"),
+                "$this->stocksTransactionsTable.amount as quantity",
+                "$this->stocksTransactionsTable.price",
+                "$this->stocksTransactionsTable.total",
+                "$this->stocksTransactionsTable.distdisc as discount",
+                "$this->weightsTable.grossweight as weight",
+            )
+            ->leftJoin("$this->itemsTable", "$this->itemsTable.logicalref", '=', "$this->stocksTransactionsTable.stockref")
+            ->leftJoin("$this->weightsTable", function ($join) {
+                $join->on("$this->stocksTransactionsTable.stockref", '=', "$this->weightsTable.itemref")
+                    ->where("$this->weightsTable.linenr", '=', 1);
+            })
+            // ->leftjoin("$this->salesmansTable", "$this->stocksTransactionsTable.salesmanref", "=", "$this->salesmansTable.logicalref")
+            // ->leftjoin("$this->invoicesTable", "$this->stocksTransactionsTable.invoiceref", "=", "$this->invoicesTable.logicalref")
+            ->where([
+                "$this->stocksTransactionsTable.invoiceref" => $invoice_id,
+                // "$this->stocksTransactionsTable.salesmanref" => $this->salesman_id,
+                "$this->weightsTable.linenr" => 1,
+            ])
+            ->orderby("$this->stocksTransactionsTable.invoicelnno", "asc")
+            ->get();
+
+        // $item = DB::table("$this->stocksTransactionsTable")
+        //     ->leftjoin("$this->itemsTable", "$this->stocksTransactionsTable.stockref", "=", "$this->itemsTable.logicalref")
+        //     ->leftjoin("$this->salesmansTable", "$this->stocksTransactionsTable.salesmanref", "=", "$this->salesmansTable.logicalref")
+        //     ->leftjoin("$this->weightsTable", "$this->weightsTable.itemref", "=", "$this->stocksTransactionsTable.logicalref")
+        //     ->leftjoin("$this->invoicesTable", "$this->stocksTransactionsTable.invoiceref", "=", "$this->invoicesTable.logicalref")
+        //     ->select(
+        //         "$this->stocksTransactionsTable.invoicelnno as line",
+        //         DB::raw("COALESCE($this->itemsTable.code, '') as code"),
+        //         DB::raw("COALESCE($this->itemsTable.name, '') as name"),
+        //         "$this->stocksTransactionsTable.amount as quantity",
+        //         "$this->stocksTransactionsTable.price as price",
+        //         "$this->stocksTransactionsTable.total as total",
+        //         "$this->stocksTransactionsTable.distdisc as discount",
+        //         "$this->weightsTable.grossweight as weight",
+        //     )
+        //     ->where([
+        //         "$this->stocksTransactionsTable.invoiceref" => $invoice_id,
+        //         "$this->salesmansTable.logicalref" => $this->salesman_id,
+        //         "$this->weightsTable.linenr" => 1,
+        //     ])
+        //     ->orderby("$this->stocksTransactionsTable.invoicelnno", "asc")
+        //     ->get();
+        dd($item);
+        if ($item->isEmpty()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'There is no data',
+                'data' => []
+            ]);
+        }
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Invoice details',
+            'invoice_info' => $info = (array) $info,
+            'data' => $item,
+        ]);
+    }
+
+    /* Store */
+    public function doSalesInvoice(Request $request)
+    {
+        // $salesman_code = $this->fetchValueFromTable($this->salesmansTable, 'logicalref', $request->salesman_id, 'code');
+        // $customer_id = $this->fetchValueFromTable($this->customersTable, 'code', $request->customer_code, 'id');
+        // $customer_payplan = $this->fetchValueFromTable($this->customersTable, 'code', $request->customer_code, 'paymentref');
+        // $payplan_code = $this->fetchValueFromTable($this->payplansTable, 'logicalref', $request->customer_payplan, 'code');
+        $data = [
+            "INTERNAL_REFERENCE" => 0,
+            "TYPE" => 8,
+            "NUMBER" => '~',
+            "DATE" =>  Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            'TIME' => TimeHelper::calculateTime(),            "ARP_CODE" => $request->customer_code,
+            "POST_FLAGS" => 247,
+            "VAT_RATE" => 18,
+            "TOTAL_DISCOUNTS" => $request->total_discounts,
+            "TOTAL_DISCOUNTED" => $request->after_discount,
+            "TOTAL_GROSS" => $request->before_discount,
+            "TOTAL_NET" => $request->net_total,
+            "TC_NET" => $request->net_total,
+            "RC_XRATE" => 1,
+            "RC_NET" => $request->net_total,
+            "NOTES1" => $request->notes,
+            "PAYMENT_CODE" => $request->payment_code,
+            "CREATED_BY" => request()->header('username'),
+            "DATE_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "HOUR_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('H'),
+            "MIN_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
+            "SEC_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
+            "SALESMAN_CODE" => $request->salesman_code,
+            "CURRSEL_TOTALS" => 1,
+        ];
+        $DISPATCHES = [
+            "INTERNAL_REFERENCE" => 0,
+            "TYPE" => 8,
+            "NUMBER" => '~',
+            "DATE" =>  Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            'TIME' => TimeHelper::calculateTime(),            "INVOICE_NUMBER" => $data['NUMBER'],
+            "ARP_CODE" => $request->customer_code,
+            "INVOICED" => 1,
+            "TOTLA_DISCOUNTS" => $request->total_discounts,
+            "TOTAL_DISCOUNTED" => $request->after_discount,
+            "TOTAL_GROSS" => $request->before_discount,
+            "TOTAL_NET" => $request->net_total,
+            "RC_RATE" => 1,
+            "RC_NET" => $request->net_total,
+            "PAYMENT_CODE" => $request->payment_code,
+            "CREATED_BY" => request()->header('username'),            "DATE_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "HOUR_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('H'),
+            "MIN_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
+            "SEC_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
+            "SALESMANCODE" => $request->salesman_code,
+            "CURRSEL_TOTALS" => 1,
+            "ORIG_NUMBER" => '~',
+            "DEDUCTIONPART1" => 2,
+            "DEDUCTIONPART2" => 3,
+            "AFFECT_RISK" => 1,
+            "DISP_STATUS" => 1,
+            "SHIP_DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "SHIP_TIME" => strtotime(Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d H:i:s.v')),
+            "DOC_DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "DOC_TIME" => strtotime(Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d H:i:s.v')),
+        ];
+        $transactions = $request->input('TRANSACTIONS.items');
+        foreach ($transactions as $item) {
+            $type = $item['item_type'];
+            $master_code = $item['item_code'];
+            $quantity = $item['item_quantity'];
+            $price = $item['item_price'];
+            $total = $item['item_total'];
+            $unit_code = $item['item_unit_code'];
+            $salesman_code = $request->salesman_code;
+            // $master_def = $item['item_ar_name'];
+            // $master_def2 = $item['item_en_name'];
+            // $master_def3 = $item['item_tr_name'];
+            // $barcode = $item['item_barcode'];
+            $itemData = [
+                "INTERNAL_REFERENCE" => 0,
+                "TYPE" => $type,
+                "MASTER_CODE" => $master_code,
+                "QUANTITY" => $quantity,
+                "PRICE" => $price,
+                "TOTAL" => $total,
+                "RC_XRATE" => 1,
+                "COST_DISTR" => $request->total_discounts,
+                "DISCOUNT_DISTR" => $request->total_discounts,
+                "UNIT_CODE" => $unit_code,
+                "VAT_BASE" => $total,
+                "BILLED" => 1,
+                "TOTAL_NET" => $total,
+                "DISPATCH_NUMBER" => $DISPATCHES['NUMBER'],
+                "MULTI_ADD_TAX" => 0,
+                "EDT_CURR" => 30,
+                "EDT_PRICE" => $total,
+                "SALEMANCODE" => $salesman_code,
+                "MONTH" => Carbon::now()->timezone('Asia/Baghdad')->format('m'),
+                "YEAR" => Carbon::now()->timezone('Asia/Baghdad')->format('Y'),
+                "AFFECT_RISK" => 1,
+                // "MASTER_DEF" => $master_def,
+                // "MASTER_DEF2" => $master_def2,
+                // "MASTER_DEF3" => $master_def3,
+                // "BARCODE" => $barcode,
+                "FOREIGN_TRADE_TYPE" => 0,
+                "DISTRIBUTION_TYPE_WHS" => 0,
+                "DISTRIBUTION_TYPE_FNO" => 0,
+            ];
+            if ($item['item_type'] == 0) {
+                $itemData["UNIT_CONV1"] = 1;
+                $itemData["UNIT_CONV2"] = 1;
+            } else {
+                $itemData["DISCOUNT_RATE"] = ($request->total_discounts / $request->before_discount) * 100;
+                $itemData["DISCEXP_CALC"] = 1;
+                $itemData["UNIT_CONV1"] = 0;
+                $itemData["UNIT_CONV2"] = 0;
+            }
+            $data['TRANSACTIONS']['items'][] = $itemData;
+        }
+        $PAYMENT = [
+            "INTERNAL_REFERENCE" => 0,
+            "DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "MODULENR" => 4,
+            "TRCODE" => 8,
+            "TOTAL" => $request->net_total,
+            "DAYS" => $request->payment_code,
+            "PROCDATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d H:i:s.v'),
+            "REPORTRATE" => 1,
+            "PAY_NO" => 1,
+            "DISCTRDELLIST" => 0,
+        ];
+        $data['DISPATCHES']['items'][] = $DISPATCHES;
+        $data['PAYMENT_LIST']['items'][] = $PAYMENT;
+        // dd($data);
+        try {
+
+            $response = Http::withOptions([
+                'verify' => false,
+            ])
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                    'Authorization' => $request->header('authorization')
+                ])
+                ->withBody(json_encode($data), 'application/json')
+                ->post('https://10.27.0.109:32002/api/v1/salesInvoices');
+            return response()->json([
+                'status' => $response->successful() ? 'success' : 'failed',
+                'invoice' => $response->json(),
+            ], $response->status());
+        } catch (Throwable $e) {
+            return response()->json([
+                'status' => 'Invoice failed',
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    /* Sales  */
 
     public function salesinvoicedetails(Request $request)
     {
@@ -652,160 +913,7 @@ class InvoiceController extends Controller
         ]);
     }
 
-    public function doSalesInvoice(Request $request)
-    {
-        // $salesman_code = $this->fetchValueFromTable($this->salesmansTable, 'logicalref', $request->salesman_id, 'code');
-        // $customer_id = $this->fetchValueFromTable($this->customersTable, 'code', $request->customer_code, 'id');
-        // $customer_payplan = $this->fetchValueFromTable($this->customersTable, 'code', $request->customer_code, 'paymentref');
-        // $payplan_code = $this->fetchValueFromTable($this->payplansTable, 'logicalref', $request->customer_payplan, 'code');
-        $data = [
-            "INTERNAL_REFERENCE" => 0,
-            "TYPE" => 8,
-            "NUMBER" => '~',
-            "DATE" =>  Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
-            'TIME' => TimeHelper::calculateTime(),            "ARP_CODE" => $request->customer_code,
-            "POST_FLAGS" => 247,
-            "VAT_RATE" => 18,
-            "TOTAL_DISCOUNTS" => $request->total_discounts,
-            "TOTAL_DISCOUNTED" => $request->after_discount,
-            "TOTAL_GROSS" => $request->before_discount,
-            "TOTAL_NET" => $request->net_total,
-            "TC_NET" => $request->net_total,
-            "RC_XRATE" => 1,
-            "RC_NET" => $request->net_total,
-            "NOTES1" => $request->notes,
-            "PAYMENT_CODE" => $request->payment_code,
-            "CREATED_BY" => request()->header('username'),
-            "DATE_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
-            "HOUR_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('H'),
-            "MIN_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
-            "SEC_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
-            "SALESMAN_CODE" => $request->salesman_code,
-            "CURRSEL_TOTALS" => 1,
-        ];
-        $DISPATCHES = [
-            "INTERNAL_REFERENCE" => 0,
-            "TYPE" => 8,
-            "NUMBER" => '~',
-            "DATE" =>  Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
-            'TIME' => TimeHelper::calculateTime(),            "INVOICE_NUMBER" => $data['NUMBER'],
-            "ARP_CODE" => $request->customer_code,
-            "INVOICED" => 1,
-            "TOTLA_DISCOUNTS" => $request->total_discounts,
-            "TOTAL_DISCOUNTED" => $request->after_discount,
-            "TOTAL_GROSS" => $request->before_discount,
-            "TOTAL_NET" => $request->net_total,
-            "RC_RATE" => 1,
-            "RC_NET" => $request->net_total,
-            "PAYMENT_CODE" => $request->payment_code,
-            "CREATED_BY" => request()->header('username'),            "DATE_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
-            "HOUR_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('H'),
-            "MIN_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
-            "SEC_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
-            "SALESMANCODE" => $request->salesman_code,
-            "CURRSEL_TOTALS" => 1,
-            "ORIG_NUMBER" => '~',
-            "DEDUCTIONPART1" => 2,
-            "DEDUCTIONPART2" => 3,
-            "AFFECT_RISK" => 1,
-            "DISP_STATUS" => 1,
-            "SHIP_DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
-            "SHIP_TIME" => strtotime(Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d H:i:s.v')),
-            "DOC_DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
-            "DOC_TIME" => strtotime(Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d H:i:s.v')),
-        ];
-        $transactions = $request->input('TRANSACTIONS.items');
-        foreach ($transactions as $item) {
-            $type = $item['item_type'];
-            $master_code = $item['item_code'];
-            $quantity = $item['item_quantity'];
-            $price = $item['item_price'];
-            $total = $item['item_total'];
-            $unit_code = $item['item_unit_code'];
-            $salesman_code = $request->salesman_code;
-            // $master_def = $item['item_ar_name'];
-            // $master_def2 = $item['item_en_name'];
-            // $master_def3 = $item['item_tr_name'];
-            // $barcode = $item['item_barcode'];
-            $itemData = [
-                "INTERNAL_REFERENCE" => 0,
-                "TYPE" => $type,
-                "MASTER_CODE" => $master_code,
-                "QUANTITY" => $quantity,
-                "PRICE" => $price,
-                "TOTAL" => $total,
-                "RC_XRATE" => 1,
-                "COST_DISTR" => $request->total_discounts,
-                "DISCOUNT_DISTR" => $request->total_discounts,
-                "UNIT_CODE" => $unit_code,
-                "VAT_BASE" => $total,
-                "BILLED" => 1,
-                "TOTAL_NET" => $total,
-                "DISPATCH_NUMBER" => $DISPATCHES['NUMBER'],
-                "MULTI_ADD_TAX" => 0,
-                "EDT_CURR" => 30,
-                "EDT_PRICE" => $total,
-                "SALEMANCODE" => $salesman_code,
-                "MONTH" => Carbon::now()->timezone('Asia/Baghdad')->format('m'),
-                "YEAR" => Carbon::now()->timezone('Asia/Baghdad')->format('Y'),
-                "AFFECT_RISK" => 1,
-                // "MASTER_DEF" => $master_def,
-                // "MASTER_DEF2" => $master_def2,
-                // "MASTER_DEF3" => $master_def3,
-                // "BARCODE" => $barcode,
-                "FOREIGN_TRADE_TYPE" => 0,
-                "DISTRIBUTION_TYPE_WHS" => 0,
-                "DISTRIBUTION_TYPE_FNO" => 0,
-            ];
-            if ($item['item_type'] == 0) {
-                $itemData["UNIT_CONV1"] = 1;
-                $itemData["UNIT_CONV2"] = 1;
-            } else {
-                $itemData["DISCOUNT_RATE"] = ($request->total_discounts / $request->before_discount) * 100;
-                $itemData["DISCEXP_CALC"] = 1;
-                $itemData["UNIT_CONV1"] = 0;
-                $itemData["UNIT_CONV2"] = 0;
-            }
-            $data['TRANSACTIONS']['items'][] = $itemData;
-        }
-        $PAYMENT = [
-            "INTERNAL_REFERENCE" => 0,
-            "DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
-            "MODULENR" => 4,
-            "TRCODE" => 8,
-            "TOTAL" => $request->net_total,
-            "DAYS" => $request->payment_code,
-            "PROCDATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d H:i:s.v'),
-            "REPORTRATE" => 1,
-            "PAY_NO" => 1,
-            "DISCTRDELLIST" => 0,
-        ];
-        $data['DISPATCHES']['items'][] = $DISPATCHES;
-        $data['PAYMENT_LIST']['items'][] = $PAYMENT;
-        // dd($data);
-        try {
 
-            $response = Http::withOptions([
-                'verify' => false,
-            ])
-                ->withHeaders([
-                    'Accept' => 'application/json',
-                    'Content-Type' => 'application/json',
-                    'Authorization' => $request->header('authorization')
-                ])
-                ->withBody(json_encode($data), 'application/json')
-                ->post('https://10.27.0.109:32002/api/v1/salesInvoices');
-            return response()->json([
-                'status' => $response->successful() ? 'success' : 'failed',
-                'invoice' => $response->json(),
-            ], $response->status());
-        } catch (Throwable $e) {
-            return response()->json([
-                'status' => 'Invoice failed',
-                'message' => $e->getMessage(),
-            ], 422);
-        }
-    }
 
     public function doSalesReturnInvoice(Request $request)
     {
@@ -1024,7 +1132,11 @@ class InvoiceController extends Controller
                 "$this->invoicesTable.nettotal as total_amount",
                 "$this->invoicesTable.docode as from_p_invoice"
             )
-            ->where(["$this->invoicesTable.salesmanref" => $this->salesman_id, "$this->invoicesTable.grpcode" => 2, "$this->invoicesTable.trcode" => $this->type])
+            ->where([
+                "$this->invoicesTable.salesmanref" => $this->salesman_id,
+                "$this->invoicesTable.grpcode" => 2,
+                "$this->invoicesTable.trcode" => $this->type
+            ])
             ->orderBy("$this->invoicesTable.capiblock_creadeddate", "desc");
         $invoicesData = $invoices->paginate($this->perpage);
         if ($invoicesData->isEmpty()) {
@@ -1083,21 +1195,26 @@ class InvoiceController extends Controller
             ->first();
         // dd($info);
         $item = DB::table("$this->stocksTransactionsTable")
+            ->leftjoin("$this->itemsTable", "$this->stocksTransactionsTable.stockref", "=", "$this->itemsTable.logicalref")
+            ->leftjoin("$this->weightsTable", "$this->weightsTable.itemref", "=", "$this->stocksTransactionsTable.ordficheref")
             ->select(
-                "$this->stocksTransactionsTable.invoicelnno as line",
-                DB::raw("COALESCE($this->itemsTable.code, '0') as code"),
-                DB::raw("COALESCE($this->itemsTable.name, '0') as name"),
-                "$this->stocksTransactionsTable.amount as quantity",
-                "$this->stocksTransactionsTable.price",
-                "$this->stocksTransactionsTable.total",
-                "$this->weightsTable.grossweight as weight",
+                DB::raw("COALESCE($this->stocksTransactionsTable.invoicelnno, '') as line"),
+                DB::raw("COALESCE($this->stocksTransactionsTable.date_, '') as date"),
+                DB::raw("COALESCE($this->itemsTable.code, '') as code"),
+                DB::raw("COALESCE($this->itemsTable.name, '') as name"),
+                DB::raw("COALESCE($this->stocksTransactionsTable.amount, '0') as quantity"),
+                DB::raw("COALESCE($this->stocksTransactionsTable.price, '0') as price"),
+                DB::raw("COALESCE($this->stocksTransactionsTable.total, '0') as total"),
+                DB::raw("COALESCE($this->stocksTransactionsTable.distdisc, '0') as discount"),
+                DB::raw("CASE WHEN $this->stocksTransactionsTable.stockref = 0 THEN 0
+                ELSE $this->weightsTable.grossweight END as weight"),
             )
-            ->leftJoin("$this->itemsTable", "$this->itemsTable.logicalref", '=', "$this->stocksTransactionsTable.stockref")
-            ->leftJoin("$this->weightsTable", function ($join) {
-                $join->on("$this->stocksTransactionsTable.stockref", '=', "$this->weightsTable.itemref")
-                    ->where("$this->weightsTable.linenr", '=', 1);
-            })
-            ->where("$this->stocksTransactionsTable.invoiceref", '=', $invoice_id)
+            ->where([
+                "$this->stocksTransactionsTable.invoiceref" => $invoice_id,
+                "$this->stocksTransactionsTable.salesmanref" => $this->salesman_id,
+                "$this->stocksTransactionsTable.clientref" => $this->customer_id,
+                "$this->weightsTable.linenr" => 1,
+            ])
             ->get();
         dd($item);
         if ($item->isEmpty()) {
@@ -1114,77 +1231,7 @@ class InvoiceController extends Controller
             'data' => $item,
         ]);
     }
-    public function accountingSalesmanInvoiceDetails(Request $request)
-    {
-        $invoice = $request->header('invoice');
-        $invoice_id = $this->fetchValueFromTable("$this->invoicesTable", "FICHENO", $invoice, "LOGICALREF");
-        $info = DB::table("$this->stocksTransactionsTable")
-            ->join("$this->itemsTable", "$this->stocksTransactionsTable.stockref", "=", "$this->itemsTable.logicalref")
-            ->join("$this->salesmansTable", "$this->stocksTransactionsTable.salesmanref", "=", "$this->salesmansTable.logicalref")
-            ->join("$this->weightsTable", "$this->weightsTable.itemref", "=", "$this->itemsTable.logicalref")
-            ->join("$this->invoicesTable", "$this->stocksTransactionsTable.invoiceref", "=", "$this->invoicesTable.logicalref")
-            ->join("$this->customersTable", "$this->stocksTransactionsTable.clientref", "=", "$this->customersTable.logicalref")
-            ->join("$this->cutomersView", "$this->cutomersView.logicalref", "=", "$this->customersTable.logicalref")
-            ->join("$this->payplansTable", "$this->payplansTable.logicalref", '=', "$this->invoicesTable.paydefref")
-            ->select(
-                "$this->invoicesTable.capiblock_creadeddate as date",
-                "$this->invoicesTable.ficheno as number",
-                "$this->invoicesTable.genexp1 as approved_by",
-                "$this->invoicesTable.grosstotal as invoice_amount",
-                "$this->invoicesTable.totaldiscounts as invoice_discount",
-                "$this->invoicesTable.nettotal as invoice_total",
-                "$this->salesmansTable.definition_ as salesman_name",
-                "$this->customersTable.code as customer_code",
-                "$this->customersTable.definition_ as customer_name",
-                "$this->customersTable.addr1 as customer_address",
-                "$this->customersTable.telnrs1 as customer_phone",
-                "$this->cutomersView.debit as customer_debit",
-                "$this->cutomersView.credit as customer_credit",
-                "$this->payplansTable.code as payment_plan",
-                "$this->invoicesTable.genexp2 as payment_type"
-            )
-            ->where([
-                "$this->invoicesTable.ficheno" => $invoice, "$this->salesmansTable.logicalref" => $this->salesman_id, "$this->stocksTransactionsTable.iocode" => 4,
-            ])
-            ->distinct()
-            ->first();
-        $item = DB::table("$this->stocksTransactionsTable")
-            ->leftjoin("$this->itemsTable", "$this->stocksTransactionsTable.stockref", "=", "$this->itemsTable.logicalref")
-            ->leftjoin("$this->salesmansTable", "$this->stocksTransactionsTable.salesmanref", "=", "$this->salesmansTable.logicalref")
-            ->leftjoin("$this->weightsTable", "$this->weightsTable.itemref", "=", "$this->stocksTransactionsTable.logicalref")
-            ->leftjoin("$this->invoicesTable", "$this->stocksTransactionsTable.invoiceref", "=", "$this->invoicesTable.logicalref")
-            ->select(
-                "$this->stocksTransactionsTable.invoicelnno as line",
-                DB::raw("COALESCE($this->itemsTable.code, '') as code"),
-                DB::raw("COALESCE($this->itemsTable.name, '') as name"),
-                "$this->stocksTransactionsTable.amount as quantity",
-                "$this->stocksTransactionsTable.price as price",
-                "$this->stocksTransactionsTable.total as total",
-                "$this->stocksTransactionsTable.distdisc as discount",
-                DB::raw("CASE WHEN $this->stocksTransactionsTable.stockref = 0 THEN 0
-                ELSE $this->weightsTable.grossweight END as weight"),
-            )
-            ->where([
-                "$this->stocksTransactionsTable.invoiceref" => $invoice_id,
-                "$this->salesmansTable.logicalref" => $this->salesman_id,
-                "$this->weightsTable.linenr" => 1,
-            ])
-            ->orderby("$this->stocksTransactionsTable.invoicelnno", "asc")
-            ->get();
-        if ($item->isEmpty()) {
-            return response()->json([
-                'status' => 'success',
-                'message' => 'There is no data',
-                'data' => []
-            ]);
-        }
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Invoice details',
-            'invoice_info' => $info = (array) $info,
-            'data' => $item,
-        ]);
-    }
+
 
     // retrieve orders based on date
     public function InvoiceDateFilter(Request $request)

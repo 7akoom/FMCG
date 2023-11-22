@@ -142,23 +142,26 @@ Route::controller(InvoiceController::class)
         Route::prefix('invoice')
             ->group(function () {
                 Route::prefix('accounting')->group(function () {
+                    Route::post('/invoices', 'InvoicesList');
+                    Route::post('/invoicedetails', 'accountingSalesmanInvoiceDetails');
+
+                    Route::post('/newsalesinvoice', 'doSalesInvoice');
+
+                    Route::post('/salesmaninvoices', 'salesmaninvoices');
+                    Route::post('/salesinvoicedetails', 'salesinvoicedetails');
+
                     Route::post('/previoussalesreturninvoices', 'customerprevioussalesreturninvoices');
                     Route::post('/customerprevioussalesinvoices', 'customerprevioussalesinvoices');
                     Route::post('/searchinvoicebydate', 'searchreturnedinvoicebydate');
                     Route::post('/searchinvoicebynumber', 'searchinvoicebynumber');
-                    Route::post('/salesmaninvoices', 'salesmaninvoices');
-                    Route::post('/invoicedetails', 'accountingSalesmanInvoiceDetails');
-                    Route::post('/newsalesinvoice', 'doSalesInvoice');
-                    Route::post('/newpurchaseinvoice', 'doPurchaseInvoice');
-                    Route::post('/invoices', 'InvoicesList');
-                    Route::post('/salesinvoicedetails', 'salesinvoicedetails');
                     Route::post('/salesreturninvoice', 'salesReturnInvoicesList');
                     Route::post('/salesreturninvoicedetails', 'salesReturnInvoiceDetails');
-                    Route::post('/purchaseinvoicedetails', 'purchaseinvoicedetails');
-                    Route::post('/purchasereturninvoices', 'purchaseReturnInvoicesList');
-                    Route::post('/purchasereturninvoicesdetails', 'purchaseReturnInvoicesDetails');
-                    Route::post('/purchasedservicesinvoice', 'purchaseServicesInvoicesList');
-                    Route::post('/purchasedservicesinvoicedetails', 'purchasedServicesInvoicedetails');
+                    // Route::post('/newpurchaseinvoice', 'doPurchaseInvoice');
+                    // Route::post('/purchaseinvoicedetails', 'purchaseinvoicedetails');
+                    // Route::post('/purchasereturninvoices', 'purchaseReturnInvoicesList');
+                    // Route::post('/purchasereturninvoicesdetails', 'purchaseReturnInvoicesDetails');
+                    // Route::post('/purchasedservicesinvoice', 'purchaseServicesInvoicesList');
+                    // Route::post('/purchasedservicesinvoicedetails', 'purchasedServicesInvoicedetails');
                 });
                 Route::prefix('salesman')
                     ->group(function () {
