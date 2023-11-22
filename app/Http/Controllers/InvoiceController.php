@@ -1286,6 +1286,7 @@ class InvoiceController extends Controller
                 "$this->invoicesTable.nettotal as total",
                 "$this->invoicesTable.docode as from_p_invoice",
                 "$this->invoicesTable.genexp1 as note",
+                "$this->invoicesTable.salesmanref as salesman_id",
             )
             ->where(["$this->customersTable.code" => $customer, "$this->invoicesTable.trcode" => 3])
             ->orderby("$this->invoicesTable.capiblock_creadeddate", "desc")
