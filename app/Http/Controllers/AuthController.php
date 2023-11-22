@@ -53,12 +53,12 @@ class AuthController extends Controller
             ]);
         }
 
-        if (!$this->checkSalesManDevice()) {
-            return response()->json([
-                'message' => 'invalid device for the salesman',
-                'data' => []
-            ]);
-        }
+        // if (!$this->checkSalesManDevice()) {
+        //     return response()->json([
+        //         'message' => 'invalid device for the salesman',
+        //         'data' => []
+        //     ]);
+        // }
 
         return response()->json([
             'message' => 'Login successful',
