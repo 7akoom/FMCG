@@ -224,7 +224,7 @@ class InvoiceController extends Controller
         //     ])
         //     ->orderby("$this->stocksTransactionsTable.invoicelnno", "asc")
         //     ->get();
-        dd($item);
+        // dd($item);
         if ($item->isEmpty()) {
             return response()->json([
                 'status' => 'success',
