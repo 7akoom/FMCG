@@ -35,6 +35,7 @@ class InvoiceController extends Controller
     protected $weightsTable;
     protected $payplansTable;
     protected $stocksTransactionsTable;
+    protected $customersTransactionsTable;
     protected $servicesTable;
 
 
@@ -66,6 +67,7 @@ class InvoiceController extends Controller
         $this->payplansTable = 'LG_' . $this->code . '_PAYPLANS';
         $this->invoicesTable = 'LG_' . $this->code . '_01_INVOICE';
         $this->stocksTransactionsTable = 'LG_' . $this->code . '_01_STLINE';
+        $this->customersTransactionsTable = 'LG_' . $this->code . '_01_CLFLINE';
     }
 
     /* Index */
@@ -1130,7 +1132,9 @@ class InvoiceController extends Controller
                 "$this->customersTable.definition_ as customer_name",
                 "$this->invoicesTable.ficheno as invoice_number",
                 "$this->invoicesTable.nettotal as total_amount",
-                "$this->invoicesTable.docode as from_p_invoice"
+                "$this->invoicesTable.docode as from_p_invoice",
+                DB::raw("(SELECT TOP 1 CAPIBLOCK_CREADEDDATE FROM $this->invoicesTable WHERE $this->invoicesTable.clientref = $this->customersTable.logicalref ORDER BY logicalref DESC) as last_invoice_date"),
+                DB::raw("(SELECT TOP 1 CAPIBLOCK_CREADEDDATE FROM $this->customersTransactionsTable WHERE $this->customersTransactionsTable.clientref = $this->customersTable.logicalref and trcode=1 ORDER BY $this->customersTransactionsTable.logicalref DESC) as last_payment_date")
             )
             ->where([
                 "$this->invoicesTable.salesmanref" => $this->salesman_id,
@@ -1138,7 +1142,9 @@ class InvoiceController extends Controller
                 "$this->invoicesTable.trcode" => $this->type
             ])
             ->orderBy("$this->invoicesTable.capiblock_creadeddate", "desc");
+
         $invoicesData = $invoices->paginate($this->perpage);
+
         if ($invoicesData->isEmpty()) {
             return response()->json([
                 'status' => 'success',
@@ -1146,6 +1152,7 @@ class InvoiceController extends Controller
                 'data' => [],
             ]);
         }
+
         return response()->json([
             'status' => 'success',
             'message' => 'Invoices list',
@@ -1158,6 +1165,7 @@ class InvoiceController extends Controller
             'total' => $invoicesData->total(),
         ]);
     }
+
     // retrieve invoice details according on salesman logicalref and invoice logicalref
     public function salesmaninvoicedetails(Request $request)
     {

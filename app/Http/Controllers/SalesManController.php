@@ -122,6 +122,8 @@ class SalesManController extends Controller
     {
         $latest_salesman_specode = DB::table($this->specialcodesTable)->where(['codetype' => 1, 'specodetype' => 50])->orderby('logicalref', 'desc')->value('specode');
         $latest_safe_specode = DB::table($this->specialcodesTable)->where(['codetype' => 1, 'specodetype' => 34])->orderby('logicalref', 'desc')->value('specode');
+        $user = DB::table("L_CAPIUSER")->where('name', request()->header('username'))
+            ->value('nr');
         $salesman = [
             'code' => $request->salesman_code,
             'definition_' => $request->salesman_name,
@@ -130,7 +132,7 @@ class SalesManController extends Controller
             'specode' => $latest_salesman_specode + 1,
             'firmnr' => $this->code,
             'active' => 0,
-            "CREATED_BY" => request()->header('username'),
+            "CAPIBLOCK_CREATEDBY" => $user,
             'capiblock_creadeddate' => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d H:i:s.v'),
             'capiblock_createdhour' => Carbon::now()->timezone('Asia/Baghdad')->format('H'),
             'capiblock_createdmin' => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
