@@ -6,7 +6,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
-use League\CommonMark\Extension\CommonMark\Node\Inline\Code;
 
 class CustomerController extends Controller
 {
@@ -463,7 +462,9 @@ class CustomerController extends Controller
         $data = DB::table($this->customersSalesmansRelationsTable)
             ->join("$this->salesmansTable", "$this->customersSalesmansRelationsTable.salesmanref", '=', "$this->salesmansTable.logicalref")
             ->join("$this->customersTable", "$this->customersSalesmansRelationsTable.clientref", '=', "$this->customersTable.logicalref")
+            ->join("$this->customersView", "$this->customersView.logicalref", '=', "$this->customersSalesmansRelationsTable.clientref")
             ->join("$this->payplansTable", "$this->payplansTable.logicalref", '=', "$this->customersTable.paymentref")
+            ->leftjoin("$this->customersLimitTable", "$this->customersLimitTable.clcardref", "=", "$this->customersTable.logicalref")
             ->select(
                 "$this->customersSalesmansRelationsTable.salesmanref as salesman_id",
                 "$this->salesmansTable.code as salesman_code",
@@ -471,18 +472,28 @@ class CustomerController extends Controller
                 "$this->customersTable.logicalref as customer_id",
                 "$this->customersTable.definition2 as customer_name",
                 "$this->customersTable.code as customer_code",
-                "$this->payplansTable.code as payplan_code",
+                "$this->payplansTable.code as payment_plan",
                 "$this->customersTable.definition_ as market_name",
                 "$this->customersTable.addr1 as customer_address",
                 "$this->customersTable.PPGROUPCODE as group",
                 "$this->customersTable.telnrs1 as customer_phone",
                 "$this->customersTable.telnrs2 as second_customer_phone",
                 "$this->customersTable.longitude",
-                "$this->customersTable.latitute"
+                "$this->customersTable.latitute",
+                DB::raw("COALESCE($this->customersView.credit, 0) as credit"),
+                DB::raw("COALESCE($this->customersView.debit, 0) as debit"),
+                DB::raw("COALESCE($this->customersLimitTable.accrisklimit, 0) as limit"),
+                DB::raw("COALESCE(
+                    CONVERT(VARCHAR, (SELECT TOP 1 CAPIBLOCK_CREADEDDATE
+                                     FROM LG_888_01_INVOICE
+                                     WHERE LG_888_01_INVOICE.clientref = LG_888_CLCARD.logicalref
+                                     ORDER BY logicalref DESC), 120),
+                    'No invoice found'
+                ) as last_invoice_date
+                "),
             )
             ->where(["$this->salesmansTable.logicalref" => $this->salesman_id, "$this->salesmansTable.active" => '0', "$this->customersTable.active" => 0])
-            // ->whereNotNull("$this->customersTable.telnrs2")
-            ->orderBy("$this->customersTable.Code")
+            ->orderBy("$this->customersSalesmansRelationsTable.clientref")
             ->get();
         if ($data->isEmpty()) {
             return response()->json([
