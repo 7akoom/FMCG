@@ -511,33 +511,77 @@ class CustomerController extends Controller
 
     public function accountingSalesmanCustomers(Request $request)
     {
-        $data = DB::table("$this->customersTable")
-            ->join("$this->customersSalesmansRelationsTable", "$this->customersSalesmansRelationsTable.clientref", "=", "$this->customersTable.logicalref")
-            ->join("$this->customersView", "$this->customersSalesmansRelationsTable.clientref", "=", "$this->customersView.logicalref")
-            ->join("$this->payplansTable", "$this->payplansTable.logicalref", "=", "$this->customersTable.paymentref")
+        // $data = DB::table("$this->customersTable")
+        //     ->join("$this->customersSalesmansRelationsTable", "$this->customersSalesmansRelationsTable.clientref", "=", "$this->customersTable.logicalref")
+        //     ->join("$this->customersView", "$this->customersSalesmansRelationsTable.clientref", "=", "$this->customersView.logicalref")
+        //     ->join("$this->payplansTable", "$this->payplansTable.logicalref", "=", "$this->customersTable.paymentref")
+        //     ->leftjoin("$this->customersLimitTable", "$this->customersLimitTable.clcardref", "=", "$this->customersTable.logicalref")
+        //     ->leftjoin("$this->specialcodesTable", "$this->specialcodesTable.specode", "=", "$this->customersTable.specode2")
+        //     ->select(
+        //         "$this->customersTable.logicalref as customer_id",
+        //         "$this->customersTable.code as customer_code",
+        //         "$this->customersTable.definition_ as customer_name",
+        //         "$this->customersTable.addr1 as address",
+        //         "$this->customersTable.city",
+        //         "$this->customersTable.country",
+        //         "$this->customersTable.telnrs1 as customer_phone",
+        //         DB::raw("(SELECT TOP 1 date_ FROM $this->invoicesTable WHERE clientref=$this->customersTable.logicalref ORDER BY date_ DESC) as last_invoice_date"),
+        //         DB::raw("(SELECT TOP 1 date_ FROM $this->customersTransactionsTable WHERE clientref=$this->customersTable.logicalref and trcode=1 ORDER BY date_ DESC) as last_payment_date"),
+        //         DB::raw("COALESCE($this->customersView.debit, 0) as debit"),
+        //         DB::raw("COALESCE($this->customersView.credit, 0) as credit"),
+        //         "$this->payplansTable.definition_ as payment_plan",
+        //         DB::raw("COALESCE($this->customersLimitTable.accrisklimit, 0) as limit"),
+        //         DB::raw("COALESCE($this->specialcodesTable.definition_, '') as price_group"),
+        //     )
+        //     ->where([
+        //         "$this->customersSalesmansRelationsTable.salesmanref" => $this->salesman_id, "$this->customersTable.active" => $this->isactive, "$this->specialcodesTable.codetype" => 1, "$this->specialcodesTable.specodetype" => 26
+        //     ]);
+
+        $data = DB::table($this->customersSalesmansRelationsTable)
+            ->join("$this->salesmansTable", "$this->customersSalesmansRelationsTable.salesmanref", '=', "$this->salesmansTable.logicalref")
+            ->join("$this->customersTable", "$this->customersSalesmansRelationsTable.clientref", '=', "$this->customersTable.logicalref")
+            ->join("$this->customersView", "$this->customersView.logicalref", '=', "$this->customersSalesmansRelationsTable.clientref")
+            ->join("$this->payplansTable", "$this->payplansTable.logicalref", '=', "$this->customersTable.paymentref")
             ->leftjoin("$this->customersLimitTable", "$this->customersLimitTable.clcardref", "=", "$this->customersTable.logicalref")
-            ->leftjoin("$this->specialcodesTable", "$this->specialcodesTable.specode", "=", "$this->customersTable.specode2")
             ->select(
+                "$this->customersSalesmansRelationsTable.salesmanref as salesman_id",
+                "$this->salesmansTable.code as salesman_code",
+                "$this->salesmansTable.definition_ as salesman_name",
                 "$this->customersTable.logicalref as customer_id",
+                "$this->customersTable.definition2 as customer_name",
                 "$this->customersTable.code as customer_code",
-                "$this->customersTable.definition_ as customer_name",
+                "$this->payplansTable.code as payment_plan",
+                "$this->customersTable.definition_ as market_name",
                 "$this->customersTable.addr1 as address",
-                "$this->customersTable.city",
-                "$this->customersTable.country",
+                "$this->customersTable.PPGROUPCODE as price_group",
                 "$this->customersTable.telnrs1 as customer_phone",
-                DB::raw("(SELECT TOP 1 date_ FROM $this->invoicesTable WHERE clientref=$this->customersTable.logicalref ORDER BY date_ DESC) as last_invoice_date"),
-                DB::raw("(SELECT TOP 1 date_ FROM $this->customersTransactionsTable WHERE clientref=$this->customersTable.logicalref and trcode=1 ORDER BY date_ DESC) as last_payment_date"),
-                DB::raw("COALESCE($this->customersView.debit, 0) as debit"),
+                "$this->customersTable.telnrs2 as second_customer_phone",
+                "$this->customersTable.longitude",
+                "$this->customersTable.latitute",
                 DB::raw("COALESCE($this->customersView.credit, 0) as credit"),
-                "$this->payplansTable.definition_ as payment_plan",
+                DB::raw("COALESCE($this->customersView.debit, 0) as debit"),
                 DB::raw("COALESCE($this->customersLimitTable.accrisklimit, 0) as limit"),
-                DB::raw("COALESCE($this->specialcodesTable.definition_, '') as price_group"),
+                DB::raw("COALESCE(
+                    CONVERT(VARCHAR, (SELECT TOP 1 CAPIBLOCK_CREADEDDATE
+                                     FROM LG_888_01_INVOICE
+                                     WHERE LG_888_01_INVOICE.clientref = LG_888_CLCARD.logicalref
+                                     ORDER BY logicalref DESC), 120),
+                    'No invoice found'
+                ) as last_invoice_date
+                "),
+                DB::raw("COALESCE(
+                    CONVERT(VARCHAR, (SELECT TOP 1 DATE_
+                    FROM $this->customersTransactionsTable
+                    WHERE clientref = $this->customersTable.logicalref and trcode = 1
+                    ORDER BY date_ DESC), 120),
+                    'No payment found'
+                ) as last_payment_date")
+
+                // DB::raw("(SELECT TOP 1 date_ FROM $this->customersTransactionsTable WHERE clientref=$this->customersTable.logicalref and trcode=1 ORDER BY date_ DESC) as last_payment_date"),
             )
-            ->where([
-                "$this->customersSalesmansRelationsTable.salesmanref" => $this->salesman_id, "$this->customersTable.active" => $this->isactive, "$this->specialcodesTable.codetype" => 1, "$this->specialcodesTable.specodetype" => 26
-            ]);
-        $result = $data->paginate($this->perpage);
-        if ($result->isEmpty()) {
+            ->where(["$this->salesmansTable.logicalref" => $this->salesman_id, "$this->salesmansTable.active" => '0', "$this->customersTable.active" => 0])
+            ->orderBy("$this->customersSalesmansRelationsTable.clientref")->paginate($this->perpage);
+        if ($data->isEmpty()) {
             return response()->json([
                 'status' => 'success',
                 'message' => 'There is no data',
@@ -547,13 +591,13 @@ class CustomerController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Customers list',
-            'data' => $result->items(),
-            'current_page' => $result->currentPage(),
-            'per_page' => $result->perPage(),
-            'next_page' => $result->nextPageUrl($this->page),
-            'previous_page' => $result->previousPageUrl($this->page),
-            'last_page' => $result->lastPage(),
-            'total' => $result->total(),
+            'data' => $data->items(),
+            'current_page' => $data->currentPage(),
+            'per_page' => $data->perPage(),
+            'next_page' => $data->nextPageUrl($this->page),
+            'previous_page' => $data->previousPageUrl($this->page),
+            'last_page' => $data->lastPage(),
+            'total' => $data->total(),
         ]);
     }
 
