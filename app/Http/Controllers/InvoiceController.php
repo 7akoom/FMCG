@@ -1310,6 +1310,7 @@ class InvoiceController extends Controller
         $customer = $request->header('customer');
         $invoices = DB::table("$this->invoicesTable")
             ->join($this->customersTable, "$this->invoicesTable.clientref", "=", "$this->customersTable.logicalref")
+            ->join($this->salesmansTable, "$this->invoicesTable.salesmanref", "=", "$this->salesmansTable.logicalref")
             ->select(
                 "$this->invoicesTable.capiblock_creadeddate as date",
                 "$this->invoicesTable.ficheno as invoice_number",
@@ -1318,6 +1319,7 @@ class InvoiceController extends Controller
                 "$this->invoicesTable.nettotal as total",
                 "$this->invoicesTable.docode as from_p_invoice",
                 "$this->invoicesTable.genexp1 as note",
+                "$this->salesmansTable.logicalref as salesman_id",
             )
             ->where(["$this->customersTable.code" => $customer, "$this->invoicesTable.trcode" => 8]);
         if ($request->input('start_date') && $request->input('end_date')) {
