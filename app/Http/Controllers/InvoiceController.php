@@ -1288,10 +1288,16 @@ class InvoiceController extends Controller
                 "$this->invoicesTable.genexp1 as note",
                 "$this->invoicesTable.salesmanref as salesman_id",
             )
-            ->where(["$this->customersTable.code" => $customer, "$this->invoicesTable.trcode" => 3])
-            ->orderby("$this->invoicesTable.capiblock_creadeddate", "desc")
-            ->get();
-        if ($invoices->isEmpty()) {
+            ->where(["$this->customersTable.code" => $customer, "$this->invoicesTable.trcode" => 3]);
+        if ($request->input('start_date') && $request->input('end_date')) {
+            if ($this->start_date == '-1' && $this->end_date == '-1') {
+                $invoices->get();
+            } else {
+                $invoices->whereBetween(DB::raw("CONVERT(date, $this->invoicesTable.CAPIBLOCK_CREADEDDATE)"), [$this->start_date, $this->end_date]);
+            }
+        }
+        $data = $invoices->orderby("$this->invoicesTable.capiblock_creadeddate", "desc")->get();
+        if ($data->isEmpty()) {
             return response()->json([
                 'status' => 'success',
                 'message' => 'There is no data',
@@ -1301,7 +1307,7 @@ class InvoiceController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Invoice list',
-            'data' => $invoices,
+            'data' => $data,
         ]);
     }
     // retrieve returned invoices that related to customer
