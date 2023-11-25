@@ -6,9 +6,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
+use App\Traits\Filterable;
+
 
 class CustomerController extends Controller
 {
+    use Filterable;
+
     protected $code;
     protected $perpage;
     protected $page;
@@ -65,12 +69,22 @@ class CustomerController extends Controller
                 DB::raw("COALESCE({$this->customersView}.credit, 0) as credit"),
                 DB::raw("COALESCE({$this->payplansTable}.code, '') as payment_plan"),
                 DB::raw("COALESCE({$this->customersLimitTable}.accrisklimit, '') as limit"),
-            );
+            )->where("$this->customersTable.cardtype", "=", 3);
         if ($request->input('isactive')) {
             $data->where("{$this->customersTable}.active", $this->isactive);
         } else {
             $data->where("{$this->customersTable}.active", 0);
         }
+        $this->applyFilters($data, [
+            "$this->customersTable.code" => [
+                'value' => '%' . $request->input('customer_code') . '%',
+                'operator' => 'LIKE',
+            ],
+            "$this->customersTable.definition_" => [
+                'value' => '%' . $request->input('customer_name') . '%',
+                'operator' => 'LIKE',
+            ],
+        ]);
 
         $customer = $data->paginate($this->perpage);
         if ($customer->isEmpty()) {
@@ -285,7 +299,7 @@ class CustomerController extends Controller
                 "{$this->customersTable}.city",
                 "{$this->customersTable}.addr2 as zone",
                 "{$this->customersTable}.addr1 as address",
-                "{$this->customersTable}.ppgroupcode as customer_type",
+                "{$this->customersTable}.spcode2 as customer_type",
                 "{$this->payplansTable}.code as payment_plan",
                 DB::raw("COALESCE({$this->customersLimitTable}.accrisklimit, 0) as limit")
             )
@@ -306,42 +320,6 @@ class CustomerController extends Controller
             'data' => $data,
         ]);
     }
-    // public function pendingCustomerDetails(Request $request)
-    // {
-    //     $customer = $request->header('customer');
-    //     $data = DB::table("{$this->customersTable}")
-    //         ->join('lg_slsman', "{$this->customersTable}.mapid", '=', 'lg_slsman.logicalref')
-    //         ->join("{$this->customersLimitTable}", "{$this->customersLimitTable}.clcardref", "=", "{$this->customersTable}.logicalref")
-    //         ->join("{$this->payplansTable}", "{$this->payplansTable}.logicalref", "=", "{$this->customersTable}.paymentref")
-    //         ->select(
-    //             "{$this->customersTable}.definition2 as customer_name",
-    //             "{$this->customersTable}.definition_ as market_name",
-    //             "$this->salesmansTable.definition_ as salesman_name",
-    //             "{$this->customersTable}.telnrs1 as first_phone",
-    //             "{$this->customersTable}.telnrs2 as second_phone",
-    //             "{$this->customersTable}.code",
-    //             "{$this->customersTable}.city",
-    //             "{$this->customersTable}.addr2 as zone",
-    //             "{$this->customersTable}.addr1 as address",
-    //             "{$this->customersTable}.ppgroupcode as customer_type",
-    //             "{$this->payplansTable}.code as payment_plan",
-    //             DB::raw("COALESCE({$this->customersLimitTable}.accrisklimit, 0) as limit")
-    //         )
-    //         ->where("{$this->customersTable}.logicalref", $customer)
-    //         ->get();
-    //     if ($data->isEmpty()) {
-    //         return response()->json([
-    //             'status' => 'success',
-    //             'message' => 'There is no data',
-    //             'data' => [],
-    //         ]);
-    //     }
-    //     return response()->json([
-    //         'status' => 'success',
-    //         'message' => 'Pending customer details',
-    //         'data' => $data,
-    //     ]);
-    // }
 
     public function UpdatePendingCustomer(Request $request, $id)
     {
@@ -511,32 +489,6 @@ class CustomerController extends Controller
 
     public function accountingSalesmanCustomers(Request $request)
     {
-        // $data = DB::table("$this->customersTable")
-        //     ->join("$this->customersSalesmansRelationsTable", "$this->customersSalesmansRelationsTable.clientref", "=", "$this->customersTable.logicalref")
-        //     ->join("$this->customersView", "$this->customersSalesmansRelationsTable.clientref", "=", "$this->customersView.logicalref")
-        //     ->join("$this->payplansTable", "$this->payplansTable.logicalref", "=", "$this->customersTable.paymentref")
-        //     ->leftjoin("$this->customersLimitTable", "$this->customersLimitTable.clcardref", "=", "$this->customersTable.logicalref")
-        //     ->leftjoin("$this->specialcodesTable", "$this->specialcodesTable.specode", "=", "$this->customersTable.specode2")
-        //     ->select(
-        //         "$this->customersTable.logicalref as customer_id",
-        //         "$this->customersTable.code as customer_code",
-        //         "$this->customersTable.definition_ as customer_name",
-        //         "$this->customersTable.addr1 as address",
-        //         "$this->customersTable.city",
-        //         "$this->customersTable.country",
-        //         "$this->customersTable.telnrs1 as customer_phone",
-        //         DB::raw("(SELECT TOP 1 date_ FROM $this->invoicesTable WHERE clientref=$this->customersTable.logicalref ORDER BY date_ DESC) as last_invoice_date"),
-        //         DB::raw("(SELECT TOP 1 date_ FROM $this->customersTransactionsTable WHERE clientref=$this->customersTable.logicalref and trcode=1 ORDER BY date_ DESC) as last_payment_date"),
-        //         DB::raw("COALESCE($this->customersView.debit, 0) as debit"),
-        //         DB::raw("COALESCE($this->customersView.credit, 0) as credit"),
-        //         "$this->payplansTable.definition_ as payment_plan",
-        //         DB::raw("COALESCE($this->customersLimitTable.accrisklimit, 0) as limit"),
-        //         DB::raw("COALESCE($this->specialcodesTable.definition_, '') as price_group"),
-        //     )
-        //     ->where([
-        //         "$this->customersSalesmansRelationsTable.salesmanref" => $this->salesman_id, "$this->customersTable.active" => $this->isactive, "$this->specialcodesTable.codetype" => 1, "$this->specialcodesTable.specodetype" => 26
-        //     ]);
-
         $data = DB::table($this->customersSalesmansRelationsTable)
             ->join("$this->salesmansTable", "$this->customersSalesmansRelationsTable.salesmanref", '=', "$this->salesmansTable.logicalref")
             ->join("$this->customersTable", "$this->customersSalesmansRelationsTable.clientref", '=', "$this->customersTable.logicalref")
@@ -576,8 +528,6 @@ class CustomerController extends Controller
                     ORDER BY date_ DESC), 120),
                     'No payment found'
                 ) as last_payment_date")
-
-                // DB::raw("(SELECT TOP 1 date_ FROM $this->customersTransactionsTable WHERE clientref=$this->customersTable.logicalref and trcode=1 ORDER BY date_ DESC) as last_payment_date"),
             )
             ->where(["$this->salesmansTable.logicalref" => $this->salesman_id, "$this->salesmansTable.active" => '0', "$this->customersTable.active" => 0])
             ->orderBy("$this->customersSalesmansRelationsTable.clientref")->paginate($this->perpage);
@@ -663,5 +613,31 @@ class CustomerController extends Controller
             'message' => 'customers list',
             'data' => $customers
         ]);
+    }
+    public function getPendingCustomerList()
+    {
+        $customer = DB::table("$this->customersTable")
+            ->join("$this->customersLimitTable", "$this->customersLimitTable.clcardref", "$this->customersTable.logicalref")
+            ->join("$this->payplansTable", "$this->payplansTable.logicalref", "$this->customersTable.paymentref")
+            ->select(
+                "$this->customersTable.definition_ as market_name",
+                "$this->customersTable.telnrs1 as firstPhone",
+                DB::raw("COALESCE($this->customersTable.telnrs2, '0') as secondPhone"),
+                "$this->customersTable.code",
+                "$this->customersTable.city",
+                "$this->customersTable.addr2 as zone",
+                "$this->customersTable.addr1 as address",
+                DB::raw("COALESCE($this->customersTable.specode2, '0') as customerType"),
+                "$this->payplansTable.code as paymentPlan",
+                "$this->payplansTable.code as paymentPlan",
+                "$this->customersLimitTable.accrisklimit as limit"
+            )
+            ->where("$this->customersTable.active", 2)
+            ->get();
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Customer updated successfully',
+            'data' => $customer,
+        ], 200);
     }
 }
