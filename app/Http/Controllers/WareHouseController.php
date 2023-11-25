@@ -82,7 +82,8 @@ class WareHouseController extends Controller
                 DB::raw("COALESCE(SUM({$this->stocksTable}.onhand), 0) as quantity")
             )
             ->where([
-                'item.active' => 0, 'cat.codetype' => 1, 'cat.specodetype' => 1, 'cat.spetyp1' => 1, 'sub.codetype' => 1, 'sub.specodetype' => 1,
+                'item.active' => 0, 'cat.codetype' => 1, 'cat.specodetype' => 1,
+                'cat.spetyp1' => 1, 'sub.codetype' => 1, 'sub.specodetype' => 1,
                 'sub.spetyp2' => 1, "$this->weightsTable.linenr" => 1
             ])
             ->groupBy(
@@ -149,7 +150,7 @@ class WareHouseController extends Controller
         }
         return response()->json([
             'status' => 'success',
-            'message' => 'Customers list',
+            'message' => 'Items list',
             'data' => $result->items(),
             'current_page' => $result->currentPage(),
             'per_page' => $result->perPage(),
