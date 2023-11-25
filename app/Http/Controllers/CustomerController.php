@@ -56,19 +56,19 @@ class CustomerController extends Controller
     public function index(Request $request)
     {
         $data = DB::table($this->customersTable)
-            ->leftjoin("{$this->customersView}", "{$this->customersTable}.logicalref", '=', "{$this->customersView}.logicalref")
-            ->leftjoin("{$this->payplansTable}", "{$this->payplansTable}.logicalref", '=', "{$this->customersTable}.paymentref")
-            ->leftjoin("{$this->customersLimitTable}", "{$this->customersTable}.logicalref", '=', "{$this->customersLimitTable}.clcardref")
+            ->leftjoin("$this->customersView", "$this->customersTable.logicalref", '=', "$this->customersView.logicalref")
+            ->leftjoin("$this->payplansTable", "$this->payplansTable.logicalref", '=', "$this->customersTable.paymentref")
+            ->leftjoin("$this->customersLimitTable", "$this->customersTable.logicalref", '=', "$this->customersLimitTable.clcardref")
             ->select(
-                "{$this->customersTable}.logicalref as id",
-                "{$this->customersTable}.code",
-                "{$this->customersTable}.definition_ as name",
-                "{$this->customersTable}.addr1 as address",
-                "{$this->customersTable}.telnrs1 as phone",
-                DB::raw("COALESCE({$this->customersView}.debit, 0) as debit"),
-                DB::raw("COALESCE({$this->customersView}.credit, 0) as credit"),
-                DB::raw("COALESCE({$this->payplansTable}.code, '') as payment_plan"),
-                DB::raw("COALESCE({$this->customersLimitTable}.accrisklimit, '') as limit"),
+                "$this->customersTable.logicalref as id",
+                "$this->customersTable.code",
+                "$this->customersTable.definition_ as name",
+                "$this->customersTable.addr1 as address",
+                "$this->customersTable.telnrs1 as phone",
+                DB::raw("COALESCE($this->customersView.debit, 0) as debit"),
+                DB::raw("COALESCE($this->payplansTable.code, '') as payment_plan"),
+                DB::raw("COALESCE($this->customersView.credit, 0) as credit"),
+                DB::raw("COALESCE($this->customersLimitTable.accrisklimit, '') as limit"),
             )->where("$this->customersTable.cardtype", "=", 3);
         if ($request->input('isactive')) {
             $data->where("{$this->customersTable}.active", $this->isactive);

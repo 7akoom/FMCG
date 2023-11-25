@@ -35,7 +35,7 @@ Route::controller(CustomerController::class)->group(function () {
             Route::post('/debitandpayment', 'debitandpayment');
             Route::post('/newcustomer', 'newCustomer');
             Route::post('/pendingcustomer', 'pendingCustomerDetails');
-            Route::post('/pendingcustomer', 'getPendingCustomerList');
+            Route::post('/pending-customer-list', 'getPendingCustomerList');
             Route::post('/updatecustomerstatus/{id}', 'UpdatePendingCustomer');
             Route::post('/salesmancustomers', 'accountingSalesmanCustomers');
             Route::post('/allcustomers', 'allCustomers');
