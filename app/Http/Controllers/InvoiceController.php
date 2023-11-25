@@ -204,29 +204,6 @@ class InvoiceController extends Controller
             ->orderby("$this->stocksTransactionsTable.invoicelnno", "asc")
             ->get();
 
-        // $item = DB::table("$this->stocksTransactionsTable")
-        //     ->leftjoin("$this->itemsTable", "$this->stocksTransactionsTable.stockref", "=", "$this->itemsTable.logicalref")
-        //     ->leftjoin("$this->salesmansTable", "$this->stocksTransactionsTable.salesmanref", "=", "$this->salesmansTable.logicalref")
-        //     ->leftjoin("$this->weightsTable", "$this->weightsTable.itemref", "=", "$this->stocksTransactionsTable.logicalref")
-        //     ->leftjoin("$this->invoicesTable", "$this->stocksTransactionsTable.invoiceref", "=", "$this->invoicesTable.logicalref")
-        //     ->select(
-        //         "$this->stocksTransactionsTable.invoicelnno as line",
-        //         DB::raw("COALESCE($this->itemsTable.code, '') as code"),
-        //         DB::raw("COALESCE($this->itemsTable.name, '') as name"),
-        //         "$this->stocksTransactionsTable.amount as quantity",
-        //         "$this->stocksTransactionsTable.price as price",
-        //         "$this->stocksTransactionsTable.total as total",
-        //         "$this->stocksTransactionsTable.distdisc as discount",
-        //         "$this->weightsTable.grossweight as weight",
-        //     )
-        //     ->where([
-        //         "$this->stocksTransactionsTable.invoiceref" => $invoice_id,
-        //         "$this->salesmansTable.logicalref" => $this->salesman_id,
-        //         "$this->weightsTable.linenr" => 1,
-        //     ])
-        //     ->orderby("$this->stocksTransactionsTable.invoicelnno", "asc")
-        //     ->get();
-        // dd($item);
         if ($item->isEmpty()) {
             return response()->json([
                 'status' => 'success',
@@ -1199,32 +1176,31 @@ class InvoiceController extends Controller
                 "$this->invoicesTable.salesmanref" => $this->salesman_id,
                 "$this->invoicesTable.clientref" => $this->customer_id,
             ])
-            // ->distinct()
             ->first();
-        // dd($info);
+
         $item = DB::table("$this->stocksTransactionsTable")
-            ->leftjoin("$this->itemsTable", "$this->stocksTransactionsTable.stockref", "=", "$this->itemsTable.logicalref")
-            ->leftjoin("$this->weightsTable", "$this->weightsTable.itemref", "=", "$this->stocksTransactionsTable.ordficheref")
             ->select(
-                DB::raw("COALESCE($this->stocksTransactionsTable.invoicelnno, '') as line"),
-                DB::raw("COALESCE($this->stocksTransactionsTable.date_, '') as date"),
+                "$this->stocksTransactionsTable.invoicelnno as line",
+                "$this->stocksTransactionsTable.date_ as date",
                 DB::raw("COALESCE($this->itemsTable.code, '') as code"),
                 DB::raw("COALESCE($this->itemsTable.name, '') as name"),
-                DB::raw("COALESCE($this->stocksTransactionsTable.amount, '0') as quantity"),
-                DB::raw("COALESCE($this->stocksTransactionsTable.price, '0') as price"),
-                DB::raw("COALESCE($this->stocksTransactionsTable.total, '0') as total"),
-                DB::raw("COALESCE($this->stocksTransactionsTable.distdisc, '0') as discount"),
-                DB::raw("CASE WHEN $this->stocksTransactionsTable.stockref = 0 THEN 0
-                ELSE $this->weightsTable.grossweight END as weight"),
+                "$this->stocksTransactionsTable.amount as quantity",
+                "$this->stocksTransactionsTable.price",
+                "$this->stocksTransactionsTable.total",
+                "$this->stocksTransactionsTable.distdisc as discount",
+                "$this->weightsTable.grossweight as weight",
             )
+            ->leftJoin("$this->itemsTable", "$this->itemsTable.logicalref", '=', "$this->stocksTransactionsTable.stockref")
+            ->leftJoin("$this->weightsTable", function ($join) {
+                $join->on("$this->stocksTransactionsTable.stockref", '=', "$this->weightsTable.itemref")
+                    ->where("$this->weightsTable.linenr", '=', 1);
+            })
             ->where([
                 "$this->stocksTransactionsTable.invoiceref" => $invoice_id,
-                "$this->stocksTransactionsTable.salesmanref" => $this->salesman_id,
-                "$this->stocksTransactionsTable.clientref" => $this->customer_id,
                 "$this->weightsTable.linenr" => 1,
             ])
+            ->orderby("$this->stocksTransactionsTable.invoicelnno", "asc")
             ->get();
-        dd($item);
         if ($item->isEmpty()) {
             return response()->json([
                 'status' => 'success',
@@ -1319,6 +1295,7 @@ class InvoiceController extends Controller
             ->join($this->salesmansTable, "$this->invoicesTable.salesmanref", "=", "$this->salesmansTable.logicalref")
             ->select(
                 "$this->invoicesTable.capiblock_creadeddate as date",
+                "$this->invoicesTable.capiblock_createdby as created_by",
                 "$this->invoicesTable.ficheno as invoice_number",
                 "$this->invoicesTable.grosstotal as amount",
                 "$this->invoicesTable.totaldiscounts as discount",
