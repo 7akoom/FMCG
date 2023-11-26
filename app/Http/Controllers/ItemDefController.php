@@ -121,7 +121,7 @@ class ItemDefController extends Controller
         }
         $categoryIds = $categories->pluck('id');
         $subcategories = DB::table("$this->specialcodesTable as sub")
-            ->select('logicalref as subcategory_id', DB::raw("CASE WHEN '$this->lang' = 'ar' THEN sub.definition_
+            ->select('SPECODE as subcategory_id', DB::raw("CASE WHEN '$this->lang' = 'ar' THEN sub.definition_
         WHEN '{$this->lang}' = 'en' THEN sub.definition2
         WHEN '{$this->lang}' = 'tr' THEN sub.definition3 ELSE sub.definition_ END as subcategory_name"), 'globalid as category_id')
             ->whereIn('globalid', $categoryIds)

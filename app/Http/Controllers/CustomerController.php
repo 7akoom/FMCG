@@ -636,7 +636,7 @@ class CustomerController extends Controller
             ->get();
         return response()->json([
             'status' => 'success',
-            'message' => 'Customer updated successfully',
+            'message' => 'Pending Customer List',
             'data' => $customer,
         ], 200);
     }
