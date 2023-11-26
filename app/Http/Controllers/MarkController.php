@@ -29,7 +29,12 @@ class MarkController extends Controller
     public function brands(Request $request)
     {
         $brand = DB::table("$this->brandsTable")
-            ->select("$this->brandsTable.logicalref as id", "$this->brandsTable.code as name", "$this->brandsTable.descr as image");
+            ->select(
+                "$this->brandsTable.logicalref as id",
+                "$this->brandsTable.code as name",
+                DB::raw("REVERSE(SUBSTRING(REVERSE($this->brandsTable.descr), 1, CHARINDEX('/', REVERSE($this->brandsTable.descr)) - 1)) as brand_image")
+            );
+
         if ($request->hasHeader('type')) {
             if ($this->type == -1) {
                 $data = $brand->get();

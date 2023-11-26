@@ -617,18 +617,21 @@ class CustomerController extends Controller
     public function getPendingCustomerList()
     {
         $customer = DB::table("$this->customersTable")
+            ->join("$this->customersSalesmansRelationsTable", "$this->customersSalesmansRelationsTable.clientref", "$this->customersTable.logicalref")
+            ->join("$this->salesmansTable", "$this->customersSalesmansRelationsTable.salesmanref", "$this->salesmansTable.logicalref")
             ->join("$this->customersLimitTable", "$this->customersLimitTable.clcardref", "$this->customersTable.logicalref")
             ->join("$this->payplansTable", "$this->payplansTable.logicalref", "$this->customersTable.paymentref")
             ->select(
                 "$this->customersTable.definition_ as market_name",
-                "$this->customersTable.telnrs1 as firstPhone",
+                "$this->customersTable.definition2 as customer_name",
+                "$this->salesmansTable.definition_ as salesman_name",
+                "$this->customersTable.telnrs1 as first_phone",
                 DB::raw("COALESCE($this->customersTable.telnrs2, '0') as secondPhone"),
                 "$this->customersTable.code",
                 "$this->customersTable.city",
                 "$this->customersTable.addr2 as zone",
                 "$this->customersTable.addr1 as address",
                 DB::raw("COALESCE($this->customersTable.specode2, '0') as customerType"),
-                "$this->payplansTable.code as paymentPlan",
                 "$this->payplansTable.code as paymentPlan",
                 "$this->customersLimitTable.accrisklimit as limit"
             )

@@ -192,27 +192,7 @@ class OrderController extends Controller
             ->where(["$this->ordersTable.ficheno" => $order])
             ->distinct()
             ->first();
-        // $item = DB::table("$this->ordersTransactionsTable")
-        //     ->leftjoin("$this->itemsTable", "$this->ordersTransactionsTable.stockref", "=", "$this->itemsTable.logicalref")
-        //     ->leftjoin("$this->weightsTable", "$this->weightsTable.itemref", "=", "$this->ordersTransactionsTable.stockref")
-        //     ->select(
-        //         DB::raw("COALESCE($this->ordersTransactionsTable.lineno_, '') as line"),
-        //         DB::raw("COALESCE($this->ordersTransactionsTable.linetype, '') as type"),
-        //         "$this->ordersTransactionsTable.date_ as date",
-        //         DB::raw("COALESCE($this->itemsTable.code, '') as code"),
-        //         DB::raw("COALESCE($this->itemsTable.name, '') as name"),
-        //         "$this->ordersTransactionsTable.amount as quantity",
-        //         "$this->ordersTransactionsTable.price as price",
-        //         "$this->ordersTransactionsTable.total as total",
-        //         "$this->ordersTransactionsTable.distdisc as discount",
-        //         DB::raw("CASE WHEN $this->ordersTransactionsTable.stockref = 0 THEN 0
-        //         ELSE $this->weightsTable.grossweight END as weight"),
-        //     )
-        //     ->where([
-        //         "$this->ordersTransactionsTable.ordficheref" => $order_id,
-        //         "$this->weightsTable.linenr" => 1,
-        //     ])
-        //     ->get();
+
         $item = DB::table("$this->ordersTransactionsTable")
             ->select(
                 "$this->ordersTransactionsTable.lineno_ as line",
@@ -443,6 +423,7 @@ class OrderController extends Controller
             ->join("$this->ordersTable", "$this->ordersTransactionsTable.ordficheref", "=", "$this->ordersTable.logicalref")
             ->leftjoin("$this->payplansTable", "$this->payplansTable.logicalref", "=", "$this->ordersTable.paydefref")
             ->select(
+                "$this->ordersTable.logicalref as id",
                 "$this->ordersTable.ficheno as number",
                 "$this->ordersTable.grosstotal as order_amount",
                 "$this->ordersTable.totaldiscounts as order_discount",
@@ -455,26 +436,24 @@ class OrderController extends Controller
             ->where(["$this->ordersTable.ficheno" => $order])
             ->distinct()
             ->first();
-        $item = DB::table("$this->ordersTransactionsTable")
-            ->leftjoin("$this->itemsTable", "$this->ordersTransactionsTable.stockref", "=", "$this->itemsTable.logicalref")
-            ->leftjoin("$this->weightsTable", "$this->weightsTable.itemref", "=", "$this->ordersTransactionsTable.ordficheref")
-            ->select(
-                DB::raw("COALESCE($this->ordersTransactionsTable.lineno_, '') as line"),
-                "$this->ordersTransactionsTable.date_ as date",
-                DB::raw("COALESCE($this->itemsTable.code, '') as code"),
-                DB::raw("COALESCE($this->itemsTable.name, '') as name"),
-                "$this->ordersTransactionsTable.amount as quantity",
-                "$this->ordersTransactionsTable.price as price",
-                "$this->ordersTransactionsTable.total as total",
-                "$this->ordersTransactionsTable.distdisc as discount",
-                DB::raw("CASE WHEN $this->ordersTransactionsTable.stockref = 0 THEN 0
-                ELSE $this->weightsTable.grossweight END as weight"),
 
+        $item = DB::table("$this->ordersTransactionsTable")
+            ->select(
+                "$this->ordersTransactionsTable.lineno_ as line",
+                DB::raw("COALESCE($this->itemsTable.code, '0') as code"),
+                DB::raw("COALESCE($this->itemsTable.name, '0') as name"),
+                "$this->ordersTransactionsTable.amount as quantity",
+                "$this->ordersTransactionsTable.price",
+                "$this->ordersTransactionsTable.total",
+                "$this->ordersTransactionsTable.distcost as discount",
+                "$this->weightsTable.grossweight as weight",
             )
-            ->where([
-                "$this->ordersTransactionsTable.ordficheref" => $order_id,
-                "$this->weightsTable.convfact1" => 1
-            ])
+            ->leftJoin("$this->itemsTable", "$this->itemsTable.logicalref", '=', "$this->ordersTransactionsTable.stockref")
+            ->leftJoin("$this->weightsTable", function ($join) {
+                $join->on("$this->ordersTransactionsTable.stockref", '=', "$this->weightsTable.itemref")
+                    ->where("$this->weightsTable.linenr", '=', 1);
+            })
+            ->where("$this->ordersTransactionsTable.ordficheref", '=', $order_id)
             ->get();
         if ($item->isEmpty()) {
             return response()->json([
@@ -604,7 +583,7 @@ class OrderController extends Controller
                 ->post('https://10.27.0.109:32002/api/v1/salesOrders');
             $responseData = $response->json();
             $order = DB::table($this->ordersTable)
-                ->select("FICHENO", "DATE_")
+                ->select("logicalref as id", "FICHENO", "DATE_")
                 ->where("LOGICALREF", $responseData['INTERNAL_REFERENCE'])
                 ->first();
             return response()->json([
