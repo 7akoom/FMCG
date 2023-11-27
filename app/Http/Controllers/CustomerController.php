@@ -114,10 +114,12 @@ class CustomerController extends Controller
             ->select('logicalref as salesmsna_id', 'definition_ as salesman_name')
             ->where(['firmnr' => $this->code, 'active' => 0])
             ->get();
+
         $payplans = DB::table($this->payplansTable)
             ->select('logicalref as payplan_id', 'definition_ as payplan_name')
             ->where(['active' => 0])
             ->get();
+
         $customers_types = DB::table($this->specialcodesTable)
             ->select(
                 'logicalref as type_id',
@@ -127,13 +129,21 @@ class CustomerController extends Controller
             ->where(['codetype' => 1, 'specodetype' => 26, 'spetyp2' => 1])
             ->get();
 
+        $customers_status = [
+            ['active' => '0'],
+            ['inactive' => '1'],
+            ['pending' => '2'],
+        ];
+
         return response()->json([
             'status' => 'success',
             'salesmans' => $salesmans,
             'payplans' => $payplans,
             'customers_types' => $customers_types,
+            'customers_status' => $customers_status,
         ]);
     }
+
 
     public function store(Request $request)
     {
