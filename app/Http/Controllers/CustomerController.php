@@ -340,35 +340,71 @@ class CustomerController extends Controller
         ]);
     }
 
-    public function UpdatePendingCustomer(Request $request, $id)
+    public function updatePendingCustomer(Request $request, $id)
     {
-        $customer = DB::table("{$this->customersTable}")->where('logicalref', $id)->first();
-        $limit = DB::table("{$this->customersLimitTable}")->where('clcardref', $id)->first();
-        $custData = [
-            'definition2' => $request->customer_name,
-            'definition_' => $request->market_name,
-            'telnrs1' => $request->first_phone,
-            'telnrs2' => $request->second_phone,
-            'city' => $request->city,
-            'addr2' => $request->zone,
-            'addr1' => $request->address,
-            'ppgroupcode' => $request->customer_type,
-            'paymentref' => $request->payment_plan,
-            'active' => $request->active,
-        ];
-        $limitData = [
-            'accrisklimit' => $request->limit
-        ];
-        DB::beginTransaction();
-        DB::table("{$this->customersTable}")->where('logicalref', $id)->update($custData);
-        DB::table("{$this->customersLimitTable}")->where('clcardref', $id)->update($limitData);
-        DB::commit();
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Customer updated successfully',
-            'data' => $custData,
-        ], 200);
+        try {
+
+            $custData = [
+                'definition2' => $request->customer_name,
+                'definition_' => $request->market_name,
+                'telnrs1' => $request->first_phone,
+                'telnrs2' => $request->second_phone,
+                'city' => $request->city,
+                'addr2' => $request->zone,
+                'addr1' => $request->address,
+                'specode2' => $request->customer_type,
+                'paymentref' => $request->payment_plan,
+                'active' => $request->active,
+            ];
+
+            $limitData = [
+                'accrisklimit' => $request->limit
+            ];
+
+            DB::beginTransaction();
+
+            DB::table("{$this->customersTable}")->where('logicalref', $id)->update($custData);
+            DB::table("{$this->customersLimitTable}")->where('clcardref', $id)->update($limitData);
+
+            DB::commit();
+
+            $columnMapping = [
+                'definition2' => 'customer_name',
+                'definition_' => 'market_name',
+                'telnrs1' => 'first_phone',
+                'telnrs2' => 'second_phone',
+                'city' => 'city',
+                'addr2' => 'zone',
+                'addr1' => 'address',
+                'specode2' => 'customer_type',
+                'paymentref' => 'payment_plan',
+                'active' => 'active',
+            ];
+
+            $responseData = [];
+            foreach ($columnMapping as $dbColumn => $requestName) {
+                $responseData[$requestName] = $custData[$dbColumn];
+            }
+
+            $responseData['limit'] = $limitData['accrisklimit'];
+
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Customer updated successfully',
+                'data' => $responseData,
+            ], 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Error updating customer: ' . $e->getMessage(),
+            ], 500);
+        }
     }
+
+
 
     public function getcustomerByCode(Request $request)
     {
@@ -652,7 +688,9 @@ class CustomerController extends Controller
                 "$this->customersTable.city",
                 "$this->customersTable.addr2 as zone",
                 "$this->customersTable.addr1 as address",
+                DB::raw("COALESCE($this->specialcodesTable.specode, '0') as customerType_id"),
                 DB::raw("COALESCE($this->specialcodesTable.definition_, '0') as customerType"),
+                "$this->payplansTable.logicalref as paymentPlan_id",
                 "$this->payplansTable.code as paymentPlan",
                 "$this->customersLimitTable.accrisklimit as limit"
             )

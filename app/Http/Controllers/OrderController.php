@@ -438,22 +438,21 @@ class OrderController extends Controller
             ->first();
 
         $item = DB::table("$this->ordersTransactionsTable")
+            ->join("$this->itemsTable", "$this->ordersTransactionsTable.stockref", "=", "$this->itemsTable.logicalref")
+            ->join("$this->weightsTable", "$this->weightsTable.itemref", "=", "$this->itemsTable.logicalref")
+            ->join("$this->ordersTable", "$this->ordersTransactionsTable.ordficheref", "=", "$this->ordersTable.logicalref")
             ->select(
                 "$this->ordersTransactionsTable.lineno_ as line",
-                DB::raw("COALESCE($this->itemsTable.code, '0') as code"),
-                DB::raw("COALESCE($this->itemsTable.name, '0') as name"),
+                "$this->ordersTable.capiblock_creadeddate as date",
+                "$this->itemsTable.code as code",
+                "$this->itemsTable.name as name",
                 "$this->ordersTransactionsTable.amount as quantity",
-                "$this->ordersTransactionsTable.price",
-                "$this->ordersTransactionsTable.total",
-                "$this->ordersTransactionsTable.distcost as discount",
-                "$this->weightsTable.grossweight as weight",
+                "$this->ordersTransactionsTable.price as price",
+                "$this->ordersTransactionsTable.total as total",
+                "$this->ordersTransactionsTable.distdisc as discount",
+                "$this->weightsTable.grossweight as weight"
             )
-            ->leftJoin("$this->itemsTable", "$this->itemsTable.logicalref", '=', "$this->ordersTransactionsTable.stockref")
-            ->leftJoin("$this->weightsTable", function ($join) {
-                $join->on("$this->ordersTransactionsTable.stockref", '=', "$this->weightsTable.itemref")
-                    ->where("$this->weightsTable.linenr", '=', 1);
-            })
-            ->where("$this->ordersTransactionsTable.ordficheref", '=', $order_id)
+            ->where(["$this->ordersTable.ficheno" => $order, "$this->weightsTable.linenr" => 1])
             ->get();
         if ($item->isEmpty()) {
             return response()->json([
