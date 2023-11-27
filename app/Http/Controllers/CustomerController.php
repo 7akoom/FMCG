@@ -168,6 +168,7 @@ class CustomerController extends Controller
                 'latitute' => $request->latitude,
                 'capiblock_createdby' => $this->salesman_id,
             ];
+            $sls == 2 ? $defaultValues['specode2'] = 3 : $defaultValues['specode2'] = 2;
             $limitNames = Schema::getColumnListing($this->customersLimitTable);
             $limitValues = array_fill_keys($limitNames, 0);
             DB::beginTransaction();
@@ -621,6 +622,8 @@ class CustomerController extends Controller
             ->join("$this->salesmansTable", "$this->customersSalesmansRelationsTable.salesmanref", "$this->salesmansTable.logicalref")
             ->join("$this->customersLimitTable", "$this->customersLimitTable.clcardref", "$this->customersTable.logicalref")
             ->join("$this->payplansTable", "$this->payplansTable.logicalref", "$this->customersTable.paymentref")
+            ->join("$this->specialcodesTable", "$this->specialcodesTable.specode", "$this->customersTable.specode2")
+            ->where(["$this->specialcodesTable.codetype" => 1, "$this->specialcodesTable.specodetype" => 26, "$this->specialcodesTable.spetyp2" => 1])
             ->select(
                 "$this->customersTable.definition_ as market_name",
                 "$this->customersTable.definition2 as customer_name",
@@ -631,7 +634,7 @@ class CustomerController extends Controller
                 "$this->customersTable.city",
                 "$this->customersTable.addr2 as zone",
                 "$this->customersTable.addr1 as address",
-                DB::raw("COALESCE($this->customersTable.specode2, '0') as customerType"),
+                DB::raw("COALESCE($this->specialcodesTable.definition_, '0') as customerType"),
                 "$this->payplansTable.code as paymentPlan",
                 "$this->customersLimitTable.accrisklimit as limit"
             )
