@@ -130,9 +130,18 @@ class CustomerController extends Controller
             ->get();
 
         $customers_status = [
-            ['active' => '0'],
-            ['inactive' => '1'],
-            ['pending' => '2'],
+            [
+                'name' => 'active',
+                'code' => '0',
+            ],
+            [
+                'name' => 'inactive',
+                'code' => '1',
+            ],
+            [
+                'name' => 'pending',
+                'code' => '2',
+            ],
         ];
 
         return response()->json([
