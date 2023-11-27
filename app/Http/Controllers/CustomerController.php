@@ -136,14 +136,13 @@ class CustomerController extends Controller
         ];
 
         return response()->json([
-            'status' => 'success',
+            'status' => 'Customers data',
             'salesmans' => $salesmans,
             'payplans' => $payplans,
             'customers_types' => $customers_types,
             'customers_status' => $customers_status,
         ]);
     }
-
 
     public function store(Request $request)
     {
