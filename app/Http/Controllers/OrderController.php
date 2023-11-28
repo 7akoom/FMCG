@@ -147,7 +147,6 @@ class OrderController extends Controller
                 'data' => [],
             ], 200);
         }
-        dd($data);
         return response()->json([
             'status' => 'success',
             'message' => 'Order list',
