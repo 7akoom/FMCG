@@ -703,4 +703,81 @@ class CustomerController extends Controller
             'data' => $customer,
         ], 200);
     }
+
+    public function storeFromAccounting(Request $request)
+    {
+        try {
+            $sls = $this->fetchValueFromTable($this->salesmansTable, 'logicalref', $this->salesman_id, 'position_');
+            $validateData = $request->validate([
+                'market_name' => 'required',
+                'customer_name' => 'required',
+                'phone' => 'required|unique:' . $this->customersTable . ',telnrs1',
+                'city' => 'required',
+                'address' => 'required',
+                'zone' => 'required',
+                'longitude' => 'required',
+                'latitude' => 'required',
+            ]);
+            $columnNames = Schema::getColumnListing($this->customersTable);
+            $defaultValues = array_fill_keys($columnNames, 0);
+            $defaultValues = [
+                'active' => 2,
+                'cardtype' => 3,
+                'definition_' => $request->market_name,
+                'definition2' => $request->customer_name,
+                'telnrs1' => $request->phone,
+                'telnrs2' => $request->phone2,
+                'city' => $request->city,
+                'addr1' => $request->address,
+                'addr2' => $request->zone,
+                'country' => 'iraq',
+                'cyphcode' => '1',
+                'paymentref' => '10',
+                'longitude' => $request->longitude,
+                'latitute' => $request->latitude,
+                'capiblock_createdby' => $this->salesman_id,
+            ];
+            $sls == 2 ? $defaultValues['specode2'] = 3 : $defaultValues['specode2'] = 2;
+            $limitNames = Schema::getColumnListing($this->customersLimitTable);
+            $limitValues = array_fill_keys($limitNames, 0);
+            DB::beginTransaction();
+            if ($sls && $sls->position_ == 1) {
+                $latestCode = DB::table($this->customersTable)
+                    ->where('code', 'like', '120.%')
+                    ->orderBy('logicalref', 'desc')
+                    ->value('code');
+                $defaultValues['code'] = '120.' . str_pad(substr($latestCode, 4) + 1, 4, '0', STR_PAD_LEFT);
+            } else if ($sls && $sls->position_ == 2) {
+                $latestCode = DB::table($this->customersTable)
+                    ->where('code', 'like', '180.%')
+                    ->orderBy('logicalref', 'desc')
+                    ->value('code');
+                $defaultValues['code'] = '180.' . str_pad(substr($latestCode, 4) + 1, 4, '0', STR_PAD_LEFT);
+            }
+            $logicalref = DB::table($this->customersTable)->insertGetId($defaultValues);
+            $limitValues = [
+                'clcardref' => $logicalref,
+                'accrisklimit' => '0'
+            ];
+            DB::table($this->customersLimitTable)->insert($limitValues);
+            DB::table($this->customersSalesmansRelationsTable)->insert([
+                'SALESMANREF' => $this->salesman_id,
+                'CLIENTREF' => $logicalref,
+            ]);
+            DB::commit();
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Customers inserted successfully',
+                'data' => $defaultValues,
+            ], 200);
+        } catch (ValidationException $e) {
+            $errors = $e->validator->errors()->getMessages();
+            $errorMsg = [];
+            foreach ($errors as $key => $value) {
+                $errorMsg[$key] = $value[0];
+            }
+            return response()->json([
+                'errors' => $errorMsg,
+            ], 422);
+        }
 }

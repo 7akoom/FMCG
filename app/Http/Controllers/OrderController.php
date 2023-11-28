@@ -77,7 +77,8 @@ class OrderController extends Controller
             ->select(
                 "$this->ordersTable.capiblock_creadeddate as order_date",
                 "$this->ordersTable.ficheno as order_number",
-                "$this->ordersTable.docode as document_number",
+                DB::raw("COALESCE($this->ordersTable.docode, '0') as document_number"),
+                // "$this->ordersTable.docode as document_number",
                 "$this->customersTable.definition_ as customer_name",
                 "$this->customersTable.addr1 as customer_address",
                 "$this->salesmansTable.code as salesman_code",
@@ -146,7 +147,7 @@ class OrderController extends Controller
                 'data' => [],
             ], 200);
         }
-
+        dd($data);
         return response()->json([
             'status' => 'success',
             'message' => 'Order list',
