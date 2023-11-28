@@ -679,6 +679,7 @@ class CustomerController extends Controller
             ->join("$this->specialcodesTable", "$this->specialcodesTable.specode", "$this->customersTable.specode2")
             ->where(["$this->specialcodesTable.codetype" => 1, "$this->specialcodesTable.specodetype" => 26, "$this->specialcodesTable.spetyp2" => 1])
             ->select(
+                "$this->customersTable.logicalref as customer_id",
                 "$this->customersTable.definition_ as market_name",
                 "$this->customersTable.definition2 as customer_name",
                 "$this->salesmansTable.definition_ as salesman_name",
