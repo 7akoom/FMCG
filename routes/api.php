@@ -179,6 +179,7 @@ Route::controller(WareHouseController::class)->group(function () {
         Route::post('/cashvan', 'cashvanWHouse');
         Route::post('/wastage', 'wastageWHouse');
         Route::post('/whlist', 'wHouseList');
+        Route::post('/ware-house', 'wHouse');
     });
 });
 

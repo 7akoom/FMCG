@@ -222,10 +222,6 @@ class InvoiceController extends Controller
     /* Store */
     public function doSalesInvoice(Request $request)
     {
-        // $salesman_code = $this->fetchValueFromTable($this->salesmansTable, 'logicalref', $request->salesman_id, 'code');
-        // $customer_id = $this->fetchValueFromTable($this->customersTable, 'code', $request->customer_code, 'id');
-        // $customer_payplan = $this->fetchValueFromTable($this->customersTable, 'code', $request->customer_code, 'paymentref');
-        // $payplan_code = $this->fetchValueFromTable($this->payplansTable, 'logicalref', $request->customer_payplan, 'code');
         $data = [
             "INTERNAL_REFERENCE" => 0,
             "TYPE" => 8,

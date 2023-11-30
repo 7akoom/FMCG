@@ -9,6 +9,8 @@ class WareHouseController extends Controller
 {
     protected $code;
     protected $type;
+    protected $inputType;
+    protected $stock_number;
     protected $perpage;
     protected $page;
     protected $lang;
@@ -19,6 +21,7 @@ class WareHouseController extends Controller
     protected $specialCodesTable;
     protected $brandsTable;
     protected $weightsTable;
+    protected $unitGroupsTable;
     protected $unitsTable;
     protected $stocksTable;
     protected $wareHousesTable;
@@ -27,6 +30,8 @@ class WareHouseController extends Controller
     {
         $this->code = $request->header('citycode');
         $this->type = $request->header('type');
+        $this->inputType = $request->input('item_type');
+        $this->stock_number = $request->input('stock_number');
         $this->lang = $request->header('lang', 'ar');
         $this->category = $request->header('category');
         $this->subcategory = $request->header('subcategory');
@@ -38,7 +43,8 @@ class WareHouseController extends Controller
         $this->specialCodesTable = 'LG_' . $this->code . '_SPECODES';
         $this->brandsTable = 'LG_' . $this->code . '_MARK';
         $this->weightsTable = 'LG_' . $this->code . '_ITMUNITA';
-        $this->unitsTable = 'LG_' . $this->code . '_UNITSETF';
+        $this->unitGroupsTable = 'LG_' . $this->code . '_UNITSETF';
+        $this->unitsTable = 'LG_' . $this->code . '_UNITSETL';
         $this->stocksTable = 'LV_' . $this->code . '_01_STINVTOT';
     }
 
@@ -401,6 +407,63 @@ class WareHouseController extends Controller
                 ->where('firmnr', $this->code)
                 ->select('logicalref as id', 'nr as number', 'name')
                 ->get(),
+        ], 200);
+    }
+
+    public function wHouse(Request $request)
+    {
+        $items = DB::table("$this->itemsTable AS item")
+            ->leftJoin("$this->unitGroupsTable", "$this->unitGroupsTable.logicalref", '=', 'item.unitsetref')
+            ->leftJoin("$this->specialCodesTable AS grp", function ($join) {
+                $join->on('grp.specode', '=', "item.stgrpcode")
+                    ->where('grp.codetype', '=', 4);
+            })
+            ->leftJoin("$this->unitsTable AS unit1", function ($join) {
+                $join->on('unit1.unitsetref', '=', "$this->unitGroupsTable.logicalref")
+                    ->where('unit1.linenr', '=', 1);
+            })
+            ->leftJoin("$this->unitsTable AS unit2", function ($join) {
+                $join->on('unit2.unitsetref', '=', "$this->unitGroupsTable.logicalref")
+                    ->where('unit2.linenr', '=', 2);
+            })
+            ->leftJoin("$this->weightsTable AS weight1", function ($join) {
+                $join->on('weight1.itemref', '=', 'item.logicalref')
+                    ->where('weight1.linenr', '=', 1);
+            })
+            ->leftJoin("$this->weightsTable AS weight2", function ($join) {
+                $join->on('weight2.itemref', '=', 'item.logicalref')
+                    ->where('weight2.linenr', '=', 2);
+            })
+            ->leftJoin("$this->stocksTable", function ($join) {
+                $join->on('item.logicalref', '=', "$this->stocksTable.stockref")
+                    ->where("$this->stocksTable.invenno", '=', $this->stock_number);
+            })
+            ->where(['item.active' => 0, 'item.cardtype' => 1])
+            ->groupBy('item.logicalref', 'item.code', 'unit1.name', 'unit2.name', 'weight1.grossweight', 'weight2.grossweight', "grp.definition_");
+
+        $result = $items->select([
+            'item.logicalref as item_id',
+            'item.code as item_code',
+            'unit1.name as unit1',
+            DB::raw('COALESCE(grp.definition_, \'0\') as group_name'),
+            DB::raw('COALESCE(unit2.name, \'0\') as unit2'),
+            'weight1.grossweight as weight1',
+            DB::raw('COALESCE(weight2.grossweight, \'0\') as weight2'),
+            DB::raw("COALESCE(SUM({$this->stocksTable}.onhand), 0) as quantity")
+        ]);
+        $data = ($this->inputType == -1) ? $result->paginate($this->perpage) : $result->where('item.classtype', $this->inputType)->paginate($this->perpage);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Items list',
+            'data' => $data->items(),
+            'current_page' => $data->currentPage(),
+            'per_page' => $data->perPage(),
+            'next_page' => $data->nextPageUrl($this->page),
+            'previous_page' => $data->previousPageUrl($this->page),
+            'first_page' => $data->url(1),
+            'last_page' => $data->url($data->lastPage()),
+            'total' => $data->total(),
         ], 200);
     }
 }
