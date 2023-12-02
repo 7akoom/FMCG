@@ -125,7 +125,7 @@ class WareHouseController extends Controller
             if ($this->type == -1) {
                 $items->get();
             } else {
-                $items->where("item.classtype", $this->type);
+                $items->where("item.specode3", $this->type);
             }
         }
         if ($request->hasHeader('category')) {
@@ -241,7 +241,7 @@ class WareHouseController extends Controller
             if ($this->type == -1) {
                 $items->get();
             } else {
-                $items->where("item.classtype", $this->type);
+                $items->where("item.specode3", $this->type);
             }
         }
         if ($request->hasHeader('category')) {
@@ -357,7 +357,7 @@ class WareHouseController extends Controller
             if ($this->type == -1) {
                 $items->get();
             } else {
-                $items->where("item.classtype", $this->type);
+                $items->where("item.specode3", $this->type);
             }
         }
         if ($request->hasHeader('category')) {
@@ -492,7 +492,7 @@ class WareHouseController extends Controller
             ],
         ]);
 
-        $data = ($this->inputType == -1) ? $result->paginate($this->perpage) : $result->where('item.classtype', $this->inputType)->paginate($this->perpage);
+        $data = ($this->inputType == -1) ? $result->paginate($this->perpage) : $result->where('item.specode3', $this->inputType)->paginate($this->perpage);
 
         return response()->json([
             'status' => 'success',
