@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Traits\Filterable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class WareHouseController extends Controller
 {
+    use Filterable;
+
     protected $code;
     protected $type;
     protected $inputType;
@@ -438,12 +441,18 @@ class WareHouseController extends Controller
                 $join->on('item.logicalref', '=', "$this->stocksTable.stockref")
                     ->where("$this->stocksTable.invenno", '=', $this->stock_number);
             })
-            ->where(['item.active' => 0, 'item.cardtype' => 1])
-            ->groupBy('item.logicalref', 'item.code', 'unit1.name', 'unit2.name', 'weight1.grossweight', 'weight2.grossweight', "grp.definition_");
+            ->where(['item.active' => 0, 'item.cardtype' => 1]);
+
+        if ($this->stock_number != 0) {
+            $items->having(DB::raw("COALESCE(SUM({$this->stocksTable}.onhand), 0)"), '>', 0);
+        }
+
+        $items->groupBy('item.logicalref', 'item.code', 'item.name', 'unit1.name', 'unit2.name', 'weight1.grossweight', 'weight2.grossweight', "grp.definition_");
 
         $result = $items->select([
             'item.logicalref as item_id',
             'item.code as item_code',
+            'item.name as item_name',
             'unit1.name as unit1',
             DB::raw('COALESCE(grp.definition_, \'0\') as group_name'),
             DB::raw('COALESCE(unit2.name, \'0\') as unit2'),
@@ -451,6 +460,38 @@ class WareHouseController extends Controller
             DB::raw('COALESCE(weight2.grossweight, \'0\') as weight2'),
             DB::raw("COALESCE(SUM({$this->stocksTable}.onhand), 0) as quantity")
         ]);
+
+        $this->applyFilters($items, [
+            "item.code" => [
+                'value' => '%' . $request->input('item_code') . '%',
+                'operator' => 'LIKE',
+            ],
+            "item.name" => [
+                'value' => '%' . $request->input('item_name') . '%',
+                'operator' => 'LIKE',
+            ],
+            "item.markref" => [
+                'value' => '%' . $request->input('item_brand') . '%',
+                'operator' => 'LIKE',
+            ],
+            "weight1.grossweight" => [
+                'value' => '%' . $request->input('item_weight1') . '%',
+                'operator' => 'LIKE',
+            ],
+            "weight2.grossweight" => [
+                'value' => '%' . $request->input('item_weight2') . '%',
+                'operator' => 'LIKE',
+            ],
+            "unit1.name" => [
+                'value' => '%' . $request->input('item_unit1') . '%',
+                'operator' => 'LIKE',
+            ],
+            "unit2.name" => [
+                'value' => '%' . $request->input('item_unit2') . '%',
+                'operator' => 'LIKE',
+            ],
+        ]);
+
         $data = ($this->inputType == -1) ? $result->paginate($this->perpage) : $result->where('item.classtype', $this->inputType)->paginate($this->perpage);
 
         return response()->json([
