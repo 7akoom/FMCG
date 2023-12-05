@@ -42,7 +42,6 @@ class OrderController extends Controller
         return DB::table($table)
             ->where($column, $value1)
             ->value($value2);
-        // ->first();
     }
 
     public function __construct(Request $request)
@@ -68,7 +67,6 @@ class OrderController extends Controller
         $this->invoicesTable = 'LG_' . $this->code . '_01_INVOICE';
     }
 
-    // retrieve orders list
     public function index(Request $request)
     {
         $order = DB::table("$this->salesmansTable")
@@ -78,7 +76,6 @@ class OrderController extends Controller
                 "$this->ordersTable.capiblock_creadeddate as order_date",
                 "$this->ordersTable.ficheno as order_number",
                 DB::raw("COALESCE($this->ordersTable.docode, '0') as document_number"),
-                // "$this->ordersTable.docode as document_number",
                 "$this->customersTable.definition_ as customer_name",
                 "$this->customersTable.addr1 as customer_address",
                 "$this->salesmansTable.code as salesman_code",
@@ -124,14 +121,6 @@ class OrderController extends Controller
                 'value' => $request->input('status'),
                 'operator' => '=',
             ],
-            //     "$this->ordersTable.date_" => [
-            //         'value' => strtotime($start_date),
-            //         'operator' => '>=',
-            //     ],
-            //     "$this->ordersTable.date_" => [
-            //         'value' => strtotime($end_date),
-            //         'operator' => '<=',
-            //     ],
         ]);
 
         if ($request->input('start_date') && $request->input('end_date')) {
@@ -160,8 +149,6 @@ class OrderController extends Controller
         ], 200);
     }
 
-
-    //retrieve order details based on order number
     public function orderdetails(Request $request)
     {
         $order = $request->header('order');
@@ -201,6 +188,7 @@ class OrderController extends Controller
                 "$this->ordersTransactionsTable.amount as quantity",
                 "$this->ordersTransactionsTable.price",
                 "$this->ordersTransactionsTable.total",
+                "$this->ordersTransactionsTable.distdisc as discount",
                 "$this->weightsTable.grossweight as weight",
             )
             ->leftJoin("$this->itemsTable", "$this->itemsTable.logicalref", '=', "$this->ordersTransactionsTable.stockref")
@@ -254,7 +242,6 @@ class OrderController extends Controller
                     "$this->ordersTable.ficheno as order_number",
                     "$this->ordersTable.docode as document_number",
                     DB::raw("COALESCE($this->salesmansTable.definition_, '') as salesman_name"),
-                    // "$this->salesmansTable.definition_ as salesman_name",
                     "$this->ordersTable.grosstotal as order_total",
                     "$this->ordersTable.totaldiscounts as order_discount",
                     "$this->ordersTable.nettotal as order_net"
@@ -295,7 +282,6 @@ class OrderController extends Controller
         }
     }
 
-    // retrieve orders based on status
     public function ordersStatusFilter(Request $request)
     {
         $order = DB::table("$this->salesmansTable")
@@ -339,7 +325,7 @@ class OrderController extends Controller
             'total' => $result->total(),
         ], 200);
     }
-    // retrieve orders based on date
+
     public function OrderDateFilter(Request $request)
     {
         $order = DB::table("$this->salesmansTable")
@@ -380,7 +366,7 @@ class OrderController extends Controller
             'total' => $result->total(),
         ], 200);
     }
-    //retrieve previous orders that related to customer
+
     public function salesmanlacurrentmonthorder(Request $request)
     {
         $order = DB::table("$this->ordersTable")
@@ -410,9 +396,6 @@ class OrderController extends Controller
         ], 200);
     }
 
-
-
-    //retrieve previous order details based on order number
     public function previousorderdetails(Request $request)
     {
         $order = $request->header('order');
@@ -495,7 +478,6 @@ class OrderController extends Controller
         $salesman = $request->header('salesman');
         $salesman_code = $this->fetchValueFromTable($this->salesmansTable, 'logicalref', $salesman, 'code');
         $payment_ref = $this->fetchValueFromTable($this->customersTable, 'code', $customer, 'paymentref');
-        // $payment_code = $this->fetchValueFromTable($this->payplansTable, 'logicalref', $payment_ref, 'code');
         $data = [
             'INTERNAL_REFERENCE' => 0,
             'NUMBER' => '~',
@@ -552,7 +534,6 @@ class OrderController extends Controller
             if ($item['item_type'] == 0) {
                 $itemData["UNIT_CONV1"] = 1;
                 $itemData["UNIT_CONV2"] = 1;
-                // $itemData["ORDER_RESERVE"] = 1;
                 $itemData["RESERVE_DATE"] = Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d');
                 $itemData["RESERVE_AMOUNT"] = $quantity;
             } else {
@@ -641,7 +622,6 @@ class OrderController extends Controller
             'DEDUCTIONPART2' => 3,
             'CURRSEL_TOTAL' => 1,
         ];
-        // dd($data['DATE_CREATED']);
 
         $transactions = $request->input('TRANSACTIONS.items');
         foreach ($transactions as $item) {
@@ -659,7 +639,6 @@ class OrderController extends Controller
                 "PRICE" => $price,
                 "TOTAL" => $total,
                 "VAT_BASE" => $total,
-                // "DUE_DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
                 "TOTAL_NET" => $total,
                 "SALESMAN_CODE" => $salesman_code,
                 "MULTI_ADD_TAX" => 0,
