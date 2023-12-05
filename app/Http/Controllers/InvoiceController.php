@@ -274,9 +274,9 @@ class InvoiceController extends Controller
             "AFFECT_RISK" => 1,
             "DISP_STATUS" => 1,
             "SHIP_DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
-            "SHIP_TIME" => strtotime(Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d H:i:s.v')),
+            "SHIP_TIME" => TimeHelper::calculateTime(),
             "DOC_DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
-            "DOC_TIME" => strtotime(Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d H:i:s.v')),
+            "DOC_TIME" => TimeHelper::calculateTime(),
         ];
         $transactions = $request->input('TRANSACTIONS.items');
         foreach ($transactions as $item) {
@@ -953,9 +953,9 @@ class InvoiceController extends Controller
             "AFFECT_RISK" => 1,
             "DISP_STATUS" => 1,
             "SHIP_DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d H:i:s.v'),
-            "SHIP_TIME" => strtotime(Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d H:i:s.v')),
+            "SHIP_TIME" => TimeHelper::calculateTime(),
             "DOC_DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d H:i:s.v'),
-            "DOC_TIME" => strtotime(Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d H:i:s.v')),
+            "DOC_TIME" => TimeHelper::calculateTime(),
         ];
         $transactions = $request->input('TRANSACTIONS.items');
         foreach ($transactions as $item) {
@@ -1482,9 +1482,9 @@ class InvoiceController extends Controller
             "AFFECT_RISK" => 1,
             "DISP_STATUS" => 1,
             "SHIP_DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
-            "SHIP_TIME" => strtotime(Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d H:i:s.v')),
+            "SHIP_TIME" => TimeHelper::calculateTime(),
             "DOC_DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
-            "DOC_TIME" => strtotime(Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d H:i:s.v')),
+            "DOC_TIME" => TimeHelper::calculateTime(),
         ];
         $transactions = $request->input('TRANSACTIONS.items');
         foreach ($transactions as $item) {
