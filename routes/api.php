@@ -166,7 +166,7 @@ Route::controller(InvoiceController::class)
                 });
                 Route::prefix('salesman')
                     ->group(function () {
-                        Route::post('/previousinvoices', 'salesmanmonthlyinvoices');
+                        Route::post('/previousinvoices', 'salesmanLastTwoMonthsInvoices');
                         Route::post('/invoicedetails', 'salesmaninvoicedetails');
                         Route::post('/customerpreviousinvoices', 'customerlastteninvoices');
                     });
