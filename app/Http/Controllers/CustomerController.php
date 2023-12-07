@@ -448,7 +448,6 @@ class CustomerController extends Controller
             'message' => 'Customers list',
             'data' => $data,
         ]);
-        // return response()->json($data);
     }
 
     public function customerDetails(Request $request)

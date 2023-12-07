@@ -138,7 +138,6 @@ class SalesManController extends Controller
             'capiblock_createdmin' => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
             'capiblock_createdsec' => Carbon::now()->timezone('Asia/Baghdad')->format('s'),
             'active' => 0,
-            // 'userid' => $request->auth_user,
             'telnumber' => $request->phone_number,
         ];
         $dinar_safe = [

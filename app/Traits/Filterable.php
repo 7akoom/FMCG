@@ -13,7 +13,9 @@ trait Filterable
             $operator = $filterData['operator'];
 
             if ($value !== null) {
-                if ($operator === 'BETWEEN') {
+                if ($operator === 'LIKE') {
+                    $query->where($field, 'LIKE', $value);
+                } elseif ($operator === 'BETWEEN') {
                     $query->whereBetween($field, $value);
                 } elseif ($operator === '>=') {
                     $query->where($field, '>=', $value);

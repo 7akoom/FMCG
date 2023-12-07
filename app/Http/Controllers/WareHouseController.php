@@ -471,8 +471,8 @@ class WareHouseController extends Controller
                 'operator' => 'LIKE',
             ],
             "item.markref" => [
-                'value' => '%' . $request->input('item_brand') . '%',
-                'operator' => 'LIKE',
+                'value' => $request->input('item_brand'),
+                'operator' => '=',
             ],
             "weight1.grossweight" => [
                 'value' => '%' . $request->input('item_weight1') . '%',

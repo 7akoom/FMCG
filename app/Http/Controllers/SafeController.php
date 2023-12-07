@@ -45,10 +45,8 @@ class SafeController extends Controller
         return DB::table($table)
             ->where($column, $value1)
             ->value($value2);
-        // ->first();
     }
 
-    //retrieve all safes with balances
     public function index(Request $request)
     {
         $query = DB::table("$this->safesTable")
@@ -232,11 +230,9 @@ class SafeController extends Controller
         }
     }
 
-    //retrieve current month safe transaction
     public function salesmanSafeTransaction(Request $request)
     {
         $salesman_specode = $this->fetchValueFromTable($this->salesmansTable, 'logicalref', $this->salesman_id, 'specode');
-        // $salesman_specode = DB::table("$this->salesmansTable")->where('logicalref', $this->salesman_id)->value('specode');
         $data = DB::table("$this->safesTransactionsTable")
             ->join("$this->safesTable", "$this->safesTable.logicalref", "=", "$this->safesTransactionsTable.cardref")
             ->select(
@@ -276,11 +272,9 @@ class SafeController extends Controller
         ]);
     }
 
-    // accounting salesman safe transaction lines
     public function accountingsalesmanSafeTransaction(Request $request)
     {
         $salesman_specode = $this->fetchValueFromTable($this->salesmansTable, 'logicalref', $this->salesman_id, 'specode');
-        // $salesman_specode = DB::table("lg_slsman")->where('logicalref', $salesman)->value('specode');
         $data = DB::table("$this->safesTransactionsTable")
             ->join("$this->safesTable", "$this->safesTable.logicalref", "=", "$this->safesTransactionsTable.cardref")
             ->join("$this->customerTransactionsTable", "$this->customerTransactionsTable.sourcefref", "=", "$this->safesTransactionsTable.logicalref")
@@ -296,7 +290,6 @@ class SafeController extends Controller
                 "$this->safesTransactionsTable.docode as document_number"
             )
             ->where(["$this->safesTable.specode" => $salesman_specode, "$this->safesTable.cyphcode" => 3])
-            // ->whereMonth("{$safeLine}.date_", '=', now()->month)
             ->get();
         $total_collection = DB::table("$this->safesTransactionsTable")
             ->join("$this->safesTable", "$this->safesTable.logicalref", "=", "$this->safesTransactionsTable.cardref")
