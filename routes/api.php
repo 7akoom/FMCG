@@ -21,8 +21,12 @@ Route::controller(SalesmanController::class)->group(function () {
     Route::prefix('salesman')->group(function () {
         Route::prefix('accounting')->group(function () {
             Route::post('/salesmans', 'index');
-            Route::post('/previousorders', 'previousorders');
             Route::post('/newsalesman', 'store');
+            Route::post('/edit/{salesmanId}', 'edit');
+            Route::post('/update/{salesmanId}', 'update');
+            Route::post('/delete/{salesmanId}', 'destroy');
+
+            // Route::post('/previousorders', 'previousorders');
         });
     });
 });
@@ -33,14 +37,15 @@ Route::controller(CustomerController::class)->group(function () {
             Route::post('/customers', 'index');
             Route::post('/getcustomerbycode', 'getcustomerByCode');
             Route::post('/debitandpayment', 'debitandpayment');
-            Route::post('/newcustomer', 'newCustomer');
+            // Route::post('/newcustomer', 'pendingCustomerList');
             Route::post('/pendingcustomer', 'pendingCustomerDetails');
             Route::post('/pending-customer-list', 'getPendingCustomerList');
-            Route::post('/updatecustomerstatus/{id}', 'UpdatePendingCustomer');
+            Route::post('/updatecustomerstatus/{id}', 'updatePendingCustomerAccounting');
             Route::post('/salesmancustomers', 'accountingSalesmanCustomers');
             Route::post('/allcustomers', 'allCustomers');
             Route::post('/newcustomer', 'storeFromAccounting');
             Route::post('/addCustomerData', 'addCustomerData');
+            Route::post('/customer/delete/{customerId}', 'destroy');
         });
         Route::prefix('salesman')->group(function () {
             Route::post('/customers', 'salesmancustomers');
@@ -97,6 +102,7 @@ Route::controller(MarkController::class)->group(function () {
         });
         Route::prefix('accounting')->group(function () {
             Route::post('/brands', 'brands');
+            Route::post('/store', 'store');
         });
         Route::prefix('management')->group(function () {
             Route::post('/new', 'store');
@@ -118,6 +124,7 @@ Route::controller(OrderController::class)
             ->group(function () {
                 Route::prefix('accounting')->group(function () {
                     Route::post('/orders', 'index');
+                    Route::post('/previousorders', 'previousorders');
                     Route::post('/bystatus', 'ordersStatusFilter');
                     Route::post('/bydate', 'OrderDateFilter');
                     Route::post('/orderdetails', 'orderdetails');
@@ -189,7 +196,7 @@ Route::controller(SafeController::class)
             ->group(function () {
                 Route::prefix('accounting')->group(function () {
                     Route::post('/safes', 'index');
-                    Route::post('/newsafe', 'addSafe');
+                    Route::post('/store', 'store');
                     Route::post('/addingsafedata', 'addSafeData');
                     Route::post('/safesinformation/{safe_code}', 'safesInformation');
                     Route::post('/safetransaction', 'accountingsalesmanSafeTransaction');

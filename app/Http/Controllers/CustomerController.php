@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 use App\Traits\Filterable;
+use Throwable;
+use Illuminate\Support\Facades\Http;
 
 
 class CustomerController extends Controller
@@ -155,78 +157,73 @@ class CustomerController extends Controller
 
     public function store(Request $request)
     {
+        $data = [
+            'ACCOUNT_TYPE' => 3,
+            'RECORD_STATUS' => 2,
+            'TITLE' => $request->market_name,
+            'TITLE2' => $request->customer_name,
+            'TELEPHONE1' => $request->phone,
+            'TELEPHONE2' => $request->phone2,
+            'CITY' => $request->city,
+            'ADDRESS1' => $request->address,
+            'ADDRESS2' => $request->zone,
+            'COUNTRY' => 'iraq',
+            'AUTH_CODE' => '1',
+            'AUXIL_CODE2' => '1',
+            'PAYMENTREF' => '10',
+            'LONGITUDE' => $request->longitude,
+            'LATITUDE' => $request->latitude,
+        ];
         try {
-            $sls = $this->fetchValueFromTable($this->salesmansTable, 'logicalref', $this->salesman_id, 'position_');
-            $validateData = $request->validate([
-                'market_name' => 'required',
-                'customer_name' => 'required',
-                'phone' => 'required|unique:' . $this->customersTable . ',telnrs1',
-                'city' => 'required',
-                'address' => 'required',
-                'zone' => 'required',
-                'longitude' => 'required',
-                'latitude' => 'required',
-            ]);
-            $columnNames = Schema::getColumnListing($this->customersTable);
-            $defaultValues = array_fill_keys($columnNames, 0);
-            $defaultValues = [
-                'active' => 2,
-                'cardtype' => 3,
-                'definition_' => $request->market_name,
-                'definition2' => $request->customer_name,
-                'telnrs1' => $request->phone,
-                'telnrs2' => $request->phone2,
-                'city' => $request->city,
-                'addr1' => $request->address,
-                'addr2' => $request->zone,
-                'country' => 'iraq',
-                'cyphcode' => '1',
-                'paymentref' => '10',
-                'longitude' => $request->longitude,
-                'latitute' => $request->latitude,
-                'capiblock_createdby' => $this->salesman_id,
-            ];
-            $sls == 2 ? $defaultValues['specode2'] = 3 : $defaultValues['specode2'] = 2;
-            $limitNames = Schema::getColumnListing($this->customersLimitTable);
-            $limitValues = array_fill_keys($limitNames, 0);
-            DB::beginTransaction();
-            if ($sls && $sls->position_ == 1) {
-                $latestCode = DB::table($this->customersTable)
-                    ->where('code', 'like', '120.%')
-                    ->orderBy('logicalref', 'desc')
-                    ->value('code');
-                $defaultValues['code'] = '120.' . str_pad(substr($latestCode, 4) + 1, 4, '0', STR_PAD_LEFT);
-            } else if ($sls && $sls->position_ == 2) {
-                $latestCode = DB::table($this->customersTable)
-                    ->where('code', 'like', '180.%')
-                    ->orderBy('logicalref', 'desc')
-                    ->value('code');
-                $defaultValues['code'] = '180.' . str_pad(substr($latestCode, 4) + 1, 4, '0', STR_PAD_LEFT);
-            }
-            $logicalref = DB::table($this->customersTable)->insertGetId($defaultValues);
-            $limitValues = [
-                'clcardref' => $logicalref,
-                'accrisklimit' => '0'
-            ];
-            DB::table($this->customersLimitTable)->insert($limitValues);
-            DB::table($this->customersSalesmansRelationsTable)->insert([
-                'SALESMANREF' => $this->salesman_id,
-                'CLIENTREF' => $logicalref,
-            ]);
-            DB::commit();
+            $response = Http::withOptions([
+                'verify' => false,
+            ])
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                    'Authorization' => $request->header('authorization')
+                ])
+                ->withBody(json_encode($data), 'application/json')
+                ->post('https://10.27.0.109:32002/api/v1/Arps');
+                return response()->json([
+                'status' => $response->successful() ? 'success' : 'failed',
+                'data' => $response->json(),
+            ], $response->status());
+        } catch (Throwable $e) {
             return response()->json([
-                'status' => 'success',
-                'message' => 'Customers inserted successfully',
-                'data' => $defaultValues,
-            ], 200);
-        } catch (ValidationException $e) {
-            $errors = $e->validator->errors()->getMessages();
-            $errorMsg = [];
-            foreach ($errors as $key => $value) {
-                $errorMsg[$key] = $value[0];
-            }
+                'status' => 'failed',
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    public function updateCustomer(Request $request, $id)
+    {
+        $data = [
+            'TELEPHONE1' => $request->customer_phone,
+            'ADDRESS1' => $request->customer_address,
+            'LONGITUDE' => $request->longitude,
+            'LATITUDE' => $request->latitude,
+        ];
+        try {
+            $response = Http::withOptions([
+                'verify' => false,
+            ])
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                    'Authorization' => $request->header('authorization')
+                ])
+                ->withBody(json_encode($data), 'application/json')
+                ->patch("https://10.27.0.109:32002/api/v1/Arps/{$id}");
+                return response()->json([
+                'status' => $response->successful() ? 'success' : 'failed',
+                'data' => $response->json(),
+            ], $response->status());
+        } catch (Throwable $e) {
             return response()->json([
-                'errors' => $errorMsg,
+                'status' => 'failed',
+                'message' => $e->getMessage(),
             ], 422);
         }
     }
@@ -257,47 +254,62 @@ class CustomerController extends Controller
         ]);
     }
 
-    public function updateCustomer(Request $request, $id)
-    {
-        $data = ([
-            'definition2' => $request->customer_name,
-            'definition_' => $request->market_name,
-            'addr1' => $request->customer_address,
-            'telnrs1' => $request->customer_phone,
-            'longitude' => $request->longitude,
-            'latitute' => $request->latitute,
-        ]);
-        DB::table($this->customersTable)
-            ->where('logicalref', $id)
-            ->update($data);
-        return response()->json([
-            'status' => 'success',
-            'message' => 'customer updated successfully',
-            'data' => $data
-        ]);
-    }
+    // public function pendingCustomerList(Request $request)
+    // {
+    //     $customer = DB::table($this->customersTable)
+    //         ->join($this->salesmansTable, "{$this->customersTable}.capiblock_createdby", '=', 'lg_slsman.logicalref')
+    //         ->select(
+    //             "$this->customersTable.logicalref as customer_id",
+    //             "$this->customersTable.definition2 as customer_name",
+    //             "$this->customersTable.definition_ as market_name",
+    //             "$this->customersTable.telnrs1 as first_phone",
+    //             "$this->customersTable.code as customer_code",
+    //             "$this->customersTable.addr2 as zone",
+    //             "lg_slsman.definition_ as salesman_name"
+    //         )
+    //         ->where("{$this->customersTable}.active", 2)
+    //         ->orderby("{$this->customersTable}.logicalref", "desc")
+    //         ->get();
+    //     return response()->json([
+    //         'status' => 'success',
+    //         'message' => 'New customer list',
+    //         'data' => $customer,
+    //     ]);
+    // }
 
-    public function newCustomer(Request $request)
+    public function getPendingCustomerList()
     {
-        $customer = DB::table($this->customersTable)
-            ->join($this->salesmansTable, "{$this->customersTable}.capiblock_createdby", '=', 'lg_slsman.logicalref')
+        $customer = DB::table("$this->customersTable")
+            ->join("$this->customersSalesmansRelationsTable", "$this->customersSalesmansRelationsTable.clientref", "$this->customersTable.logicalref")
+            ->join("$this->salesmansTable", "$this->customersSalesmansRelationsTable.salesmanref", "$this->salesmansTable.logicalref")
+            ->join("$this->customersLimitTable", "$this->customersLimitTable.clcardref", "$this->customersTable.logicalref")
+            ->join("$this->payplansTable", "$this->payplansTable.logicalref", "$this->customersTable.paymentref")
+            ->join("$this->specialcodesTable", "$this->specialcodesTable.specode", "$this->customersTable.specode2")
+            ->where(["$this->specialcodesTable.codetype" => 1, "$this->specialcodesTable.specodetype" => 26, "$this->specialcodesTable.spetyp2" => 1])
             ->select(
                 "$this->customersTable.logicalref as customer_id",
-                "$this->customersTable.definition2 as customer_name",
                 "$this->customersTable.definition_ as market_name",
+                "$this->customersTable.definition2 as customer_name",
+                "$this->salesmansTable.definition_ as salesman_name",
                 "$this->customersTable.telnrs1 as first_phone",
-                "$this->customersTable.code as customer_code",
+                DB::raw("COALESCE($this->customersTable.telnrs2, '0') as secondPhone"),
+                "$this->customersTable.code",
+                "$this->customersTable.city",
                 "$this->customersTable.addr2 as zone",
-                "lg_slsman.definition_ as salesman_name"
+                "$this->customersTable.addr1 as address",
+                DB::raw("COALESCE($this->specialcodesTable.specode, '0') as customerType_id"),
+                DB::raw("COALESCE($this->specialcodesTable.definition_, '0') as customerType"),
+                "$this->payplansTable.logicalref as paymentPlan_id",
+                "$this->payplansTable.code as paymentPlan",
+                "$this->customersLimitTable.accrisklimit as limit"
             )
-            ->where("{$this->customersTable}.active", 2)
-            ->orderby("{$this->customersTable}.logicalref", "desc")
+            ->where("$this->customersTable.active", 2)
             ->get();
         return response()->json([
             'status' => 'success',
-            'message' => 'New customer list',
+            'message' => 'Pending Customer List',
             'data' => $customer,
-        ]);
+        ], 200);
     }
 
     public function pendingCustomerDetails(Request $request)
@@ -340,67 +352,42 @@ class CustomerController extends Controller
         ]);
     }
 
-    public function updatePendingCustomer(Request $request, $id)
+    public function updatePendingCustomerAccounting(Request $request, $id)
     {
-        try {
-
             $custData = [
-                'definition2' => $request->customer_name,
-                'definition_' => $request->market_name,
-                'telnrs1' => $request->first_phone,
-                'telnrs2' => $request->second_phone,
-                'city' => $request->city,
-                'addr2' => $request->zone,
-                'addr1' => $request->address,
-                'specode2' => $request->customer_type,
-                'paymentref' => $request->payment_plan,
-                'active' => $request->active,
+                'TITLE2' => $request->customer_name,
+                'TITLE' => $request->market_name,
+                'REC_STATUS' => $request->active,
+                'TELEPHONE1' => $request->first_phone,
+                'TELEPHONE2' => $request->second_phone,
+                'CITY' => $request->city,
+                'ADDRESS2' => $request->zone,
+                'ADDRESS1' => $request->address,
+                'AUXIL_CODE2' => $request->customer_type,
+                'PAYMENTREF' => $request->payment_plan,
+                'RECORD_STATUS' => $request->active,
+                'ACC_RISK_LIMIT' => $request->limit,
             ];
-
-            $limitData = [
-                'accrisklimit' => $request->limit
-            ];
-
-            DB::beginTransaction();
-
-            DB::table("{$this->customersTable}")->where('logicalref', $id)->update($custData);
-            DB::table("{$this->customersLimitTable}")->where('clcardref', $id)->update($limitData);
-
-            DB::commit();
-
-            $columnMapping = [
-                'definition2' => 'customer_name',
-                'definition_' => 'market_name',
-                'telnrs1' => 'first_phone',
-                'telnrs2' => 'second_phone',
-                'city' => 'city',
-                'addr2' => 'zone',
-                'addr1' => 'address',
-                'specode2' => 'customer_type',
-                'paymentref' => 'payment_plan',
-                'active' => 'active',
-            ];
-
-            $responseData = [];
-            foreach ($columnMapping as $dbColumn => $requestName) {
-                $responseData[$requestName] = $custData[$dbColumn];
-            }
-
-            $responseData['limit'] = $limitData['accrisklimit'];
-
-
+        try {
+            $response = Http::withOptions([
+                'verify' => false,
+            ])
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                    'Authorization' => $request->header('authorization')
+                ])
+                ->withBody(json_encode($custData), 'application/json')
+                ->patch("https://10.27.0.109:32002/api/v1/Arps/{$id}");
+                return response()->json([
+                'status' => $response->successful() ? 'success' : 'failed',
+                'data' => $response->json(),
+            ], $response->status());
+        } catch (Throwable $e) {
             return response()->json([
-                'status' => 'success',
-                'message' => 'Customer updated successfully',
-                'data' => $responseData,
-            ], 200);
-        } catch (\Exception $e) {
-            DB::rollBack();
-
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Error updating customer: ' . $e->getMessage(),
-            ], 500);
+                'status' => 'failed',
+                'message' => $e->getMessage(),
+            ], 422);
         }
     }
 
@@ -668,109 +655,71 @@ class CustomerController extends Controller
             'data' => $customers
         ]);
     }
-    public function getPendingCustomerList()
-    {
-        $customer = DB::table("$this->customersTable")
-            ->join("$this->customersSalesmansRelationsTable", "$this->customersSalesmansRelationsTable.clientref", "$this->customersTable.logicalref")
-            ->join("$this->salesmansTable", "$this->customersSalesmansRelationsTable.salesmanref", "$this->salesmansTable.logicalref")
-            ->join("$this->customersLimitTable", "$this->customersLimitTable.clcardref", "$this->customersTable.logicalref")
-            ->join("$this->payplansTable", "$this->payplansTable.logicalref", "$this->customersTable.paymentref")
-            ->join("$this->specialcodesTable", "$this->specialcodesTable.specode", "$this->customersTable.specode2")
-            ->where(["$this->specialcodesTable.codetype" => 1, "$this->specialcodesTable.specodetype" => 26, "$this->specialcodesTable.spetyp2" => 1])
-            ->select(
-                "$this->customersTable.logicalref as customer_id",
-                "$this->customersTable.definition_ as market_name",
-                "$this->customersTable.definition2 as customer_name",
-                "$this->salesmansTable.definition_ as salesman_name",
-                "$this->customersTable.telnrs1 as first_phone",
-                DB::raw("COALESCE($this->customersTable.telnrs2, '0') as secondPhone"),
-                "$this->customersTable.code",
-                "$this->customersTable.city",
-                "$this->customersTable.addr2 as zone",
-                "$this->customersTable.addr1 as address",
-                DB::raw("COALESCE($this->specialcodesTable.specode, '0') as customerType_id"),
-                DB::raw("COALESCE($this->specialcodesTable.definition_, '0') as customerType"),
-                "$this->payplansTable.logicalref as paymentPlan_id",
-                "$this->payplansTable.code as paymentPlan",
-                "$this->customersLimitTable.accrisklimit as limit"
-            )
-            ->where("$this->customersTable.active", 2)
-            ->get();
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Pending Customer List',
-            'data' => $customer,
-        ], 200);
-    }
+
 
     public function storeFromAccounting(Request $request)
     {
-        try {
             $user_nr = $this->fetchValueFromTable('l_capiuser', 'name', request()->header('username'), 'nr');
-            $sls = $this->fetchValueFromTable($this->salesmansTable, 'logicalref', $request->salesman_id, 'position_');
-            $columnNames = Schema::getColumnListing($this->customersTable);
-            $code = null;
-
-            if ($sls && $sls->position_ == 1) {
-                $latestCode = DB::table($this->customersTable)
-                    ->where('code', 'like', '120.%')
-                    ->orderBy('logicalref', 'desc')
-                    ->value('code');
-                $code = '120.' . str_pad(substr($latestCode, 4) + 1, 4, '0', STR_PAD_LEFT);
-            } else if ($sls && $sls->position_ == 2) {
-                $latestCode = DB::table($this->customersTable)
-                    ->where('code', 'like', '180.%')
-                    ->orderBy('logicalref', 'desc')
-                    ->value('code');
-                $code = '180.' . str_pad(substr($latestCode, 4) + 1, 4, '0', STR_PAD_LEFT);
-            }
-
             $defaultValues = [
-                'active' => 0,
-                'cardtype' => 3,
-                'definition_' => $request->market_name,
-                'definition2' => $request->customer_name,
-                'telnrs1' => $request->phone,
-                'telnrs2' => $request->phone2,
-                'city' => $request->city,
-                'addr1' => $request->address,
-                'addr2' => $request->zone,
-                'code' => $code,
-                'country' => 'iraq',
-                'cyphcode' => '1',
-                'paymentref' => $request->payment_plan,
-                'specode2' => $request->customer_type,
-                'capiblock_createdby' => $user_nr->nr,
+                'RECORD_STATUS' => 0,
+                'ACCOUNT_TYPE' => 3,
+                'TITLE' => $request->market_name,
+                'TITLE2' => $request->customer_name,
+                'TELEPHONE1' => $request->phone,
+                'TELEPHONE2' => $request->phone2,
+                'CITY' => $request->city,
+                'ADDRESS1' => $request->address,
+                'ADDRESS2' => $request->zone,
+                'COUNTRY' => 'iraq',
+                'AUTH_CODE' => '1',
+                'AUXIL_CODE2' => $request->customer_type,
+                'CREATED_BY' => $user_nr->nr,
+                'ACC_RISK_LIMIT' => $request->limit,
             ];
-
-            $limitNames = Schema::getColumnListing($this->customersLimitTable);
-            $limitValues = array_fill_keys($limitNames, 0);
-            DB::beginTransaction();
-
-            $logicalref = DB::table($this->customersTable)->insertGetId($defaultValues);
-            $limitValues = [
-                'clcardref' => $logicalref,
-                'accrisklimit' => $request->limit
-            ];
-            DB::table($this->customersLimitTable)->insert($limitValues);
-            DB::table($this->customersSalesmansRelationsTable)->insert([
-                'SALESMANREF' => $request->salesman_id,
-                'CLIENTREF' => $logicalref,
-            ]);
-
-            DB::commit();
+           try {
+            $response = Http::withOptions([
+                'verify' => false,
+            ])
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                    'Authorization' => $request->header('authorization')
+                ])
+                ->withBody(json_encode($defaultValues), 'application/json')
+                ->post('https://10.27.0.109:32002/api/v1/Arps');
+                return response()->json([
+                'status' => $response->successful() ? 'success' : 'failed',
+                'data' => $response->json(),
+            ], $response->status());
+        } catch (Throwable $e) {
             return response()->json([
-                'status' => 'success',
-                'message' => 'Customers inserted successfully',
-                'data' => $defaultValues,
-            ], 200);
-        } catch (\Exception $e) {
-            DB::rollBack();
+                'status' => 'failed',
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
 
+    public function destroy($id)
+    {
+        try {
+            $response = Http::withOptions([
+                'verify' => false,
+            ])
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                    'Authorization' => request()->header('authorization')
+                ])
+                ->delete("https://10.27.0.109:32002/api/v1/Arps/{$id}");
+                return response()->json([
+                'status' => $response->successful() ? 'success' : 'failed',
+                'message' => 'Customer deleted succssefully'
+            ], $response->status());
+        } catch (Throwable $e) {
             return response()->json([
-                'status' => 'error',
-                'message' => 'Error updating customer: ' . $e->getMessage(),
-            ], 500);
+                'status' => 'failed',
+                'message' => $e->getMessage(),
+            ], 422);
         }
     }
 }

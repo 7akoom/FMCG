@@ -102,6 +102,18 @@ return [
             'prefix' => '',
             'prefix_indexes' => true,
         ],
+        'sqlsrv3' => [
+            'driver' => 'sqlsrv',
+            'url' => env('DATABASE_URL'),
+            'host' => '10.27.0.110',
+            'port' => '1433',
+            'database' => 'TSC',
+            'username' => 'erbil',
+            'password' => '123_Aa+2',
+            'charset' => 'utf8',
+            'prefix' => '',
+            'prefix_indexes' => true,
+        ],
 
     ],
 

@@ -744,6 +744,9 @@ class InvoiceController extends Controller
         ]);
     }
 
+    
+    
+    
     public function salesmaninvoices(Request $request)
     {
         $invoices = DB::table("$this->salesmansTable")

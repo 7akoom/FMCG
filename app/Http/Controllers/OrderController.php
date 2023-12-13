@@ -149,6 +149,37 @@ class OrderController extends Controller
         ], 200);
     }
 
+    public function previousorders(Request $request)
+    {
+        $orders = DB::table($this->salesmansTable)
+            ->join($this->ordersTable, "$this->ordersTable.salesmanref", "=", 'lg_slsman.logicalref')
+            ->join($this->customersTable, "$this->ordersTable.clientref", "=", "$this->customersTable.logicalref")
+            ->select(
+                "$this->ordersTable.logicalref as order_id",
+                "$this->ordersTable.ficheno as order_number",
+                "$this->ordersTable.capiblock_creadeddate as order_date",
+                "$this->ordersTable.status as order_status",
+                "$this->ordersTable.nettotal as order_amount",
+                "$this->customersTable.definition_ as customer_name"
+            )
+            ->whereMonth("$this->ordersTable.capiblock_creadeddate", '=', now()->month)
+            ->where("$this->ordersTable.salesmanref", $this->salesman_id)
+            ->orderby("$this->ordersTable.capiblock_creadeddate", "desc")
+            ->get();
+        if ($orders->isEmpty()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'There is no data',
+                'data' => [],
+            ]);
+        }
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Salesman list',
+            'data' => $orders,
+        ]);
+    }
+
     public function orderdetails(Request $request)
     {
         $order = $request->header('order');
