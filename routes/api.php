@@ -129,10 +129,11 @@ Route::controller(OrderController::class)
                     Route::post('/bydate', 'OrderDateFilter');
                     Route::post('/orderdetails', 'orderdetails');
                     Route::post('/previousorderdetails', 'previousorderdetails');
-                    Route::patch('/orders/update-status/{orderId}', 'updateOrderStatus');
+                    Route::post('/orders/accept/{orderId}', 'acceptOrder');
+                    Route::post('/orders/reject/{orderId}', 'rejectOrder');
                     Route::post('/orders/update/{orderId}', 'update');
                     Route::post('/orders/delete/{orderId}', 'destroy');
-                    Route::get('/orders/{orderId}', 'getOrderToBill');
+                    Route::post('/orders/{orderId}', 'getOrderToBill');
                     // Route::post('/customercurrentorder', 'customerCurrentOrder');
                 });
                 Route::prefix('salesman')
@@ -197,6 +198,9 @@ Route::controller(SafeController::class)
                 Route::prefix('accounting')->group(function () {
                     Route::post('/safes', 'index');
                     Route::post('/store', 'store');
+                    Route::post('/edit/{safeID}', 'edit');
+                    Route::post('/update/{safeID}', 'update');
+                    Route::post('/delete/{safeID}', 'destroy');
                     Route::post('/addingsafedata', 'addSafeData');
                     Route::post('/safesinformation/{safe_code}', 'safesInformation');
                     Route::post('/safetransaction', 'accountingsalesmanSafeTransaction');

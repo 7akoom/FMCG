@@ -22,7 +22,9 @@
             "Database\\Seeders\\": "database/seeders/"
         },
         "files": [
-            "app/Helpers/TimeHelper.php"
+            "app/Helpers/TimeHelper.php",
+            "app/Helpers/InvoiceNumerGenerator.php",
+            "app/Helpers/PaperLimit.php"
         ]
     },
     "autoload-dev": {

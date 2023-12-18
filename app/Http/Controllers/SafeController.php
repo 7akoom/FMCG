@@ -154,83 +154,154 @@ class SafeController extends Controller
         ], 200);
     }
 
-    public function addSafe(Request $request)
+    public function store(Request $request)
     {
-        $creator = $this->fetchValueFromTable('l_capiuser', 'name', request()->header('username'), 'nr');
-        $currency = DB::table($this->currenciesTable)
-            ->select('logicalref as id', 'curcode as currency_code', 'curname as currency_name')
-            ->where('firmnr', 500)
-            ->get();
-        $specode = DB::table($this->specodesTable)
-            ->select('logicalref as id', 'specode', 'definition_')
-            ->where(['codetype' => 1, 'specodetype' => 50])
+        $creator = DB::table('L_CAPIUSER')->where('name', request()->header('username'))
+            ->value('nr');
+        $last_specode = DB::table($this->specodesTable)->where(['codetype' => 1, 'specodetype' => 34])
             ->orderby('logicalref', 'desc')
-            ->first();
-        $columns = Schema::getColumnListing($this->specodesTable);
-        $defaultValues = array_fill_keys($columns, 0);
-        unset($defaultValues['LOGICALREF']);
-        $overrides = [
-            'CODETYPE' => 1,
-            'SPECODETYPE' => 50,
-            'SPECODE' => $specode->specode + 1,
-            'DEFINITION_' => $request->safe_code,
-            'RECSTATUS' => 1,
+            ->value('specode');
+        $specode = [
+            'CODE_TYPE' => 1,
+            'SPE_CODE_TYPE' => 34,
+            'CODE' => $last_specode + 1,
+            'DEFINITION' => request()->input('safe_code'),
         ];
-
-        $mergedDefaultValues = array_merge($defaultValues, $overrides);
-        $safeColumns = Schema::getColumnListing($this->safesTable);
-        $defaultSafeValues = array_fill_keys($safeColumns, 0);
-        unset(
-            $defaultSafeValues['LOGICALREF'],
-            $defaultSafeValues['CAPIBLOCK_MODIFIEDBY'],
-            $defaultSafeValues['CAPIBLOCK_MODIFIEDDATE'],
-            $defaultSafeValues['CAPIBLOCK_MODIFIEDHOUR'],
-            $defaultSafeValues['CAPIBLOCK_MODIFIEDMIN'],
-            $defaultSafeValues['CAPIBLOCK_MODIFIEDSEC']
-        );
-
-        $now = now();
         $data = [
-            'CODE' => $request->safe_code,
-            'ACTIVE' => $request->status,
-            'NAME' => $request->safe_name,
-            'EXPLAIN' => $request->explain,
-            'BRANCH' => $request->branch,
-            'SPECODE' => $specode->specode + 1,
-            'CYPHCODE' => $request->auth_code,
-            'ADDR1' => $request->address1,
-            'ADDR2' => $request->address2,
-            'CCURRENCY' => $request->currency_type,
-            'CURRATETYPE' => $request->exchange_price_type,
-            'FIXEDCURRTYPE' => $request->is_currency_type_changable,
-            "CAPIBLOCK_CREATEDBY" => $creator,
-            'CAPIBLOCK_CREADEDDATE' => DB::raw("convert(datetime,'$now',101)"),
-            'CAPIBLOCK_CREATEDHOUR' => Carbon::now()->timezone('Asia/Baghdad')->format('H'),
-            'CAPIBLOCK_CREATEDMIN' => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
-            'CAPIBLOCK_CREATEDSEC' => Carbon::now()->timezone('Asia/Baghdad')->format('s'),
+            'CODE' => request()->input('safe_code'),
+            'DESCRIPTION' => request()->input('safe_name'),
+            'AUXIL_CODE' => $specode['CODE'],
+            'AUTH_CODE' => request()->input('auth_code'),
+            'USAGE_NOTE' => request()->input('explain'),
+            'CREATED_BY' => $creator,
+            'CCURRENCY' => request()->input('currency_type'),
         ];
-        $mergedSafeDefaultValues = array_merge($defaultSafeValues, $data);
-        DB::beginTransaction();
         try {
-            DB::table("$this->specodesTable")->insert($mergedDefaultValues);
-            DB::table("$this->safesTable")->insertGetId($mergedSafeDefaultValues);
-            DB::commit();
+            $response1 = Http::withOptions([
+                'verify' => false,
+            ])
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                    'Authorization' => $request->header('authorization')
+                ])
+                ->withBody(json_encode($data), 'application/json')
+                ->post('https://10.27.0.109:32002/api/v1/safeDeposits');
+            $responseData = $response1->json();
+            $response2 = Http::withOptions([
+                'verify' => false,
+            ])
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                    'Authorization' => $request->header('authorization')
+                ])
+                ->withBody(json_encode($specode), 'application/json')
+                ->post('https://10.27.0.109:32002/api/v1/specialCodes');
+            $specode_response = $response2->json();
             return response()->json([
-                "status" => "success",
-                "message" => "Safes added successfully",
-                "currencies" => $currency,
-                "data" => $mergedSafeDefaultValues,
-            ], 200);
-        } catch (\Throwable $e) {
+                'status' => $response1->successful() && $response2->successful() ? 'success' : 'failed',
+                'data' => $responseData,
+            ], $response1->status());
+        } catch (Throwable $e) {
             return response()->json([
-                "status" => "failed",
-                "message" => $e->getMessage(),
-                "data" => [],
-            ], 500);
+                'status' => 'failed',
+                'message' => $e->getMessage(),
+            ], 422);
         }
     }
 
-    public function salesmanSafeTransaction(Request $request)
+    public function edit($id)
+    {
+        $safe = DB::table($this->safesTable)
+            ->select('code', 'name','cyphcode', 'explain', 'active', 'ccurrency')
+            ->where('logicalref', $id)
+            ->first();
+
+        if (!$safe) {
+            return response()->json([
+                'status' => 'successfull',
+                'message' => 'This safe is not exist',
+                'data' => [],
+            ], 404);
+        }
+        return response()->json([
+            'status' => 'successfull',
+            'message' => 'Safe information',
+            'data' => $safe,
+        ]);
+    }
+    public function update($id)
+    {
+        $creator = DB::table('L_CAPIUSER')->where('name', request()->header('username'))
+            ->value('nr');
+        $data = [
+            'CODE' => request()->input('safe_code'),
+            'DESCRIPTION' => request()->input('safe_name'),
+            'AUTH_CODE' => request()->input('auth_code'),
+            'USAGE_NOTE' => request()->input('explain'),
+            'MODIFIED_BY' => $creator,
+            'CCURRENCY' => request()->input('currency_type'),
+            'XML_ATTRIBUTE' => 2,
+        ];
+        try {
+            $response1 = Http::withOptions([
+                'verify' => false,
+            ])
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                    'Authorization' => request()->header('authorization')
+                ])
+                ->withBody(json_encode($data), 'application/json')
+                ->patch("https://10.27.0.109:32002/api/v1/safeDeposits/{$id}");
+            $responseData = $response1->json();
+            
+            return response()->json([
+                'status' => $response1->successful() ? 'success' : 'failed',
+                'data' => $responseData,
+            ], $response1->status());
+        } catch (Throwable $e) {
+            return response()->json([
+                'status' => 'failed',
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    public function destroy($id)
+    {
+        try {
+            $safeExists = DB::table($this->safesTable)->where('logicalref', $id)->exists();
+            if (!$safeExists) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Safe not found',
+                    'data' => [],
+                ], 404);
+            }
+            $response = Http::withOptions([
+                'verify' => false,
+            ])
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                    'Authorization' => request()->header('authorization')
+                ])
+                ->delete("https://10.27.0.109:32002/api/v1/safeDeposits/{$id}");
+            return response()->json([
+                'status' => $response->successful() ? 'success' : 'failed',
+                'message' => 'Safe deleted succssefully'
+            ], $response->status());
+        } catch (Throwable $e) {
+            return response()->json([
+                'status' => 'failed',
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    public function salesmanSafeTransaction()
     {
         $salesman_specode = $this->fetchValueFromTable($this->salesmansTable, 'logicalref', $this->salesman_id, 'specode');
         $data = DB::table("$this->safesTransactionsTable")

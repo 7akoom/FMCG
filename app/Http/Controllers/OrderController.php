@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Http;
 use App\Traits\Filterable;
 use App\Helpers\TimeHelper;
 use App\Helpers\PaperLimit;
+use App\Helpers\InvoiceNumerGenerator;
 
 
 
@@ -246,7 +247,6 @@ class OrderController extends Controller
 
     public function getOrderToBill($id)
     {
-        $last_invoice_num = DB::table("$this->invoicesTable")->where("trcode", 8)->orderby("logicalref", "desc")->value("ficheno");
         $is_exist = DB::table("$this->ordersTable")->where('logicalref', $id)->first();
         if (!$is_exist) {
             return response()->json([
@@ -254,32 +254,32 @@ class OrderController extends Controller
                 'status' => 'Order not found',
                 'data' => [],
             ], 404);
-        } else {
+        }
             $order = DB::table("$this->ordersTransactionsTable")
-                ->join("$this->itemsTable", "$this->ordersTransactionsTable.stockref", "=", "$this->itemsTable.logicalref")
+                // ->join("$this->itemsTable", "$this->ordersTransactionsTable.stockref", "=", "$this->itemsTable.logicalref")
                 ->leftjoin("$this->salesmansTable", "$this->ordersTransactionsTable.salesmanref", "=", "$this->salesmansTable.logicalref")
-                ->join("$this->weightsTable", "$this->weightsTable.itemref", "=", "$this->itemsTable.logicalref")
+                // ->join("$this->weightsTable", "$this->weightsTable.itemref", "=", "$this->itemsTable.logicalref")
                 ->join("$this->ordersTable", "$this->ordersTransactionsTable.ordficheref", "=", "$this->ordersTable.logicalref")
                 ->join("$this->customersTable", "$this->ordersTransactionsTable.clientref", "=", "$this->customersTable.logicalref")
-                ->join("$this->cutoemrsView", "$this->cutoemrsView.logicalref", "=", "$this->customersTable.logicalref")
+                // ->join("$this->cutoemrsView", "$this->cutoemrsView.logicalref", "=", "$this->customersTable.logicalref")
                 ->join("$this->payplansTable", "$this->payplansTable.logicalref", '=', "$this->customersTable.paymentref")
-                ->join("$this->whousesTable", "$this->whousesTable.nr", '=', "$this->ordersTable.sourceindex")
+                ->join("$this->whousesTable", "$this->whousesTable.nr", '=', "$this->ordersTransactionsTable.sourceindex")
                 ->select(
                     "$this->customersTable.code as customer_code",
                     "$this->customersTable.definition_ as customer_name",
                     "$this->payplansTable.code as payment_code",
                     "$this->whousesTable.name as warehouse",
-                    "$this->ordersTable.date_ as order_date",
-                    "$this->ordersTable.ficheno as order_number",
-                    "$this->ordersTable.docode as document_number",
+                    // "$this->ordersTable.date_ as order_date",
+                    // "$this->ordersTable.ficheno as order_number",
                     DB::raw("COALESCE($this->salesmansTable.definition_, '') as salesman_name"),
-                    "$this->ordersTable.grosstotal as order_total",
-                    "$this->ordersTable.totaldiscounts as order_discount",
-                    "$this->ordersTable.nettotal as order_net"
+                    DB::raw("COALESCE($this->ordersTable.totaldiscounts, 0) as total_discount"),
+                    // "$this->ordersTable.grosstotal as order_total",
+                    "$this->ordersTable.nettotal as order_net_total"
                 )
-                ->where("$this->ordersTable.logicalref", $id)
+                ->where(["$this->ordersTable.logicalref" => $id,"$this->whousesTable.firmnr" => 888, "$this->salesmansTable.firmnr" => 888])
                 ->first();
             $item = DB::table("$this->ordersTransactionsTable")
+                ->leftjoin("$this->ordersTable", "$this->ordersTable.logicalref", "=", "$this->ordersTransactionsTable.ordficheref")
                 ->leftjoin("$this->unitsTable", "$this->unitsTable.logicalref", "=", "$this->ordersTransactionsTable.uomref")
                 ->leftjoin("$this->itemsTable", "$this->ordersTransactionsTable.stockref", "=", "$this->itemsTable.logicalref")
                 ->select(
@@ -290,14 +290,14 @@ class OrderController extends Controller
                     DB::raw("COALESCE($this->unitsTable.name, '') as unit"),
                     "$this->ordersTransactionsTable.price as price",
                     "$this->ordersTransactionsTable.total as total",
+                    "$this->ordersTable.ficheno as order_number",
                 )
                 ->where(["$this->ordersTransactionsTable.ordficheref" => $id])
                 ->get();
             $data = [
-                "invoice_number" => str_pad((int)$last_invoice_num + 1, strlen($last_invoice_num), '0', STR_PAD_LEFT),
+                "invoice_number" => InvoiceNumerGenerator::generateInvoiceNumber($this->invoicesTable),
                 "date" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
                 "time" => TimeHelper::calculateTime(),
-                "document_number" => $order->document_number,
                 "customer_code" => $order->customer_code,
                 "customer_name" => $order->customer_name,
                 "payment_paln" => $order->payment_code,
@@ -310,7 +310,7 @@ class OrderController extends Controller
                 'status' => 'success',
                 'data' => $data,
             ], 200);
-        }
+        
     }
 
     public function ordersStatusFilter(Request $request)
@@ -522,7 +522,7 @@ class OrderController extends Controller
             "RC_RATE" => 1,
             "RC_NET" => $request->net_total,
             "PAYMENT_CODE" => $request->payment_code,
-            "ORDER_STATUS" => 4,
+            "ORDER_STATUS" => 1,
             "CREATED_BY" => request()->header('username'),
             "DATE_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d H:i:s.v'),
             "HOUR_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('H'),
@@ -537,6 +537,7 @@ class OrderController extends Controller
             "DEDUCTIONPART1" => 2,
             "DEDUCTIONPART2" => 3,
             "CURRSEL_TOTAL" => 1,
+            "SOURCE_WH" => 3,
         ];
         $transactions = $request->input('TRANSACTIONS.items');
         foreach ($transactions as $item) {
@@ -561,6 +562,7 @@ class OrderController extends Controller
                 "AFFECT_RISK" => 1,
                 "EDT_PRICE" => $total,
                 "EDT_CURR" => 30,
+                "SOURCE_WH" => 3,
             ];
             if ($item['item_type'] == 0) {
                 $itemData["UNIT_CONV1"] = 1;
@@ -635,7 +637,6 @@ class OrderController extends Controller
             'RC_RATE' => 1,
             'RC_NET' => $request->net_total,
             'PAYMENT_CODE' => $request->payment_code,
-            'ORDER_STATUS' => 4,
             'DATE' => $existingRecord->DATE_,
             'CREATED_BY' => $existingRecord->CAPIBLOCK_CREATEDBY,
             'DATE_CREATED' => $existingRecord->CAPIBLOCK_CREADEDDATE,
@@ -669,13 +670,11 @@ class OrderController extends Controller
                 "QUANTITY" => $quantity,
                 "PRICE" => $price,
                 "TOTAL" => $total,
-                "VAT_BASE" => $total,
-                "TOTAL_NET" => $total,
                 "SALESMAN_CODE" => $salesman_code,
                 "MULTI_ADD_TAX" => 0,
                 "AFFECT_RISK" => 1,
-                "EDT_PRICE" => $total,
                 "EDT_CURR" => 30,
+                "SOURCE_WH" => 3,
             ];
             if ($item['item_type'] == 0) {
                 $itemData["UNIT_CONV1"] = 1;
@@ -720,32 +719,77 @@ class OrderController extends Controller
     }
 
 
-    public function updateOrderStatus(Request $request, $order)
+    public function acceptOrder($id)
     {
-        $status = $request->order_status;
-        $item = DB::table($this->ordersTable)->where('ficheno', $order)->first();
-        if (!$item) {
+        try {
+        $order = $this->fetchValueFromTable($this->ordersTable, 'logicalref', $id, 'date_');
+        if (!$order) {
             return response()->json([
-                'status' => 'success',
+                'status' => 'status',
                 'message' => 'Order is not exist',
-                'data' => []
+                'data' => [],
             ], 404);
         }
-        $result = get_object_vars($item);
-        $id = $result["LOGICALREF"];
-        $order_line = DB::table($this->ordersTransactionsTable)->where('ORDFICHEREF', $id)->get();
-        DB::beginTransaction();
-        try {
-            DB::table($this->ordersTable)->where('logicalref', $id)
-                ->update(['status' => $status]);
-            DB::table($this->ordersTransactionsTable)->where('ORDFICHEREF', $id)
-                ->update(['status' => $status]);
-            DB::commit();
+        $data = [
+            'DATE' => $order,
+            'ORDER_STATUS' => 4,
+            'APPROVE_DATE' => now()->format('y-m-d h:m:i'),
+        ];
+        
+            $response = Http::withOptions([
+                'verify' => false,
+            ])
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                    'Authorization' => request()->header('authorization')
+                ])
+                ->withBody(json_encode($data), 'application/json')
+                ->patch("https://10.27.0.109:32002/api/v1/salesOrders/{$id}");
+
             return response()->json([
-                'status' => 'success',
-                'message' => 'Order updated succssfully',
-                'data' => $item,
-            ], 200);
+                'status' => $response->successful() ? 'success' : 'failed',
+                'data' => $response->json(),
+            ], $response->status());
+        } catch (Throwable $e) {
+            return response()->json([
+                'status' => 'failed',
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    public function rejectOrder($id)
+    {
+        try {
+        $order = $this->fetchValueFromTable($this->ordersTable, 'logicalref', $id, 'date_');
+        if (!$order) {
+            return response()->json([
+                'status' => 'status',
+                'message' => 'Order is not exist',
+                'data' => [],
+            ], 404);
+        }
+        $data = [
+            'DATE' => $order,
+            'ORDER_STATUS' => 2,
+        ];
+        
+            $response = Http::withOptions([
+                'verify' => false,
+            ])
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                    'Authorization' => request()->header('authorization')
+                ])
+                ->withBody(json_encode($data), 'application/json')
+                ->patch("https://10.27.0.109:32002/api/v1/salesOrders/{$id}");
+
+            return response()->json([
+                'status' => $response->successful() ? 'success' : 'failed',
+                'data' => $response->json(),
+            ], $response->status());
         } catch (Throwable $e) {
             return response()->json([
                 'status' => 'failed',
