@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\InvoiceNumberGenerator;
 use Throwable;
 use App\Traits\Filterable;
 use App\Helpers\TimeHelper;
@@ -30,6 +31,8 @@ class InvoiceController extends Controller
     protected $customersTable;
     protected $cutomersView;
     protected $invoicesTable;
+    protected $dispatchesTable;
+    protected $ledgerTable;
     protected $salesmansTable;
     protected $itemsTable;
     protected $weightsTable;
@@ -66,11 +69,13 @@ class InvoiceController extends Controller
         $this->weightsTable = 'LG_' . $this->code . '_ITMUNITA';
         $this->payplansTable = 'LG_' . $this->code . '_PAYPLANS';
         $this->invoicesTable = 'LG_' . $this->code . '_01_INVOICE';
+        $this->dispatchesTable = 'LG_' . $this->code . '_01_STFICHE';
+        $this->ledgerTable = 'LG_' . $this->code . '_01_PAYTRANS';
         $this->stocksTransactionsTable = 'LG_' . $this->code . '_01_STLINE';
         $this->customersTransactionsTable = 'LG_' . $this->code . '_01_CLFLINE';
     }
 
-    public function InvoicesList(Request $request)
+    public function index(Request $request)
     {
         $invoices = DB::table("$this->invoicesTable")
             ->leftjoin($this->salesmansTable, "$this->invoicesTable.salesmanref", "=", "$this->salesmansTable.logicalref")
@@ -142,6 +147,359 @@ class InvoiceController extends Controller
         ]);
     }
 
+    public function store(Request $request)
+    {
+        $creator = DB::table('L_CAPIUSER')->where('name', request()->header('username'))
+            ->value('nr');
+        $data = [
+            "INTERNAL_REFERENCE" => 0,
+            "TYPE" => 8,
+            "NUMBER" => InvoiceNumberGenerator::generateInvoiceNumber($this->invoicesTable),
+            "DATE" =>  Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            'TIME' => TimeHelper::calculateTime(),
+            "ARP_CODE" => $request->customer_code,
+            "SOURCE_WH" => 3,
+            "POST_FLAGS" => 247,
+            "VAT_RATE" => 18,
+            "TOTAL_DISCOUNTS" => $request->total_discounts,
+            "TOTAL_DISCOUNTED" => $request->after_discount,
+            "TOTAL_GROSS" => $request->before_discount,
+            "TOTAL_NET" => $request->net_total,
+            "TC_NET" => $request->net_total,
+            "RC_XRATE" => 1,
+            "RC_NET" => $request->net_total,
+            "NOTES1" => $request->notes,
+            "PAYMENT_CODE" => $request->payment_code,
+            "CREATED_BY" => $creator,
+            "DATE_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "HOUR_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('H'),
+            "MIN_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
+            "SEC_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
+            "SALESMAN_CODE" => $request->salesman_code,
+            "CURRSEL_TOTALS" => 1,
+            "DOC_DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+        ];
+        $DISPATCHES = [
+            "INTERNAL_REFERENCE" => 0,
+            "TYPE" => 8,
+            "NUMBER" => InvoiceNumberGenerator::generateInvoiceNumber($this->dispatchesTable),
+            "DATE" =>  Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            'TIME' => $data['TIME'],
+            "INVOICE_NUMBER" => $data['NUMBER'],
+            "ARP_CODE" => $request->customer_code,
+            "INVOICED" => 1,
+            "TOTLA_DISCOUNTS" => $request->total_discounts,
+            "TOTAL_DISCOUNTED" => $request->after_discount,
+            "TOTAL_GROSS" => $request->before_discount,
+            "TOTAL_NET" => $request->net_total,
+            "RC_RATE" => 1,
+            "RC_NET" => $request->net_total,
+            "PAYMENT_CODE" => $request->payment_code,
+            "CREATED_BY" => $creator,
+            "DATE_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "HOUR_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('H'),
+            "MIN_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
+            "SEC_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
+            "SALESMANCODE" => $request->salesman_code,
+            "CURRSEL_TOTALS" => 1,
+            "DEDUCTIONPART1" => 2,
+            "DEDUCTIONPART2" => 3,
+            "AFFECT_RISK" => 1,
+            "DISP_STATUS" => 1,
+            "SHIP_DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "SHIP_TIME" => TimeHelper::calculateTime(),
+            "DOC_DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "DOC_TIME" => TimeHelper::calculateTime(),
+        ];
+        $transactions = $request->input('TRANSACTIONS.items');
+        foreach ($transactions as $item) {
+            $type = $item['item_type'];
+            $master_code = $item['item_code'];
+            $quantity = $item['item_quantity'];
+            $price = $item['item_price'];
+            $total = $item['item_total'];
+            $unit_code = $item['item_unit_code'];
+            $salesman_code = $request->salesman_code;
+            $itemData = [
+                "INTERNAL_REFERENCE" => 0,
+                "TYPE" => $type,
+                "MASTER_CODE" => $master_code,
+                "SOURCEINDEX" => 3,
+                "QUANTITY" => $quantity,
+                "PRICE" => $price,
+                "TOTAL" => $total,
+                "RC_XRATE" => 1,
+                "COST_DISTR" => $request->total_discounts,
+                "DISCOUNT_DISTR" => $request->total_discounts,
+                "UNIT_CODE" => $unit_code,
+                "VAT_BASE" => $total - $request->total_discounts,
+                "BILLED" => 1,
+                "TOTAL_NET" => $total - $request->total_discounts,
+                "DISPATCH_NUMBER" => $DISPATCHES['NUMBER'],
+                "MULTI_ADD_TAX" => 0,
+                "EDT_CURR" => 30,
+                "EDT_PRICE" => $price,
+                "SALEMANCODE" => $salesman_code,
+                "MONTH" => Carbon::now()->timezone('Asia/Baghdad')->format('m'),
+                "YEAR" => Carbon::now()->timezone('Asia/Baghdad')->format('Y'),
+                "AFFECT_RISK" => 1,
+                "FOREIGN_TRADE_TYPE" => 0,
+                "DISTRIBUTION_TYPE_WHS" => 0,
+                "DISTRIBUTION_TYPE_FNO" => 0,
+            ];
+            if ($item['item_type'] == 0) {
+                $itemData["UNIT_CONV1"] = 1;
+                $itemData["UNIT_CONV2"] = 1;
+            } else {
+                $itemData["DISCOUNT_RATE"] = ($request->total_discounts / $request->before_discount) * 100;
+                $itemData["DISCEXP_CALC"] = 1;
+                $itemData["UNIT_CONV1"] = 0;
+                $itemData["UNIT_CONV2"] = 0;
+            }
+            $data['TRANSACTIONS']['items'][] = $itemData;
+        }
+        $PAYMENT = [
+            "INTERNAL_REFERENCE" => 0,
+            "DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "MODULENR" => 4,
+            "TRCODE" => 8,
+            "TOTAL" => $request->net_total,
+            "DAYS" => $request->payment_code,
+            "PROCDATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d H:i:s.v'),
+            "REPORTRATE" => 1,
+            "PAY_NO" => 1,
+            "DISCTRDELLIST" => 0,
+        ];
+        $data['DISPATCHES']['items'][] = $DISPATCHES;
+        $data['PAYMENT_LIST']['items'][] = $PAYMENT;
+        try {
+            $response = Http::withOptions([
+                'verify' => false,
+            ])
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                    'Authorization' => $request->header('authorization')
+                ])
+                ->withBody(json_encode($data), 'application/json')
+                ->post('https://10.27.0.109:32002/api/v1/salesInvoices');
+            return response()->json([
+                'status' => $response->successful() ? 'success' : 'failed',
+                'invoice' => $response->json(),
+            ], $response->status());
+        } catch (Throwable $e) {
+            return response()->json([
+                'status' => 'Invoice failed',
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    public function edit($id)
+    {
+        $invoice = DB::table($this->invoicesTable)->where('logicalref', $id)->first();
+        if (!$invoice) {
+            return response()->json([
+                'status' => 'failed',
+                'status' => 'Invoice is not exist',
+                'data' => [],
+            ], 404);
+        }
+        $info = DB::table("$this->stocksTransactionsTable")
+            ->join("$this->itemsTable", "$this->stocksTransactionsTable.stockref", "=", "$this->itemsTable.logicalref")
+            ->join("$this->salesmansTable", "$this->stocksTransactionsTable.salesmanref", "=", "$this->salesmansTable.logicalref")
+            ->join("$this->weightsTable", "$this->weightsTable.itemref", "=", "$this->itemsTable.logicalref")
+            ->join("$this->invoicesTable", "$this->stocksTransactionsTable.invoiceref", "=", "$this->invoicesTable.logicalref")
+            ->join("$this->customersTable", "$this->stocksTransactionsTable.clientref", "=", "$this->customersTable.logicalref")
+            ->join("$this->cutomersView", "$this->cutomersView.logicalref", "=", "$this->customersTable.logicalref")
+            ->join("$this->payplansTable", "$this->payplansTable.logicalref", '=', "$this->invoicesTable.paydefref")
+            ->select(
+                "$this->invoicesTable.capiblock_creadeddate as date",
+                "$this->invoicesTable.ficheno as number",
+                "$this->invoicesTable.grosstotal as invoice_amount",
+                "$this->invoicesTable.totaldiscounts as invoice_discount",
+                "$this->invoicesTable.nettotal as invoice_total",
+                "$this->salesmansTable.definition_ as salesman_name",
+                "$this->customersTable.code as customer_code",
+                "$this->customersTable.definition_ as customer_name",
+                "$this->payplansTable.code as payment_plan",
+            )
+            ->where(["$this->invoicesTable.logicalref" => $id])
+            ->distinct()
+            ->first();
+        $item = DB::table("$this->stocksTransactionsTable")
+            ->select(
+                "$this->stocksTransactionsTable.invoicelnno as line",
+                DB::raw("COALESCE($this->itemsTable.code, '0') as code"),
+                DB::raw("COALESCE($this->itemsTable.name, '0') as name"),
+                "$this->stocksTransactionsTable.amount as quantity",
+                "$this->stocksTransactionsTable.price as price",
+                "$this->stocksTransactionsTable.total as total",
+                "$this->stocksTransactionsTable.distdisc as discount",
+                DB::raw("COALESCE($this->weightsTable.grossweight, '0') as weight"),
+            )
+            ->leftjoin("$this->itemsTable", "$this->stocksTransactionsTable.stockref", "=", "$this->itemsTable.logicalref")
+            ->leftJoin("$this->weightsTable", function ($join) {
+                $join->on("$this->stocksTransactionsTable.stockref", '=', "$this->weightsTable.itemref")
+                    ->where("$this->weightsTable.linenr", '=', 1);
+            })
+            ->where(["$this->stocksTransactionsTable.invoiceref" => $id])
+            ->orderby("$this->stocksTransactionsTable.invoicelnno", "asc")
+            ->get();
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Invoice details',
+            'invoice_info' => $info = (array) $info,
+            'data' => $item,
+        ]);
+    }
+
+    public function update($id)
+    {
+        $invoice = DB::table($this->invoicesTable)->where('logicalref', $id)->first();
+        $dispatch = DB::table($this->dispatchesTable)->where('invoiceref', $id)->first();
+        $payment = DB::table($this->ledgerTable)->where('ficheref', $id)->first();
+        if (!$invoice) {
+            return response()->json([
+                'status' => 'failed',
+                'status' => 'Invoice is not exist',
+                'data' => [],
+            ], 404);
+        }
+        $data = [
+            "INTERNAL_REFERENCE" => $invoice->LOGICALREF,
+            "DATE" => $invoice->DATE_,
+            'TIME' => $invoice->TIME_,
+            "ARP_CODE" => request()->customer_code,
+            "SOURCE_WH" => 3,
+            "POST_FLAGS" => 247,
+            "VAT_RATE" => 18,
+            "TOTAL_DISCOUNTS" => request()->total_discounts,
+            "TOTAL_DISCOUNTED" => request()->after_discount,
+            "TOTAL_GROSS" => request()->before_discount,
+            "TOTAL_NET" => request()->net_total,
+            "TC_NET" => request()->net_total,
+            "RC_XRATE" => 1,
+            "RC_NET" => request()->net_total,
+            "NOTES1" => request()->notes,
+            "PAYMENT_CODE" => request()->payment_code,
+            "CREATED_BY" => $invoice->CAPIBLOCK_CREATEDBY,
+            "DATE_CREATED" => $invoice->CAPIBLOCK_CREADEDDATE,
+            "HOUR_CREATED" => $invoice->CAPIBLOCK_CREATEDHOUR,
+            "MIN_CREATED" => $invoice->CAPIBLOCK_CREATEDMIN,
+            "SEC_CREATED" => $invoice->CAPIBLOCK_CREATEDSEC,
+            "SALESMAN_CODE" => request()->salesman_code,
+            "CURRSEL_TOTALS" => 1,
+            "DOC_DATE" => $invoice->DOCDATE,
+        ];
+        $DISPATCHES = [
+            "INTERNAL_REFERENCE" => $dispatch->LOGICALREF,
+            "DATE" =>  $dispatch->DATE_,
+            'TIME' => $dispatch->FTIME,
+            "ARP_CODE" => request()->customer_code,
+            "INVOICED" => 1,
+            "TOTLA_DISCOUNTS" => request()->total_discounts,
+            "TOTAL_DISCOUNTED" => request()->after_discount,
+            "TOTAL_GROSS" => request()->before_discount,
+            "TOTAL_NET" => request()->net_total,
+            "RC_RATE" => 1,
+            "RC_NET" => request()->net_total,
+            "PAYMENT_CODE" => request()->payment_code,
+            "CREATED_BY" => $dispatch->CAPIBLOCK_CREATEDBY,
+            "DATE_CREATED" => $dispatch->CAPIBLOCK_CREADEDDATE,
+            "HOUR_CREATED" => $dispatch->CAPIBLOCK_CREATEDHOUR,
+            "MIN_CREATED" => $dispatch->CAPIBLOCK_CREATEDMIN,
+            "SEC_CREATED" => $dispatch->CAPIBLOCK_CREATEDSEC,
+            "SALESMANCODE" => request()->salesman_code,
+            "CURRSEL_TOTALS" => 1,
+            "DEDUCTIONPART1" => 2,
+            "DEDUCTIONPART2" => 3,
+            "AFFECT_RISK" => 1,
+            "DISP_STATUS" => 1,
+            "SHIP_DATE" => $dispatch->SHIPDATE,
+            "SHIP_TIME" => $dispatch->SHIPTIME,
+            "DOC_DATE" => $dispatch->DOCDATE,
+            "DOC_TIME" => $dispatch->DOCTIME,
+        ];
+        $transactions = request()->input('TRANSACTIONS.items');
+        foreach ($transactions as $item) {
+            $type = $item['item_type'];
+            $master_code = $item['item_code'];
+            $quantity = $item['item_quantity'];
+            $price = $item['item_price'];
+            $total = $item['item_total'];
+            $unit_code = $item['item_unit_code'];
+            $salesman_code = request()->salesman_code;
+            $itemData = [
+                "TYPE" => $type,
+                "MASTER_CODE" => $master_code,
+                "SOURCEINDEX" => 3,
+                "QUANTITY" => $quantity,
+                "PRICE" => $price,
+                "TOTAL" => $total,
+                "RC_XRATE" => 1,
+                "COST_DISTR" => request()->total_discounts,
+                "DISCOUNT_DISTR" => request()->total_discounts,
+                "UNIT_CODE" => $unit_code,
+                "VAT_BASE" => $total - request()->total_discounts,
+                "BILLED" => 1,
+                "TOTAL_NET" => $total - request()->total_discounts,
+                "DISPATCH_NUMBER" => $dispatch->FICHENO,
+                "MULTI_ADD_TAX" => 0,
+                "EDT_CURR" => 30,
+                "EDT_PRICE" => $price,
+                "SALEMANCODE" => $salesman_code,
+                "AFFECT_RISK" => 1,
+                "FOREIGN_TRADE_TYPE" => 0,
+                "DISTRIBUTION_TYPE_WHS" => 0,
+                "DISTRIBUTION_TYPE_FNO" => 0,
+            ];
+            if ($item['item_type'] == 0) {
+                $itemData["UNIT_CONV1"] = 1;
+                $itemData["UNIT_CONV2"] = 1;
+            } else {
+                $itemData["DISCOUNT_RATE"] = (request()->total_discounts / request()->before_discount) * 100;
+                $itemData["DISCEXP_CALC"] = 1;
+                $itemData["UNIT_CONV1"] = 0;
+                $itemData["UNIT_CONV2"] = 0;
+            }
+            $data['TRANSACTIONS']['items'][] = $itemData;
+        }
+        $PAYMENT = [
+            "INTERNAL_REFERENCE" => $payment->LOGICALREF,
+            "DATE" => $payment->DATE_,
+            "MODULENR" => 4,
+            "TRCODE" => 8,
+            "TOTAL" => $payment->TOTAL,
+            "PROCDATE" => $payment->PROCDATE,
+            "REPORTRATE" => 1,
+            "PAY_NO" => 1,
+            "DISCTRDELLIST" => 0,
+        ];
+        $data['DISPATCHES']['items'][] = $DISPATCHES;
+        $data['PAYMENT_LIST']['items'][] = $PAYMENT;
+        try {
+            $response = Http::withOptions([
+                'verify' => false,
+            ])
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                    'Authorization' => request()->header('authorization')
+                ])
+                ->withBody(json_encode($data), 'application/json')
+                ->put("https://10.27.0.109:32002/api/v1/salesInvoices/{$id}");
+            return response()->json([
+                'status' => $response->successful() ? 'success' : 'failed',
+                'invoice' => $response->json(),
+            ], $response->status());
+        } catch (Throwable $e) {
+            return response()->json([
+                'status' => 'Invoice failed',
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
 
     public function accountingSalesmanInvoiceDetails(Request $request)
     {
@@ -215,147 +573,6 @@ class InvoiceController extends Controller
         ]);
     }
 
-    public function doSalesInvoice(Request $request)
-    {
-        $data = [
-            "INTERNAL_REFERENCE" => 0,
-            "TYPE" => 8,
-            "NUMBER" => '~',
-            "DATE" =>  Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
-            'TIME' => TimeHelper::calculateTime(),            "ARP_CODE" => $request->customer_code,
-            "POST_FLAGS" => 247,
-            "VAT_RATE" => 18,
-            "TOTAL_DISCOUNTS" => $request->total_discounts,
-            "TOTAL_DISCOUNTED" => $request->after_discount,
-            "TOTAL_GROSS" => $request->before_discount,
-            "TOTAL_NET" => $request->net_total,
-            "TC_NET" => $request->net_total,
-            "RC_XRATE" => 1,
-            "RC_NET" => $request->net_total,
-            "NOTES1" => $request->notes,
-            "PAYMENT_CODE" => $request->payment_code,
-            "CREATED_BY" => request()->header('username'),
-            "DATE_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
-            "HOUR_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('H'),
-            "MIN_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
-            "SEC_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
-            "SALESMAN_CODE" => $request->salesman_code,
-            "CURRSEL_TOTALS" => 1,
-        ];
-        $DISPATCHES = [
-            "INTERNAL_REFERENCE" => 0,
-            "TYPE" => 8,
-            "NUMBER" => '~',
-            "DATE" =>  Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
-            'TIME' => TimeHelper::calculateTime(),            "INVOICE_NUMBER" => $data['NUMBER'],
-            "ARP_CODE" => $request->customer_code,
-            "INVOICED" => 1,
-            "TOTLA_DISCOUNTS" => $request->total_discounts,
-            "TOTAL_DISCOUNTED" => $request->after_discount,
-            "TOTAL_GROSS" => $request->before_discount,
-            "TOTAL_NET" => $request->net_total,
-            "RC_RATE" => 1,
-            "RC_NET" => $request->net_total,
-            "PAYMENT_CODE" => $request->payment_code,
-            "CREATED_BY" => request()->header('username'),            "DATE_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
-            "HOUR_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('H'),
-            "MIN_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
-            "SEC_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
-            "SALESMANCODE" => $request->salesman_code,
-            "CURRSEL_TOTALS" => 1,
-            "ORIG_NUMBER" => '~',
-            "DEDUCTIONPART1" => 2,
-            "DEDUCTIONPART2" => 3,
-            "AFFECT_RISK" => 1,
-            "DISP_STATUS" => 1,
-            "SHIP_DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
-            "SHIP_TIME" => TimeHelper::calculateTime(),
-            "DOC_DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
-            "DOC_TIME" => TimeHelper::calculateTime(),
-        ];
-        $transactions = $request->input('TRANSACTIONS.items');
-        foreach ($transactions as $item) {
-            $type = $item['item_type'];
-            $master_code = $item['item_code'];
-            $quantity = $item['item_quantity'];
-            $price = $item['item_price'];
-            $total = $item['item_total'];
-            $unit_code = $item['item_unit_code'];
-            $salesman_code = $request->salesman_code;
-            $itemData = [
-                "INTERNAL_REFERENCE" => 0,
-                "TYPE" => $type,
-                "MASTER_CODE" => $master_code,
-                "QUANTITY" => $quantity,
-                "PRICE" => $price,
-                "TOTAL" => $total,
-                "RC_XRATE" => 1,
-                "COST_DISTR" => $request->total_discounts,
-                "DISCOUNT_DISTR" => $request->total_discounts,
-                "UNIT_CODE" => $unit_code,
-                "VAT_BASE" => $total,
-                "BILLED" => 1,
-                "TOTAL_NET" => $total,
-                "DISPATCH_NUMBER" => $DISPATCHES['NUMBER'],
-                "MULTI_ADD_TAX" => 0,
-                "EDT_CURR" => 30,
-                "EDT_PRICE" => $total,
-                "SALEMANCODE" => $salesman_code,
-                "MONTH" => Carbon::now()->timezone('Asia/Baghdad')->format('m'),
-                "YEAR" => Carbon::now()->timezone('Asia/Baghdad')->format('Y'),
-                "AFFECT_RISK" => 1,
-                "FOREIGN_TRADE_TYPE" => 0,
-                "DISTRIBUTION_TYPE_WHS" => 0,
-                "DISTRIBUTION_TYPE_FNO" => 0,
-            ];
-            if ($item['item_type'] == 0) {
-                $itemData["UNIT_CONV1"] = 1;
-                $itemData["UNIT_CONV2"] = 1;
-            } else {
-                $itemData["DISCOUNT_RATE"] = ($request->total_discounts / $request->before_discount) * 100;
-                $itemData["DISCEXP_CALC"] = 1;
-                $itemData["UNIT_CONV1"] = 0;
-                $itemData["UNIT_CONV2"] = 0;
-            }
-            $data['TRANSACTIONS']['items'][] = $itemData;
-        }
-        $PAYMENT = [
-            "INTERNAL_REFERENCE" => 0,
-            "DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
-            "MODULENR" => 4,
-            "TRCODE" => 8,
-            "TOTAL" => $request->net_total,
-            "DAYS" => $request->payment_code,
-            "PROCDATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d H:i:s.v'),
-            "REPORTRATE" => 1,
-            "PAY_NO" => 1,
-            "DISCTRDELLIST" => 0,
-        ];
-        $data['DISPATCHES']['items'][] = $DISPATCHES;
-        $data['PAYMENT_LIST']['items'][] = $PAYMENT;
-        try {
-            $response = Http::withOptions([
-                'verify' => false,
-            ])
-                ->withHeaders([
-                    'Accept' => 'application/json',
-                    'Content-Type' => 'application/json',
-                    'Authorization' => $request->header('authorization')
-                ])
-                ->withBody(json_encode($data), 'application/json')
-                ->post('https://10.27.0.109:32002/api/v1/salesInvoices');
-            return response()->json([
-                'status' => $response->successful() ? 'success' : 'failed',
-                'invoice' => $response->json(),
-            ], $response->status());
-        } catch (Throwable $e) {
-            return response()->json([
-                'status' => 'Invoice failed',
-                'message' => $e->getMessage(),
-            ], 422);
-        }
-    }
-
     public function salesinvoicedetails(Request $request)
     {
         $invoice = $request->header('invoice');
@@ -423,11 +640,12 @@ class InvoiceController extends Controller
 
     public function salesReturnInvoicesList(Request $request)
     {
-        $invoices = DB::table("$this->salesmansTable")
-            ->join($this->invoicesTable, "$this->invoicesTable.salesmanref", "=", "$this->salesmansTable.logicalref")
+        $invoices = DB::table("$this->invoicesTable")
+            ->leftjoin($this->salesmansTable, "$this->invoicesTable.salesmanref", "=", "$this->salesmansTable.logicalref")
             ->join($this->customersTable, "$this->invoicesTable.clientref", "=", "$this->customersTable.logicalref")
             ->select(
-                "$this->salesmansTable.definition_ as salesman_name",
+                // "$this->salesmansTable.definition_ as salesman_name",
+                DB::raw("COALESCE($this->salesmansTable.definition_,'0') as salesman_name"),
                 "$this->customersTable.logicalref as customer_id",
                 "$this->customersTable.code as customer_code",
                 "$this->invoicesTable.logicalref as invoice_id",
@@ -744,9 +962,6 @@ class InvoiceController extends Controller
         ]);
     }
 
-    
-    
-    
     public function salesmaninvoices(Request $request)
     {
         $invoices = DB::table("$this->salesmansTable")
@@ -931,6 +1146,7 @@ class InvoiceController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Invoice list',
+            'total' => $data->count(),
             'data' => $data,
         ]);
     }

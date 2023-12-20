@@ -25,8 +25,6 @@ Route::controller(SalesmanController::class)->group(function () {
             Route::post('/edit/{salesmanId}', 'edit');
             Route::post('/update/{salesmanId}', 'update');
             Route::post('/delete/{salesmanId}', 'destroy');
-
-            // Route::post('/previousorders', 'previousorders');
         });
     });
 });
@@ -131,6 +129,7 @@ Route::controller(OrderController::class)
                     Route::post('/previousorderdetails', 'previousorderdetails');
                     Route::post('/orders/accept/{orderId}', 'acceptOrder');
                     Route::post('/orders/reject/{orderId}', 'rejectOrder');
+                    Route::post('/orders/edit/{orderId}', 'edit');
                     Route::post('/orders/update/{orderId}', 'update');
                     Route::post('/orders/delete/{orderId}', 'destroy');
                     Route::post('/orders/{orderId}', 'getOrderToBill');
@@ -151,10 +150,12 @@ Route::controller(InvoiceController::class)
         Route::prefix('invoice')
             ->group(function () {
                 Route::prefix('accounting')->group(function () {
-                    Route::post('/invoices', 'InvoicesList');
+                    Route::post('/invoices', 'index');
                     Route::post('/invoicedetails', 'accountingSalesmanInvoiceDetails');
 
-                    Route::post('/newsalesinvoice', 'doSalesInvoice');
+                    Route::post('/newsalesinvoice', 'store');
+                    Route::post('/edit/{invoiceId}', 'edit');
+                    Route::post('/update/{invoiceId}', 'update');
 
                     Route::post('/salesmaninvoices', 'salesmaninvoices');
                     Route::post('/salesinvoicedetails', 'salesinvoicedetails');

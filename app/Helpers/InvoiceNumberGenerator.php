@@ -4,7 +4,7 @@ namespace App\Helpers;
 
 use Illuminate\Support\Facades\DB;
 
-class InvoiceNumerGenerator
+class InvoiceNumberGenerator
 {
     public static function generateInvoiceNumber($table)
     {

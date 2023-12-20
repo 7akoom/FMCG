@@ -262,7 +262,7 @@ class SalesManController extends Controller
                     'Authorization' => request()->header('authorization')
                 ])
                 ->withBody(json_encode($updateData), 'application/json')
-                ->patch("https://10.27.0.109:32002/api/v1/salesmen/{$id}");
+                ->put("https://10.27.0.109:32002/api/v1/salesmen/{$id}");
             $salesman_response = $response->json();
             DB::connection('sqlsrv3')
                 ->table('LG_XT_SALESMAN')

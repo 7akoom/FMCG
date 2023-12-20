@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Http;
 use App\Traits\Filterable;
 use App\Helpers\TimeHelper;
 use App\Helpers\PaperLimit;
-use App\Helpers\InvoiceNumerGenerator;
+use App\Helpers\InvoiceNumberGenerator;
 
 
 
@@ -273,7 +273,7 @@ class OrderController extends Controller
                     // "$this->ordersTable.ficheno as order_number",
                     DB::raw("COALESCE($this->salesmansTable.definition_, '') as salesman_name"),
                     DB::raw("COALESCE($this->ordersTable.totaldiscounts, 0) as total_discount"),
-                    // "$this->ordersTable.grosstotal as order_total",
+                    "$this->ordersTable.totaldiscounted as total_discounted",
                     "$this->ordersTable.nettotal as order_net_total"
                 )
                 ->where(["$this->ordersTable.logicalref" => $id,"$this->whousesTable.firmnr" => 888, "$this->salesmansTable.firmnr" => 888])
@@ -295,7 +295,7 @@ class OrderController extends Controller
                 ->where(["$this->ordersTransactionsTable.ordficheref" => $id])
                 ->get();
             $data = [
-                "invoice_number" => InvoiceNumerGenerator::generateInvoiceNumber($this->invoicesTable),
+                "invoice_number" => InvoiceNumberGenerator::generateInvoiceNumber($this->invoicesTable),
                 "date" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
                 "time" => TimeHelper::calculateTime(),
                 "customer_code" => $order->customer_code,
@@ -303,7 +303,9 @@ class OrderController extends Controller
                 "payment_paln" => $order->payment_code,
                 "warehouse" => $order->warehouse,
                 "salesman_name" => $order->salesman_name,
-                "due_date" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+                "total_discount" => $order->total_discount,
+                "total" => $order->total_discounted,
+                "net_total" => $order->order_net_total,
                 "items" => $item
             ];
             return response()->json([
@@ -611,6 +613,65 @@ class OrderController extends Controller
         }
     }
 
+    public function edit($id)
+    {
+        $order = DB::table($this->ordersTable)->where('logicalref',$id)->first();
+         if (!$order) {
+            return response()->json([
+                'status' => 'failed',
+                'status' => 'Order is not exist',
+                'data' => [],
+            ], 404);
+        }
+        $info = DB::table("$this->ordersTransactionsTable")
+            ->join("$this->itemsTable", "$this->ordersTransactionsTable.stockref", "=", "$this->itemsTable.logicalref")
+            ->join("$this->salesmansTable", "$this->ordersTransactionsTable.salesmanref", "=", "$this->salesmansTable.logicalref")
+            ->join("$this->weightsTable", "$this->weightsTable.itemref", "=", "$this->itemsTable.logicalref")
+            ->join("$this->ordersTable", "$this->ordersTransactionsTable.ordficheref", "=", "$this->ordersTable.logicalref")
+            ->join("$this->customersTable", "$this->ordersTransactionsTable.clientref", "=", "$this->customersTable.logicalref")
+            ->join("$this->cutoemrsView", "$this->cutoemrsView.logicalref", "=", "$this->customersTable.logicalref")
+            ->join("$this->payplansTable", "$this->payplansTable.logicalref", '=', "$this->customersTable.paymentref")
+            ->select(
+                "$this->ordersTable.date_ as date",
+                "$this->ordersTable.ficheno as number",
+                "$this->customersTable.code as customer_code",
+                "$this->customersTable.definition_ as customer_name",
+                "$this->payplansTable.code as customer_payment_plan",
+                "$this->salesmansTable.definition_ as salesman_name",
+                "$this->ordersTable.grosstotal as order_total",
+                "$this->ordersTable.totaldiscounts as order_discount",
+                "$this->ordersTable.nettotal as order_net",
+            )
+            ->where(["$this->ordersTable.logicalref" => $id])
+            ->distinct()
+            ->first();
+
+        $item = DB::table("$this->ordersTransactionsTable")
+            ->select(
+                "$this->ordersTransactionsTable.lineno_ as line",
+                DB::raw("COALESCE($this->itemsTable.code, '0') as code"),
+                DB::raw("COALESCE($this->itemsTable.name, '0') as name"),
+                "$this->ordersTransactionsTable.amount as quantity",
+                "$this->ordersTransactionsTable.price",
+                "$this->ordersTransactionsTable.total",
+                "$this->ordersTransactionsTable.distdisc as discount",
+                DB::raw("COALESCE($this->weightsTable.grossweight, '0') as weight"),
+            )
+            ->leftJoin("$this->itemsTable", "$this->itemsTable.logicalref", '=', "$this->ordersTransactionsTable.stockref")
+            ->leftJoin("$this->weightsTable", function ($join) {
+                $join->on("$this->ordersTransactionsTable.stockref", '=', "$this->weightsTable.itemref")
+                    ->where("$this->weightsTable.linenr", '=', 1);
+            })
+            ->where("$this->ordersTransactionsTable.ordficheref", '=', $id)
+            ->get();
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Order details',
+            'order_info' => $info = (array) $info,
+            'data' => $item,
+        ]);
+    }
+
     public function update(Request $request, $id)
     {
         $customer = $request->header('customer');
@@ -664,7 +725,6 @@ class OrderController extends Controller
             $total = $item['item_total'];
             $unit = isset($item['item_unit']) ? $item['item_unit'] : '';
             $itemData = [
-                "INTERNAL_REFERENCE" => 0,
                 "TYPE" => $item_type,
                 "MASTER_CODE" => $master_code,
                 "QUANTITY" => $quantity,
@@ -745,7 +805,7 @@ class OrderController extends Controller
                     'Authorization' => request()->header('authorization')
                 ])
                 ->withBody(json_encode($data), 'application/json')
-                ->patch("https://10.27.0.109:32002/api/v1/salesOrders/{$id}");
+                ->put("https://10.27.0.109:32002/api/v1/salesOrders/{$id}");
 
             return response()->json([
                 'status' => $response->successful() ? 'success' : 'failed',
@@ -784,7 +844,7 @@ class OrderController extends Controller
                     'Authorization' => request()->header('authorization')
                 ])
                 ->withBody(json_encode($data), 'application/json')
-                ->patch("https://10.27.0.109:32002/api/v1/salesOrders/{$id}");
+                ->put("https://10.27.0.109:32002/api/v1/salesOrders/{$id}");
 
             return response()->json([
                 'status' => $response->successful() ? 'success' : 'failed',

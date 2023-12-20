@@ -215,7 +215,7 @@ class CustomerController extends Controller
                     'Authorization' => $request->header('authorization')
                 ])
                 ->withBody(json_encode($data), 'application/json')
-                ->patch("https://10.27.0.109:32002/api/v1/Arps/{$id}");
+                ->put("https://10.27.0.109:32002/api/v1/Arps/{$id}");
                 return response()->json([
                 'status' => $response->successful() ? 'success' : 'failed',
                 'data' => $response->json(),
@@ -378,7 +378,7 @@ class CustomerController extends Controller
                     'Authorization' => $request->header('authorization')
                 ])
                 ->withBody(json_encode($custData), 'application/json')
-                ->patch("https://10.27.0.109:32002/api/v1/Arps/{$id}");
+                ->put("https://10.27.0.109:32002/api/v1/Arps/{$id}");
                 return response()->json([
                 'status' => $response->successful() ? 'success' : 'failed',
                 'data' => $response->json(),
