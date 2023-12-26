@@ -82,6 +82,10 @@ class CustomerController extends Controller
                 'value' => '%' . $request->input('customer_code') . '%',
                 'operator' => 'LIKE',
             ],
+            "$this->customersTable.telnrs1" => [
+                'value' => '%' . $request->input('customer_phone') . '%',
+                'operator' => '=',
+            ],
             "$this->customersTable.definition_" => [
                 'value' => '%' . $request->input('customer_name') . '%',
                 'operator' => 'LIKE',
@@ -99,6 +103,7 @@ class CustomerController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Customers list',
+            'total' => $customer->total(),
             'data' => $customer->items(),
             'current_page' => $customer->currentPage(),
             'per_page' => $customer->perPage(),
@@ -106,7 +111,6 @@ class CustomerController extends Controller
             'previous_page' => $customer->previousPageUrl($this->page),
             'first_page' => $customer->url(1),
             'last_page' => $customer->url($customer->lastPage()),
-            'total' => $customer->total(),
         ], 200);
     }
 
