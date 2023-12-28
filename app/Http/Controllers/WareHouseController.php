@@ -497,6 +497,7 @@ class WareHouseController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Items list',
+            'total' => $data->total(),
             'data' => $data->items(),
             'current_page' => $data->currentPage(),
             'per_page' => $data->perPage(),

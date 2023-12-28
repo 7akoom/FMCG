@@ -83,12 +83,20 @@ class CustomerController extends Controller
                 'operator' => 'LIKE',
             ],
             "$this->customersTable.telnrs1" => [
-                'value' => '%' . $request->input('customer_phone') . '%',
+                'value' => $request->input('customer_phone'),
                 'operator' => '=',
             ],
             "$this->customersTable.definition_" => [
                 'value' => '%' . $request->input('customer_name') . '%',
                 'operator' => 'LIKE',
+            ],
+            "$this->customersView.credit" => [
+                'value' => $request->input('credit'), 
+                'operator' => $request->input('operator'),
+            ],
+            "$this->customersView.debit" => [
+                'value' => $request->input('debit'),
+                'operator' => $request->input('operator'),
             ],
         ]);
 
@@ -189,7 +197,7 @@ class CustomerController extends Controller
                 ])
                 ->withBody(json_encode($data), 'application/json')
                 ->post('https://10.27.0.109:32002/api/v1/Arps');
-                return response()->json([
+            return response()->json([
                 'status' => $response->successful() ? 'success' : 'failed',
                 'data' => $response->json(),
             ], $response->status());
@@ -220,7 +228,7 @@ class CustomerController extends Controller
                 ])
                 ->withBody(json_encode($data), 'application/json')
                 ->put("https://10.27.0.109:32002/api/v1/Arps/{$id}");
-                return response()->json([
+            return response()->json([
                 'status' => $response->successful() ? 'success' : 'failed',
                 'data' => $response->json(),
             ], $response->status());
@@ -358,20 +366,20 @@ class CustomerController extends Controller
 
     public function updatePendingCustomerAccounting(Request $request, $id)
     {
-            $custData = [
-                'TITLE2' => $request->customer_name,
-                'TITLE' => $request->market_name,
-                'REC_STATUS' => $request->active,
-                'TELEPHONE1' => $request->first_phone,
-                'TELEPHONE2' => $request->second_phone,
-                'CITY' => $request->city,
-                'ADDRESS2' => $request->zone,
-                'ADDRESS1' => $request->address,
-                'AUXIL_CODE2' => $request->customer_type,
-                'PAYMENTREF' => $request->payment_plan,
-                'RECORD_STATUS' => $request->active,
-                'ACC_RISK_LIMIT' => $request->limit,
-            ];
+        $custData = [
+            'TITLE2' => $request->customer_name,
+            'TITLE' => $request->market_name,
+            'REC_STATUS' => $request->active,
+            'TELEPHONE1' => $request->first_phone,
+            'TELEPHONE2' => $request->second_phone,
+            'CITY' => $request->city,
+            'ADDRESS2' => $request->zone,
+            'ADDRESS1' => $request->address,
+            'AUXIL_CODE2' => $request->customer_type,
+            'PAYMENTREF' => $request->payment_plan,
+            'RECORD_STATUS' => $request->active,
+            'ACC_RISK_LIMIT' => $request->limit,
+        ];
         try {
             $response = Http::withOptions([
                 'verify' => false,
@@ -383,7 +391,7 @@ class CustomerController extends Controller
                 ])
                 ->withBody(json_encode($custData), 'application/json')
                 ->put("https://10.27.0.109:32002/api/v1/Arps/{$id}");
-                return response()->json([
+            return response()->json([
                 'status' => $response->successful() ? 'success' : 'failed',
                 'data' => $response->json(),
             ], $response->status());
@@ -663,24 +671,24 @@ class CustomerController extends Controller
 
     public function storeFromAccounting(Request $request)
     {
-            $user_nr = $this->fetchValueFromTable('l_capiuser', 'name', request()->header('username'), 'nr');
-            $defaultValues = [
-                'RECORD_STATUS' => 0,
-                'ACCOUNT_TYPE' => 3,
-                'TITLE' => $request->market_name,
-                'TITLE2' => $request->customer_name,
-                'TELEPHONE1' => $request->phone,
-                'TELEPHONE2' => $request->phone2,
-                'CITY' => $request->city,
-                'ADDRESS1' => $request->address,
-                'ADDRESS2' => $request->zone,
-                'COUNTRY' => 'iraq',
-                'AUTH_CODE' => '1',
-                'AUXIL_CODE2' => $request->customer_type,
-                'CREATED_BY' => $user_nr->nr,
-                'ACC_RISK_LIMIT' => $request->limit,
-            ];
-           try {
+        $user_nr = $this->fetchValueFromTable('l_capiuser', 'name', request()->header('username'), 'nr');
+        $defaultValues = [
+            'RECORD_STATUS' => 0,
+            'ACCOUNT_TYPE' => 3,
+            'TITLE' => $request->market_name,
+            'TITLE2' => $request->customer_name,
+            'TELEPHONE1' => $request->phone,
+            'TELEPHONE2' => $request->phone2,
+            'CITY' => $request->city,
+            'ADDRESS1' => $request->address,
+            'ADDRESS2' => $request->zone,
+            'COUNTRY' => 'iraq',
+            'AUTH_CODE' => '1',
+            'AUXIL_CODE2' => $request->customer_type,
+            'CREATED_BY' => $user_nr->nr,
+            'ACC_RISK_LIMIT' => $request->limit,
+        ];
+        try {
             $response = Http::withOptions([
                 'verify' => false,
             ])
@@ -691,7 +699,7 @@ class CustomerController extends Controller
                 ])
                 ->withBody(json_encode($defaultValues), 'application/json')
                 ->post('https://10.27.0.109:32002/api/v1/Arps');
-                return response()->json([
+            return response()->json([
                 'status' => $response->successful() ? 'success' : 'failed',
                 'data' => $response->json(),
             ], $response->status());
@@ -715,7 +723,7 @@ class CustomerController extends Controller
                     'Authorization' => request()->header('authorization')
                 ])
                 ->delete("https://10.27.0.109:32002/api/v1/Arps/{$id}");
-                return response()->json([
+            return response()->json([
                 'status' => $response->successful() ? 'success' : 'failed',
                 'message' => 'Customer deleted succssefully'
             ], $response->status());

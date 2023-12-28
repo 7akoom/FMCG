@@ -154,6 +154,7 @@ Route::controller(InvoiceController::class)
                     Route::post('/invoicedetails', 'accountingSalesmanInvoiceDetails');
 
                     Route::post('/newsalesinvoice', 'store');
+                    Route::post('/bill/{orderId}', 'billOrder');
                     Route::post('/edit/{invoiceId}', 'edit');
                     Route::post('/update/{invoiceId}', 'update');
 
@@ -178,6 +179,10 @@ Route::controller(InvoiceController::class)
                         Route::post('/previousinvoices', 'salesmanLastTwoMonthsInvoices');
                         Route::post('/invoicedetails', 'salesmaninvoicedetails');
                         Route::post('/customerpreviousinvoices', 'customerlastteninvoices');
+                    });
+                Route::prefix('ware-house')
+                    ->group(function () {
+                        Route::post('/prepare/{invoiceId}', 'prepare');
                     });
             });
     });
