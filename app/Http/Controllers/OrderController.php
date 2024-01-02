@@ -860,6 +860,14 @@ class OrderController extends Controller
 
     public function destroy($id)
     {
+       $order = $this->fetchValueFromTable($this->ordersTable, 'logicalref', $id, 'ficheno');
+        if (!$order) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Order is not exist',
+                'data' => [],
+            ], 404);
+        }
         try {
             $response = Http::withOptions([
                 'verify' => false,

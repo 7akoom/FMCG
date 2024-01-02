@@ -88,6 +88,27 @@ Route::controller(ItemDefController::class)->group(function () {
         });
         Route::prefix('accounting')->group(function () {
             Route::post('/categoriestree', 'catAndSubCategory');
+            Route::prefix('category')->group(function () {
+                Route::post('/categories', 'categories');
+                Route::post('/store', 'addCategory');
+                Route::post('/edit/{categoryId}', 'editCategory');
+                Route::post('/update/{categoryId}', 'updateCategory');
+                Route::post('/destroy/{categoryId}', 'destroy');
+            });
+            Route::prefix('sub-category')->group(function () {
+                Route::post('/subcategories', 'subcategories');
+                Route::post('/store', 'addSubCategory');
+                Route::post('/edit/{subCategoryId}', 'editSubCategory');
+                Route::post('/update/{subCategoryId}', 'updateSubCategory');
+                Route::post('/destroy/{subCategoryId}', 'destroy');
+            });
+            Route::prefix('group')->group(function () {
+                Route::post('/groups', 'groups');
+                Route::post('/store', 'addGroup');
+                Route::post('/edit/{groupId}', 'editGroup');
+                Route::post('/update/{groupId}', 'updateGroup');
+                Route::post('/destroy/{groupId}', 'destroy');
+            });
         });
     });
 });
@@ -157,6 +178,7 @@ Route::controller(InvoiceController::class)
                     Route::post('/bill/{orderId}', 'billOrder');
                     Route::post('/edit/{invoiceId}', 'edit');
                     Route::post('/update/{invoiceId}', 'update');
+                    Route::post('/destroy/{invoiceId}', 'destroy');
 
                     Route::post('/salesmaninvoices', 'salesmaninvoices');
                     Route::post('/salesinvoicedetails', 'salesinvoicedetails');
@@ -183,6 +205,10 @@ Route::controller(InvoiceController::class)
                 Route::prefix('ware-house')
                     ->group(function () {
                         Route::post('/prepare/{invoiceId}', 'prepare');
+                    });
+                Route::prefix('driver')
+                    ->group(function () {
+                        Route::post('/deliver/{invoiceId}', 'deliver');
                     });
             });
     });

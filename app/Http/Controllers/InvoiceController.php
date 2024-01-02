@@ -100,11 +100,10 @@ class InvoiceController extends Controller
                 "$this->invoicesTable.grpcode" => 2,
                 "$this->invoicesTable.trcode" => $this->transaction_code,
             ]);
-            if(request()->header('stock-number'))
-            {
-                $this->stock_number = request()->header('stock-number');
-                $invoices->where("$this->invoicesTable.sourceindex" , $this->stock_number);
-            }
+        if (request()->header('stock-number')) {
+            $this->stock_number = request()->header('stock-number');
+            $invoices->where("$this->invoicesTable.sourceindex", $this->stock_number);
+        }
         $this->applyFilters($invoices, [
             "$this->customersTable.code" => [
                 'value' => '%' . $request->input('customer_code') . '%',
@@ -140,7 +139,7 @@ class InvoiceController extends Controller
         }
         if ($request->input('stock')) {
             $stock = request()->input('stock');
-            $invoices->where("$this->invoicesTable.sourceindex",$stock);
+            $invoices->where("$this->invoicesTable.sourceindex", $stock);
         }
         $invoicesData = $invoices->orderBy("$this->invoicesTable.capiblock_creadeddate", "desc")->paginate($this->perpage);
         if ($invoicesData->isEmpty()) {
@@ -804,6 +803,154 @@ class InvoiceController extends Controller
                     'Authorization' => request()->header('authorization')
                 ])
                 ->withBody(json_encode($data), 'application/json')
+                ->put("https://10.27.0.109:32002/api/v1/salesInvoices/{$id}");
+            return response()->json([
+                'status' => $response->successful() ? 'success' : 'failed',
+                'invoice' => $response->json(),
+            ], $response->status());
+        } catch (Throwable $e) {
+            return response()->json([
+                'status' => 'Invoice failed',
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    public function deliver($id)
+    {
+        $invoice = DB::table($this->invoicesTable)->where('logicalref', $id)->first();
+        $dispatch = DB::table($this->dispatchesTable)->where('invoiceref', $id)->first();
+        $payment = DB::table($this->ledgerTable)->where('ficheref', $id)->first();
+        if (!$invoice) {
+            return response()->json([
+                'status' => 'failed',
+                'status' => 'Invoice is not exist',
+                'data' => [],
+            ], 404);
+        }
+        $data = [
+            "INTERNAL_REFERENCE" => $invoice->LOGICALREF,
+            "DATE" => $invoice->DATE_,
+            'TIME' => $invoice->TIME_,
+            "ARP_CODE" => request()->customer_code,
+            "SOURCE_WH" => 0,
+            "POST_FLAGS" => 247,
+            "VAT_RATE" => 18,
+            "TOTAL_DISCOUNTS" => request()->total_discounts,
+            "TOTAL_DISCOUNTED" => request()->after_discount,
+            "TOTAL_GROSS" => request()->before_discount,
+            "TOTAL_NET" => request()->net_total,
+            "TC_NET" => request()->net_total,
+            "RC_XRATE" => 1,
+            "RC_NET" => request()->net_total,
+            "NOTES1" => request()->notes,
+            "PAYMENT_CODE" => request()->payment_code,
+            "CREATED_BY" => $invoice->CAPIBLOCK_CREATEDBY,
+            "DATE_CREATED" => $invoice->CAPIBLOCK_CREADEDDATE,
+            "HOUR_CREATED" => $invoice->CAPIBLOCK_CREATEDHOUR,
+            "MIN_CREATED" => $invoice->CAPIBLOCK_CREATEDMIN,
+            "SEC_CREATED" => $invoice->CAPIBLOCK_CREATEDSEC,
+            "SALESMAN_CODE" => request()->salesman_code,
+            "CURRSEL_TOTALS" => 1,
+            "DOC_DATE" => $invoice->DOCDATE,
+        ];
+        $DISPATCHES = [
+            "INTERNAL_REFERENCE" => $dispatch->LOGICALREF,
+            "DATE" =>  $dispatch->DATE_,
+            'TIME' => $dispatch->FTIME,
+            "SOURCE_WH" => 0,
+            "ARP_CODE" => request()->customer_code,
+            "INVOICED" => 1,
+            "TOTLA_DISCOUNTS" => request()->total_discounts,
+            "TOTAL_DISCOUNTED" => request()->after_discount,
+            "TOTAL_GROSS" => request()->before_discount,
+            "TOTAL_NET" => request()->net_total,
+            "RC_RATE" => 1,
+            "RC_NET" => request()->net_total,
+            "PAYMENT_CODE" => request()->payment_code,
+            "CREATED_BY" => $dispatch->CAPIBLOCK_CREATEDBY,
+            "DATE_CREATED" => $dispatch->CAPIBLOCK_CREADEDDATE,
+            "HOUR_CREATED" => $dispatch->CAPIBLOCK_CREATEDHOUR,
+            "MIN_CREATED" => $dispatch->CAPIBLOCK_CREATEDMIN,
+            "SEC_CREATED" => $dispatch->CAPIBLOCK_CREATEDSEC,
+            "SALESMANCODE" => request()->salesman_code,
+            "CURRSEL_TOTALS" => 1,
+            "DEDUCTIONPART1" => 2,
+            "DEDUCTIONPART2" => 3,
+            "AFFECT_RISK" => 1,
+            "DISP_STATUS" => 1,
+            "SHIP_DATE" => $dispatch->SHIPDATE,
+            "SHIP_TIME" => $dispatch->SHIPTIME,
+            "DOC_DATE" => $dispatch->DOCDATE,
+            "DOC_TIME" => $dispatch->DOCTIME,
+        ];
+        $transactions = request()->input('TRANSACTIONS.items');
+        foreach ($transactions as $item) {
+            $type = $item['item_type'];
+            $master_code = $item['item_code'];
+            $quantity = $item['item_quantity'];
+            $price = $item['item_price'];
+            $total = $item['item_total'];
+            $unit_code = $item['item_unit_code'];
+            $salesman_code = request()->salesman_code;
+            $itemData = [
+                "TYPE" => $type,
+                "MASTER_CODE" => $master_code,
+                "SOURCE_WH" => 0,
+                "QUANTITY" => $quantity,
+                "PRICE" => $price,
+                "TOTAL" => $total,
+                "RC_XRATE" => 1,
+                "COST_DISTR" => request()->total_discounts,
+                "DISCOUNT_DISTR" => request()->total_discounts,
+                "UNIT_CODE" => $unit_code,
+                "VAT_BASE" => $total - request()->total_discounts,
+                "BILLED" => 1,
+                "TOTAL_NET" => $total - request()->total_discounts,
+                "DISPATCH_NUMBER" => $dispatch->FICHENO,
+                "MULTI_ADD_TAX" => 0,
+                "EDT_CURR" => 30,
+                "EDT_PRICE" => $price,
+                "SALEMANCODE" => $salesman_code,
+                "AFFECT_RISK" => 1,
+                "FOREIGN_TRADE_TYPE" => 0,
+                "DISTRIBUTION_TYPE_WHS" => 0,
+                "DISTRIBUTION_TYPE_FNO" => 0,
+            ];
+            if ($item['item_type'] == 0) {
+                $itemData["UNIT_CONV1"] = 1;
+                $itemData["UNIT_CONV2"] = 1;
+            } else {
+                $itemData["DISCOUNT_RATE"] = (request()->total_discounts / request()->before_discount) * 100;
+                $itemData["DISCEXP_CALC"] = 1;
+                $itemData["UNIT_CONV1"] = 0;
+                $itemData["UNIT_CONV2"] = 0;
+            }
+            $data['TRANSACTIONS']['items'][] = $itemData;
+        }
+        $PAYMENT = [
+            "INTERNAL_REFERENCE" => $payment->LOGICALREF,
+            "DATE" => $payment->DATE_,
+            "MODULENR" => 4,
+            "TRCODE" => 8,
+            "TOTAL" => $payment->TOTAL,
+            "PROCDATE" => $payment->PROCDATE,
+            "REPORTRATE" => 1,
+            "PAY_NO" => 1,
+            "DISCTRDELLIST" => 0,
+        ];
+        $data['DISPATCHES']['items'][] = $DISPATCHES;
+        $data['PAYMENT_LIST']['items'][] = $PAYMENT;
+        try {
+            $response = Http::withOptions([
+                'verify' => false,
+            ])
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                    'Authorization' => request()->header('authorization')
+                ])
+                ->withBody(json_encode($data), 'application/json')
                 ->patch("https://10.27.0.109:32002/api/v1/salesInvoices/{$id}");
             return response()->json([
                 'status' => $response->successful() ? 'success' : 'failed',
@@ -816,7 +963,6 @@ class InvoiceController extends Controller
             ], 422);
         }
     }
-    
 
     public function accountingSalesmanInvoiceDetails(Request $request)
     {
@@ -852,6 +998,7 @@ class InvoiceController extends Controller
             ])
             ->distinct()
             ->first();
+
         $item = DB::table("$this->stocksTransactionsTable")
             ->select(
                 "$this->stocksTransactionsTable.invoicelnno as line",
@@ -874,7 +1021,6 @@ class InvoiceController extends Controller
             ])
             ->orderby("$this->stocksTransactionsTable.invoicelnno", "asc")
             ->get();
-
         if ($item->isEmpty()) {
             return response()->json([
                 'status' => 'success',
@@ -1608,6 +1754,39 @@ class InvoiceController extends Controller
             'message' => 'Invoice list',
             'data' => $invoices,
         ]);
+    }
+
+    public function destroy($id)
+    {
+        $invoice = $this->fetchValueFromTable($this->invoicesTable, 'logicalref', $id, 'ficheno');
+        if (!$invoice) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Invoice is not exist',
+                'data' => [],
+            ], 404);
+        }
+        try {
+            $response = Http::withOptions([
+                'verify' => false,
+            ])
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                    'Authorization' => request()->header('authorization')
+                ])
+                ->delete("https://10.27.0.109:32002/api/v1/salesInvoices/{$id}");
+
+            return response()->json([
+                'status' => $response->successful() ? 'success' : 'failed',
+                'data' => $response->json(),
+            ], $response->status());
+        } catch (Throwable $e) {
+            return response()->json([
+                'status' => 'failed',
+                'message' => $e->getMessage(),
+            ], 422);
+        }
     }
 }
     // public function purchaseinvoicedetails(Request $request)
