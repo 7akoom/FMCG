@@ -256,6 +256,8 @@ Route::controller(CollectionController::class)
                     Route::post('/transferofreceivables', 'transferFromSalesmanToAccountant');
                     Route::post('/newcurrentaccountcollection', 'currentAccountCollections');
                     Route::post('/newcurrentaccountpayment', 'currentAccountPayment');
+                    Route::post('/transferdebt/{safeId}', 'transferDebt');
+                    Route::post('/create-safe-transaction/{safeId}', 'newTransactionData');
                 });
                 Route::prefix('salesman')
                     ->group(function () {
