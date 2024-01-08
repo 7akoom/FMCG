@@ -175,6 +175,7 @@ Route::controller(InvoiceController::class)
                     Route::post('/invoicedetails', 'accountingSalesmanInvoiceDetails');
 
                     Route::post('/newsalesinvoice', 'store');
+                    Route::post('/newreturnsalesinvoice', 'storeReturnInvoice');
                     Route::post('/bill/{orderId}', 'billOrder');
                     Route::post('/edit/{invoiceId}', 'edit');
                     Route::post('/update/{invoiceId}', 'update');
@@ -257,6 +258,7 @@ Route::controller(CollectionController::class)
                     Route::post('/newcurrentaccountcollection', 'currentAccountCollections');
                     Route::post('/newcurrentaccountpayment', 'currentAccountPayment');
                     Route::post('/transferdebt/{safeId}', 'transferDebt');
+                    Route::post('/transferdues/{safeId}', 'transferDues');
                     Route::post('/create-safe-transaction/{safeId}', 'newTransactionData');
                 });
                 Route::prefix('salesman')

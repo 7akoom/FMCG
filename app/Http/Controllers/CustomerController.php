@@ -342,7 +342,7 @@ class CustomerController extends Controller
                 "{$this->customersTable}.city",
                 "{$this->customersTable}.addr2 as zone",
                 "{$this->customersTable}.addr1 as address",
-                "{$this->customersTable}.spcode2 as customer_type",
+                "{$this->customersTable}.specode2 as customer_type",
                 "{$this->payplansTable}.code as payment_plan",
                 DB::raw("COALESCE({$this->customersLimitTable}.accrisklimit, 0) as limit")
             )

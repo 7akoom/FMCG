@@ -504,6 +504,64 @@ class CollectionController extends Controller
             ], 422);
         }
     }
+
+    public function transferDues($id)
+    {
+        $safe_source = $this->fetchValueFromTable($this->safesTable, 'logicalref', $id, 'code');
+        $safe_destination = request()->destination_safe;
+        $creator = DB::table('L_CAPIUSER')->where('name', request()->header('username'))->value('logicalref');
+        $safe_destination_name = $this->fetchValueFromTable($this->safesTable, 'code', $safe_destination, 'name');
+        $data = [
+            'INTERNAL_REFERENCE' => 0,
+            'TYPE' => 73,
+            'SD_CODE' => request()->destination_safe,
+            'SD_CODE_CROSS' => $safe_source,
+            'SD_NUMBER_CROSS' => InvoiceNumberGenerator::generateInvoiceNumber($this->safesTransactionsTable),
+            "DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "HOUR" => Carbon::now()->timezone('Asia/Baghdad')->format('h'),
+            "MINUTE" => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
+            "NUMBER" => InvoiceNumberGenerator::generateSafeNumber($this->customerTransactionsTable),
+            "MASTER_TITLE" => $safe_destination_name,
+            "DESCRIPTION" => request()->description,
+            "AMOUNT" => request()->amount,
+            "RC_XRATE" => 1,
+            "RC_AMOUNT" => request()->amount,
+            "TC_XRATE" => 1,
+            "TC_AMOUNT" => request()->amount,
+            "CURR_TRANS" => 30,
+            "CREATED_BY" => $creator,
+            "DATE_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "HOUR_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('h'),
+            "MIN_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
+            "SEC_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('s'),
+            "DOC_DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "TIME" => TimeHelper::calculateTime(),
+            "CROSS_TC_XRATE" => 1,
+            "CROSS_TC_CURR" => 30,
+            "CROSS_TC_AMOUNT" => request()->amount,
+        ];
+        try {
+            $response = Http::withOptions([
+                'verify' => false,
+            ])
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                    'Authorization' => request()->header('authorization')
+                ])
+                ->withBody(json_encode($data), 'application/json')
+                ->post('https://10.27.0.109:32002/api/v1/safeDepositSlips');
+            return response()->json([
+                'status' => $response->successful() ? 'success' : 'failed',
+                'Order' => $response->json(),
+            ], $response->status());
+        } catch (Throwable $e) {
+            return response()->json([
+                'status' => 'Payment failed',
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
     public function newTransactionData($id)
     {
         $source_safe = $this->fetchValueFromTable($this->safesTable, 'logicalref', $id, 'code');
