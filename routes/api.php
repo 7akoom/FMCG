@@ -235,9 +235,9 @@ Route::controller(SafeController::class)
                     Route::post('/update/{safeID}', 'update');
                     Route::post('/delete/{safeID}', 'destroy');
                     Route::post('/addingsafedata', 'addSafeData');
-                    Route::post('/safesinformation/{safe_code}', 'safesInformation');
-                    Route::post('/safetransaction', 'accountingsalesmanSafeTransaction');
-                    Route::post('/generalsafetransaction', 'accountingSafeTransaction');
+                    Route::post('/safe-information/{safeId}', 'safesInformation');
+                    Route::post('/safe-transaction', 'accountingsalesmanSafeTransaction');
+                    Route::post('/general-safe-transaction', 'accountingSafeTransaction');
                     Route::post('/transactiondetails/{id}', 'fetchTransactionDetails');
                 });
                 Route::prefix('salesman')
@@ -253,9 +253,7 @@ Route::controller(CollectionController::class)
         Route::prefix('collection')
             ->group(function () {
                 Route::prefix('accounting')->group(function () {
-                    Route::post('/addtransactiondata', 'addTransactionData');
-                    Route::post('/transferofreceivables', 'transferFromSalesmanToAccountant');
-                    Route::post('/newcurrentaccountcollection', 'currentAccountCollections');
+                    Route::post('/arp-transaction-collection/{SafeId}', 'accountingCurrentAccountCollections');
                     Route::post('/newcurrentaccountpayment', 'currentAccountPayment');
                     Route::post('/transferdebt/{safeId}', 'transferDebt');
                     Route::post('/transferdues/{safeId}', 'transferDues');

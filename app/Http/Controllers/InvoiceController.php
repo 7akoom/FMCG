@@ -349,6 +349,7 @@ class InvoiceController extends Controller
             "DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
             'TIME' => $data['TIME'],
             "INVOICE_NUMBER" => $data['NUMBER'],
+            "SOURCEINDEX" => $request->input('stock_number'),
             "ARP_CODE" => $request->customer_code,
             "INVOICED" => 1,
             "TOTLA_DISCOUNTS" => $request->total_discounts,
@@ -372,7 +373,7 @@ class InvoiceController extends Controller
             "SHIP_DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
             "SHIP_TIME" => TimeHelper::calculateTime(),
             "DOC_DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
-            "DOC_TIME" => TimeHelper::calculateTime(),            
+            "DOC_TIME" => TimeHelper::calculateTime(),
         ];
         $transactions = $request->input('TRANSACTIONS.items');
         foreach ($transactions as $item) {
@@ -391,12 +392,15 @@ class InvoiceController extends Controller
                 "QUANTITY" => $quantity,
                 "PRICE" => $price,
                 "TOTAL" => $total,
+                "CURR_PRICE" => 30,
+                "PC_PRICE" => $price,
                 "RC_XRATE" => 1,
                 "COST_DISTR" => $request->total_discounts,
                 "DISCOUNT_DISTR" => $request->total_discounts,
                 "UNIT_CODE" => $unit_code,
                 "VAT_BASE" => $total - $request->total_discounts,
                 "BILLED" => 1,
+                "RET_COST_TYPE" => 1,
                 "TOTAL_NET" => $total - $request->total_discounts,
                 "DISPATCH_NUMBER" => $DISPATCHES['NUMBER'],
                 "MULTI_ADD_TAX" => 0,
@@ -677,7 +681,7 @@ class InvoiceController extends Controller
         if (!$invoice) {
             return response()->json([
                 'status' => 'failed',
-                'status' => 'Invoice is not exist',
+                'message' => 'Invoice is not exist',
                 'data' => [],
             ], 404);
         }
@@ -780,7 +784,8 @@ class InvoiceController extends Controller
             }
             $data['TRANSACTIONS']['items'][] = $itemData;
         }
-        $PAYMENT = [
+        if($payment){
+            $PAYMENT = [
             "INTERNAL_REFERENCE" => $payment->LOGICALREF,
             "DATE" => $payment->DATE_,
             "MODULENR" => 4,
@@ -791,8 +796,9 @@ class InvoiceController extends Controller
             "PAY_NO" => 1,
             "DISCTRDELLIST" => 0,
         ];
-        $data['DISPATCHES']['items'][] = $DISPATCHES;
         $data['PAYMENT_LIST']['items'][] = $PAYMENT;
+        }
+        $data['DISPATCHES']['items'][] = $DISPATCHES;
         try {
             $response = Http::withOptions([
                 'verify' => false,

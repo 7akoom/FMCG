@@ -168,54 +168,105 @@ class CollectionController extends Controller
         }
     }
 
-    public function transferFromSalesmanToAccountant(Request $request)
-    {
-        $source_safe = $request->header('sourcesafe');
-        $destination_safe = $request->input('destination_safe');
-        $name = $this->fetchValueFromTable($this->safesTable, 'code', $destination_safe, 'name');
+    public function accountingCurrentAccountCollections($id)
+    {   
+        $customer_code = request()->input('customer_code');
+        $customer_name = $this->fetchValueFromTable($this->customersTable,'code', $customer_code,'definition_');
+        $safe_code = $this->fetchValueFromTable($this->safesTable,'logicalref', $id,'code');
         $data = [
             "INTERNAL_REFERENCE" => 0,
-            "TYPE" => 73,
-            "SD_CODE" => $source_safe,
-            "SD_CODE_CROSS" => $destination_safe,
-            "SD_NUMBER_CROSS" => "~",
-            "DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "TYPE" => 11,
+            "SD_CODE" => $safe_code,
+            "CROSS_DATA_REFERENCE" => 0,
+            "DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d H:i:s.v'),
             "HOUR" => Carbon::now()->timezone('Asia/Baghdad')->format('H'),
             "MINUTE" => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
-            "NUMBER" => "~",
-            "MASTER_TITLE" => $name,
-            "AMOUNT" => $request->amount,
+            "NUMBER" => InvoiceNumberGenerator::generateInvoiceNumber($this->safesTransactionsTable),
+            "MASTER_TITLE" => $customer_name,
+            "DESCRIPTION" => request()->note,
+            "AMOUNT" => request()->amount,
             "RC_XRATE" => 1,
-            "RC_AMOUNT" => $request->amount,
+            "RC_AMOUNT" => request()->amount,
             "TC_XRATE" => 1,
-            "TC_AMOUNT" => $request->amount,
-            "DESCRIPTION" => $request->description,
+            "TC_AMOUNT" => request()->amount,
             "CURR_TRANS" => 30,
-            "CREATED_BY" => request()->header('username'),
-            "DATE_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "CREATED_BY" => 139,
+            "DATE_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d H:i:s.v'),
             "HOUR_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('H'),
             "MIN_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('i'),
             "SEC_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('s'),
+            "DATA_REFERENCE" => 0,
             "DOC_DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
-            "TIME" => TimeHelper::calculateTime(),
-            "CROSS_TC_XRATE" => 1,
-            "CROSS_TC_CURR" => 30,
-            "CROSS_TC_AMOUNT" => $request->amount,
+            'TIME' => TimeHelper::calculateTime(),
         ];
+        $ATTACHMENT_ARP = [
+            "INTERNAL_REFERENCE" => 0,
+            "ARP_CODE" => $customer_code,
+            "TRANNO" => InvoiceNumberGenerator::generateSafeNumber($this->customerTransactionsTable),
+            "DESCRIPTION" => request()->note,
+            "CREDIT" => request()->amount,
+            "CURR_TRANS" => 30,
+            "TC_XRATE" => 1,
+            "TC_AMOUNT" => request()->amount,
+            "RC_XRATE" => 1,
+            "RC_AMOUNT" => request()->amount,
+            "MONTH" => Carbon::now()->timezone('Asia/Baghdad')->format('m'),
+            "YEAR" => Carbon::now()->timezone('Asia/Baghdad')->format('Y'),
+            "AFFECT_RISK" => 1,
+            "DOC_DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "SALESMANREF" => request()->salesman_code,
+            "DISTRIBUTION_TYPE_FNO" => 0,
+        ];
+        $PAYMENT_LIST = [
+            "INTERNAL_REFERENCE" => 0,
+            "DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d H:i:s.v'),
+            "MODULENR" => 10,
+            "SIGN" => 1,
+            "TRCODE" => 1,
+            "TOTAL" => request()->amount,
+            "PROCDATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "TRCURR" => 30,
+            "TRRATE" => 1,
+            "REPORTRATE" => 1,
+            "DATA_REFERENCE" => 0,
+            "DISCOUNT_DUEDATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
+            "PAY_NO" => 1,
+            "DISCTRDELLIST" => 0,
+            "TRNET" => request()->amount,
+            "LINE_EXP" => request()->note,
+        ];
+        $ATTACHMENT_ARP['PAYMENT_LIST']['items'][] = $PAYMENT_LIST;
+        $data['ATTACHMENT_ARP']['items'][] = $ATTACHMENT_ARP;
         try {
+
             $response = Http::withOptions([
                 'verify' => false,
             ])
                 ->withHeaders([
                     'Accept' => 'application/json',
                     'Content-Type' => 'application/json',
-                    'Authorization' => $request->header('authorization')
+                    'Authorization' => request()->header('authorization')
                 ])
                 ->withBody(json_encode($data), 'application/json')
                 ->post('https://10.27.0.109:32002/api/v1/safeDepositSlips');
+            $responseData = $response->json();
+            $payment = DB::table("$this->safesTransactionsTable")
+                ->leftjoin("$this->customersViewsTable", "$this->customersViewsTable.definition_", "=", "$this->safesTransactionsTable.custtitle")
+                ->select(
+                    "$this->safesTransactionsTable.CAPIBLOCK_CREADEDDATE as date",
+                    "$this->safesTransactionsTable.CUSTTITLE as customer_name",
+                    "$this->safesTransactionsTable.FICHENO as payment_number",
+                    "$this->safesTransactionsTable.AMOUNT",
+                    "$this->customersViewsTable.debit",
+                    "$this->customersViewsTable.credit"
+                )
+                ->where([
+                    "$this->safesTransactionsTable.logicalref" => $responseData['INTERNAL_REFERENCE'],
+                ])
+                ->first();
             return response()->json([
                 'status' => $response->successful() ? 'success' : 'failed',
-                'transaction' => $response->json(),
+                'Order' => $payment,
             ], $response->status());
         } catch (Throwable $e) {
             return response()->json([
@@ -224,6 +275,7 @@ class CollectionController extends Controller
             ], 422);
         }
     }
+
     public function currentAccountPayment(Request $request)
     {
         $source_safe = $request->header('sourcesafe');
@@ -305,20 +357,6 @@ class CollectionController extends Controller
         }
     }
 
-    public function addTransactionData()
-    {
-        $ficheno = DB::table($this->safesTransactionsTable)
-            ->orderby('logicalref', 'desc')
-            ->value('ficheno');
-        $safes = DB::table($this->safesTable)
-            ->select('logicalref as id', 'code', 'name', 'specode')
-            ->get();
-        return response()->json([
-            'message' => 'Adding transaction data',
-            'transaction_number' => $ficheno,
-            'safes' => $safes,
-        ], 200);
-    }
     public function cashVan()
     {
         $salesman_specode = $this->fetchValueFromTable($this->salesmansTable, 'definition_', $this->username, 'specode');
