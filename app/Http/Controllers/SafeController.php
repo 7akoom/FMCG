@@ -353,28 +353,19 @@ class SafeController extends Controller
 
     public function accountingsalesmanSafeTransaction(Request $request)
     {
-        $salesman_name = $this->fetchValueFromTable($this->salesmansTable, 'logicalref', $this->salesman_id, 'definition_');
-        $safe_id = $this->fetchValueFromTable($this->safesTable, 'name', $salesman_name, 'logicalref');
-        $result = DB::table("$this->safesTransactionsTable")
-            ->join("$this->safesTransactionsTable as tr", "tr.transref", '=', "$this->safesTransactionsTable.logicalref")
-            ->where(function ($query) use ($safe_id) {
-                $query->where(["$this->safesTransactionsTable.cardref" => $safe_id,"$this->safesTransactionsTable.trcode" => 74 ])
-                    ->orWhere(["$this->safesTransactionsTable.vcardref" => $safe_id,"$this->safesTransactionsTable.trcode" => 73]);
+        $safe_code = request()->header('safe-code');
+        $safe_id = $this->fetchValueFromTable($this->safesTable, 'code', $safe_code, 'logicalref');
+        $result = DB::table($this->safesTransactionsTable . ' AS LG')
+            ->select('LG.LOGICALREF AS id', 'LG.FICHENO AS safe_transaction_number', DB::raw('COALESCE(TR.FICHENO, LG.FICHENO) AS transaction_number'))
+            ->leftJoin($this->safesTransactionsTable . ' AS TR', function ($join) use ($safe_id) {
+                $join->on('TR.TRANSREF', '=', 'LG.LOGICALREF')
+                    ->where('TR.VCARDREF', '=', $safe_id);
             })
-            ->join("$this->safesTable", "$this->safesTable.logicalref", '=', "$this->safesTransactionsTable.cardref")
-            ->select(
-                "$this->safesTransactionsTable.logicalref as id",
-                "$this->safesTransactionsTable.date_ as date",
-                "$this->safesTransactionsTable.ficheno as safe_transaction_number",
-                "$this->safesTransactionsTable.custtitle as safe_description",
-                "tr.ficheno as transaction_number",
-                "$this->safesTransactionsTable.amount",
-                "$this->safesTransactionsTable.lineexp as description",
-                "$this->safesTransactionsTable.sign as transaction_type",
-                "$this->safesTransactionsTable.docode as document_number"
-            )
-            ->where(["$this->safesTransactionsTable.cardref" => $safe_id])
+            ->where('LG.CARDREF', '=', $safe_id)
             ->paginate($this->perpage);
+
+
+
 
         $total_collection = DB::table("$this->safesTransactionsTable")
             ->join("$this->safesTable", "$this->safesTable.logicalref", "=", "$this->safesTransactionsTable.cardref")
