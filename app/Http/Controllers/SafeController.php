@@ -356,13 +356,31 @@ class SafeController extends Controller
         $safe_code = request()->header('safe-code');
         $safe_id = $this->fetchValueFromTable($this->safesTable, 'code', $safe_code, 'logicalref');
         $result = DB::table($this->safesTransactionsTable . ' AS LG')
-            ->select('LG.LOGICALREF AS id', 'LG.FICHENO AS safe_transaction_number', DB::raw('COALESCE(TR.FICHENO, LG.FICHENO) AS transaction_number'))
+            ->select(
+                'LG.LOGICALREF AS id',
+                'LG.FICHENO AS safe_transaction_number',
+                DB::raw('COALESCE(TR.FICHENO, LG.FICHENO) AS transaction_number'),
+                'LG.amount',
+                'LG.docode as document_number',
+                'LG.lineexp as explain',
+                'LG.date_ as date',
+                DB::raw("(SELECT CASE 
+                    WHEN LG.trcode = '11' THEN 'Current Account Collection(11)'
+                    WHEN LG.trcode = '12' THEN 'Current Account Payment(12)'
+                    WHEN LG.trcode = '37' THEN 'Wholesale Invoice(73)'
+                    WHEN LG.trcode = '73' THEN 'Debt Transfer(73)'
+                    WHEN LG.trcode = '74' THEN 'Receivable Transfer(74)'
+                    ELSE 'DefaultName' 
+                END) AS transaction_type")
+            )
             ->leftJoin($this->safesTransactionsTable . ' AS TR', function ($join) use ($safe_id) {
                 $join->on('TR.TRANSREF', '=', 'LG.LOGICALREF')
                     ->where('TR.VCARDREF', '=', $safe_id);
             })
             ->where('LG.CARDREF', '=', $safe_id)
             ->paginate($this->perpage);
+
+
 
 
 
