@@ -620,7 +620,7 @@ class InvoiceController extends Controller
         if (!$invoice) {
             return response()->json([
                 'status' => 'failed',
-                'status' => 'Invoice is not exist',
+                'message' => 'Invoice is not exist',
                 'data' => [],
             ], 404);
         }
@@ -830,7 +830,7 @@ class InvoiceController extends Controller
         if (!$invoice) {
             return response()->json([
                 'status' => 'failed',
-                'status' => 'Invoice is not exist',
+                'message' => 'Invoice is not exist',
                 'data' => [],
             ], 404);
         }
@@ -978,7 +978,7 @@ class InvoiceController extends Controller
         if (!$invoice) {
             return response()->json([
                 'status' => 'failed',
-                'status' => 'Invoice is not exist',
+                'message' => 'Invoice is not exist',
                 'data' => [],
             ], 404);
         }
