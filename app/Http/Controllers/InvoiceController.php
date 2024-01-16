@@ -784,19 +784,19 @@ class InvoiceController extends Controller
             }
             $data['TRANSACTIONS']['items'][] = $itemData;
         }
-        if($payment){
+        if ($payment) {
             $PAYMENT = [
-            "INTERNAL_REFERENCE" => $payment->LOGICALREF,
-            "DATE" => $payment->DATE_,
-            "MODULENR" => 4,
-            "TRCODE" => 8,
-            "TOTAL" => $payment->TOTAL,
-            "PROCDATE" => $payment->PROCDATE,
-            "REPORTRATE" => 1,
-            "PAY_NO" => 1,
-            "DISCTRDELLIST" => 0,
-        ];
-        $data['PAYMENT_LIST']['items'][] = $PAYMENT;
+                "INTERNAL_REFERENCE" => $payment->LOGICALREF,
+                "DATE" => $payment->DATE_,
+                "MODULENR" => 4,
+                "TRCODE" => 8,
+                "TOTAL" => $payment->TOTAL,
+                "PROCDATE" => $payment->PROCDATE,
+                "REPORTRATE" => 1,
+                "PAY_NO" => 1,
+                "DISCTRDELLIST" => 0,
+            ];
+            $data['PAYMENT_LIST']['items'][] = $PAYMENT;
         }
         $data['DISPATCHES']['items'][] = $DISPATCHES;
         try {
@@ -1564,10 +1564,8 @@ class InvoiceController extends Controller
                 "$this->invoicesTable.docode as from_p_invoice"
             )
             ->where("$this->invoicesTable.salesmanref", $this->salesman_id)
-            ->whereBetween("$this->invoicesTable.capiblock_creadeddate", [now()->subMonths(2), now()])
             ->orderBy("$this->invoicesTable.capiblock_creadeddate", "desc")
-            ->get();
-
+            ->paginate($this->perpage);
         if ($invoices->isEmpty()) {
             return response()->json([
                 'status' => 'success',
@@ -1575,11 +1573,16 @@ class InvoiceController extends Controller
                 'data' => [],
             ]);
         }
-
         return response()->json([
             'status' => 'success',
             'message' => 'Last two months invoices',
-            'data' => $invoices,
+            'total' => $invoices->total(),
+            'data' => $invoices->items(),
+            'current_page' => $invoices->currentPage(),
+            'per_page' => $invoices->perPage(),
+            'next_page' => $invoices->nextPageUrl($this->page),
+            'previous_page' => $invoices->previousPageUrl($this->page),
+            'last_page' => $invoices->lastPage(),
         ]);
     }
 
@@ -1953,6 +1956,85 @@ class InvoiceController extends Controller
                 'message' => $e->getMessage(),
             ], 422);
         }
+    }
+
+    public function wareHouseInvoices(Request $request)
+    {
+        $invoices = DB::table("$this->invoicesTable")
+            ->leftjoin($this->salesmansTable, "$this->invoicesTable.salesmanref", "=", "$this->salesmansTable.logicalref")
+            ->leftjoin($this->customersTable, "$this->invoicesTable.clientref", "=", "$this->customersTable.logicalref")
+            ->select(
+                DB::raw("COALESCE($this->salesmansTable.definition_, '0') as salesman_name"),
+                "$this->customersTable.logicalref as customer_id",
+                "$this->customersTable.code as customer_code",
+                "$this->customersTable.definition_ as customer_name",
+                "$this->invoicesTable.logicalref as invoice_id",
+                "$this->invoicesTable.capiblock_creadeddate as invoice_date",
+                "$this->invoicesTable.ficheno as invoice_number",
+                "$this->invoicesTable.nettotal as total_amount",
+                "$this->invoicesTable.docode as from_p_invoice"
+            )
+            ->where([
+                "$this->invoicesTable.grpcode" => 2,
+                "$this->invoicesTable.trcode" => $this->transaction_code,
+            ]);
+        if ($this->stock_number) {
+            $invoices->where("$this->invoicesTable.sourceindex", 3);
+        }
+        $this->applyFilters($invoices, [
+            "$this->customersTable.code" => [
+                'value' => '%' . $request->input('customer_code') . '%',
+                'operator' => 'LIKE',
+            ],
+            "$this->customersTable.definition_" => [
+                'value' => '%' . $request->input('customer_name') . '%',
+                'operator' => 'LIKE',
+            ],
+            "$this->invoicesTable.ficheno" => [
+                'value' => '%' . $request->input('invoice_number') . '%',
+                'operator' => 'LIKE',
+            ],
+            "$this->invoicesTable.sourceindex" => [
+                'value' => $request->input('warehouse_number'),
+                'operator' => '=',
+            ],
+            "$this->invoicesTable.capiblock_createdby" => [
+                'value' => $request->input('added_by'),
+                'operator' => '=',
+            ],
+            "$this->invoicesTable.capiblock_modifiedby" => [
+                'value' => $request->input('modified_by'),
+                'operator' => '=',
+            ],
+        ]);
+        if ($request->input('start_date') && $request->input('end_date')) {
+            $this->start_date = request()->input('start_date');
+            $this->end_date = request()->input('end_date');
+            if ($this->start_date != '-1' && $this->end_date != '-1') {
+                $invoices->whereBetween(DB::raw("CONVERT(date, $this->invoicesTable.date_)"), [$this->start_date, $this->end_date]);
+            }
+        }
+
+        $invoicesData = $invoices->orderBy("$this->invoicesTable.date_", "desc")->paginate($this->perpage);
+
+        if ($invoicesData->isEmpty()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'There is no data',
+                'data' => [],
+            ]);
+        }
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Invoices list',
+            'total' => $invoicesData->total(),
+            'data' => $invoicesData->items(),
+            'current_page' => $invoicesData->currentPage(),
+            'per_page' => $invoicesData->perPage(),
+            'next_page' => $invoicesData->nextPageUrl($this->page),
+            'previous_page' => $invoicesData->previousPageUrl($this->page),
+            'last_page' => $invoicesData->lastPage(),
+        ]);
     }
 }
 // public function purchaseinvoicedetails(Request $request)

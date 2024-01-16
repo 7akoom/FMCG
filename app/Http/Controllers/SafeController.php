@@ -20,6 +20,7 @@ class SafeController extends Controller
     protected $active;
     protected $perpage;
     protected $page;
+    protected $weightsTable;
     protected $salesman_id;
     protected $salesmansTable;
     protected $safesTable;
@@ -33,6 +34,8 @@ class SafeController extends Controller
     protected $whousesTable;
     protected $specodesTable;
     protected $customerTransactionsTable;
+    protected $stocksTransactionsTable;
+
 
     public function __construct(Request $request)
     {
@@ -43,10 +46,12 @@ class SafeController extends Controller
         $this->page = $request->input('page', 1);
         $this->salesman_id = $request->header('id');
         $this->salesmansTable = 'LG_SLSMAN';
+        $this->stocksTransactionsTable = 'LG_' . $this->code . '_01_STLINE';
         $this->whousesTable = 'L_CAPIWHOUSE';
         $this->safesTable = 'LG_' . $this->code . '_KSCARD';
         $this->itemsTable = 'LG_' . $this->code . '_ITEMS';
         $this->unitsTable = 'LG_' . $this->code . '_UNITSETL';
+        $this->weightsTable = 'LG_' . $this->code . '_ITMUNITA';
         $this->customersTable = 'LG_' . $this->code . '_CLCARD';
         $this->specodesTable = 'LG_' . $this->code . '_SPECODES';
         $this->currenciesTable = 'L_CURRENCYLIST';
@@ -484,34 +489,51 @@ class SafeController extends Controller
             ], 404);
         }
         if ($record != 37) {
-            $transaction = DB::table($this->safesTransactionsTable)
-                ->leftJoin("$this->customerTransactionsTable", "$this->customerTransactionsTable.logicalref", '=', "$this->safesTransactionsTable.transref")
-                ->leftJoin("$this->salesmansTable as sls", function ($join) {
-                    $join->on('sls.logicalref', '=', "$this->customerTransactionsTable.salesmanref")
-                        ->where('sls.firmnr', '=', $this->code);
-                })
-                ->leftJoin("$this->safesTable", "$this->safesTable.logicalref", '=', "$this->safesTransactionsTable.cardref")
-                ->join("$this->customersTable", "$this->customersTable.logicalref", '=', "$this->customerTransactionsTable.CLIENTREF")
-                ->select(
-                    "$this->safesTable.code as safe_code",
-                    "$this->safesTable.name as safe_name",
-                    "$this->safesTransactionsTable.ficheno as safe_transaction_number",
-                    DB::raw('CASE WHEN ' . $this->safesTransactionsTable . '.trcode IN (11, 12) THEN ' . "$this->customerTransactionsTable.tranno" . ' ELSE ' . "$this->customerTransactionsTable.tranno" . ' END AS transaction_number'),
-                    "$this->safesTransactionsTable.date_",
-                    "$this->safesTransactionsTable.hour_",
-                    "$this->safesTransactionsTable.minute_",
-                    DB::raw("COALESCE(sls.definition_, '0') as salesman_name"),
-                    "$this->safesTransactionsTable.amount",
-                    "$this->safesTransactionsTable.lineexp as safe_description",
-                    "$this->customerTransactionsTable.clientref as customer_id",
-                    "$this->customersTable.code as customer_code",
-                    "$this->customersTable.definition_ as customer_name"
-                );
+            if ($record == 11 || $record == 12) {
+                $transaction = DB::table($this->safesTransactionsTable)
+                    ->leftJoin("$this->customerTransactionsTable", "$this->customerTransactionsTable.logicalref", '=', "$this->safesTransactionsTable.transref")
+                    ->leftJoin("$this->salesmansTable as sls", function ($join) {
+                        $join->on('sls.logicalref', '=', "$this->customerTransactionsTable.salesmanref")
+                            ->where('sls.firmnr', '=', $this->code);
+                    })
+                    ->leftJoin("$this->safesTable", "$this->safesTable.logicalref", '=', "$this->safesTransactionsTable.cardref")
+                    ->join("$this->customersTable", "$this->customersTable.logicalref", '=', "$this->customerTransactionsTable.CLIENTREF")
+                    ->select(
+                        "$this->safesTable.code as safe_code",
+                        "$this->safesTable.name as safe_name",
+                        "$this->safesTransactionsTable.ficheno as safe_transaction_number",
+                        DB::raw('CASE WHEN ' . $this->safesTransactionsTable . '.trcode IN (11, 12) THEN ' . "$this->customerTransactionsTable.tranno" . ' ELSE ' . "$this->customerTransactionsTable.tranno" . ' END AS transaction_number'),
+                        "$this->safesTransactionsTable.date_",
+                        "$this->safesTransactionsTable.hour_",
+                        "$this->safesTransactionsTable.minute_",
+                        DB::raw("COALESCE(sls.definition_, '0') as salesman_name"),
+                        "$this->safesTransactionsTable.amount",
+                        "$this->safesTransactionsTable.lineexp as safe_description",
+                        "$this->customerTransactionsTable.clientref as customer_id",
+                        "$this->customersTable.code as customer_code",
+                        "$this->customersTable.definition_ as customer_name"
+                    )
+                    ->where("$this->safesTransactionsTable.logicalref", "=", $id)
+                    ->first();
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'transaction details',
+                    'data' => $transaction
+                ], 200);
+            }
             if ($record == 73) {
-                $transaction->leftJoin("$this->safesTransactionsTable AS TR", function ($join) {
-                    $join->on('TR.TRANSREF', '=', "$this->safesTransactionsTable.LOGICALREF")
-                        ->where('TR.trcode', 74);
-                })
+                $transaction = DB::table($this->safesTransactionsTable)
+                    ->leftJoin("$this->customerTransactionsTable", "$this->customerTransactionsTable.logicalref", '=', "$this->safesTransactionsTable.transref")
+                    ->leftJoin("$this->salesmansTable as sls", function ($join) {
+                        $join->on('sls.logicalref', '=', "$this->customerTransactionsTable.salesmanref")
+                            ->where('sls.firmnr', '=', $this->code);
+                    })
+                    ->leftJoin("$this->safesTable", "$this->safesTable.logicalref", '=', "$this->safesTransactionsTable.cardref")
+                    ->join("$this->customersTable", "$this->customersTable.logicalref", '=', "$this->customerTransactionsTable.CLIENTREF")
+                    ->leftJoin("$this->safesTransactionsTable AS TR", function ($join) {
+                        $join->on('TR.TRANSREF', '=', "$this->safesTransactionsTable.LOGICALREF")
+                            ->where('TR.trcode', 74);
+                    })
                     ->leftJoin("$this->safesTable as sf", "sf.logicalref", '=', "TR.cardref")
                     ->select(
                         "$this->safesTable.code as safe_code",
@@ -525,13 +547,27 @@ class SafeController extends Controller
                         "sf.name as destination_safe_name",
                         "$this->safesTransactionsTable.amount",
                         "$this->safesTransactionsTable.lineexp as safe_description",
-                    );
+                    )->where("$this->safesTransactionsTable.logicalref", "=", $id)
+                    ->first();
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'transaction details',
+                    'data' => $transaction
+                ], 200);
             }
             if ($record == 74) {
-                $transaction->leftJoin("$this->safesTransactionsTable AS TR", function ($join) {
-                    $join->on('TR.TRANSREF', '=', "$this->safesTransactionsTable.LOGICALREF")
-                        ->where('TR.trcode', 73);
-                })
+                $transaction = DB::table($this->safesTransactionsTable)
+                    ->leftJoin("$this->customerTransactionsTable", "$this->customerTransactionsTable.logicalref", '=', "$this->safesTransactionsTable.transref")
+                    ->leftJoin("$this->salesmansTable as sls", function ($join) {
+                        $join->on('sls.logicalref', '=', "$this->customerTransactionsTable.salesmanref")
+                            ->where('sls.firmnr', '=', $this->code);
+                    })
+                    ->leftJoin("$this->safesTable", "$this->safesTable.logicalref", '=', "$this->safesTransactionsTable.cardref")
+                    ->join("$this->customersTable", "$this->customersTable.logicalref", '=', "$this->customerTransactionsTable.CLIENTREF")
+                    ->leftJoin("$this->safesTransactionsTable AS TR", function ($join) {
+                        $join->on('TR.TRANSREF', '=', "$this->safesTransactionsTable.LOGICALREF")
+                            ->where('TR.trcode', 73);
+                    })
                     ->leftJoin("$this->safesTable as sf", "sf.logicalref", '=', "TR.cardref")
                     ->select(
                         "$this->safesTable.code as safe_code",
@@ -545,62 +581,90 @@ class SafeController extends Controller
                         "sf.name as destination_safe_name",
                         "$this->safesTransactionsTable.amount",
                         "$this->safesTransactionsTable.lineexp as safe_description",
-                    );
+                    )
+                    ->where("$this->safesTransactionsTable.logicalref", "=", $id)
+                    ->first();
+
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'transaction details',
+                    'data' => $transaction
+                ], 200);
             }
-            $transaction = $transaction
-                ->where("$this->safesTransactionsTable.logicalref", "=", $id)
-                ->first();
-        }
-        $transaction = DB::table("$this->safesTransactionsTable as sfl")
-            ->join("$this->safesTable as sf", "sf.logicalref", "=", "sfl.cardref")
-            ->join("$this->invoicesTable as inv", "inv.logicalref", "=", "sfl.transref")
-            ->join("$this->salesmansTable as sls", "sls.logicalref", "=", "inv.salesmanref")
-            ->join("$this->customersTable as arp", "inv.clientref", "=", "arp.logicalref")
-            ->join("$this->itemsTransactionsTable as stl", "stl.invoiceref", "=", "inv.logicalref")
-            ->join("$this->unitsTable as unt", "unt.logicalref", "=", "stl.uomref")
-            ->join("$this->itemsTable as it", "it.logicalref", "=", "stl.stockref")
-            ->join("$this->whousesTable as wh", "wh.nr", "=", "inv.sourceindex");
-        $info = $transaction->select(
-            "sf.code as safe_code",
-            "sfl.ficheno as safe_trnsaction_number",
-            "inv.ficheno as invoice_number",
-            DB::raw("CONVERT(DATE, inv.CAPIBLOCK_CREADEDDATE) as date"),
-            DB::raw("CONVERT(DATE, inv.docdate) as editing_date"),
-            DB::raw("FORMAT(inv.CAPIBLOCK_CREADEDDATE, 'HH:mm:ss') as time"),
-            "arp.code as customer_code",
-            "arp.definition_ as customer_name",
-            "inv.sourceindex as stock_number",
-            "wh.name as stock_name",
-            "sls.code as salesman_code",
-            "sls.definition_ as salesman_name",
-            "inv.grosstotal as total_amount"
-        )
-            ->where("sfl.logicalref", $id)
-            ->first();
-        $items = DB::table("$this->itemsTransactionsTable as stl")
-            ->join("$this->itemsTable as it", "it.logicalref", "=", "stl.stockref")
-            ->join("$this->unitsTable as unt", "unt.logicalref", "=", "stl.uomref")
-            ->join("$this->whousesTable as wh", "wh.nr", "=", "stl.sourceindex")
-            ->select(
-                "it.code",
-                "it.name",
-                "stl.amount",
-                "unt.name as unit",
-                "stl.price",
-                "stl.total",
-                "stl.sourceindex as stock_number",
-                "wh.name as stock_name"
+        } elseif ($record == 37) {
+            $transaction = DB::table("$this->safesTransactionsTable as sfl")
+                ->join("$this->safesTable as sf", "sf.logicalref", "=", "sfl.cardref")
+                ->join("$this->invoicesTable as inv", "inv.logicalref", "=", "sfl.transref")
+                ->join("$this->salesmansTable as sls", "sls.logicalref", "=", "inv.salesmanref")
+                ->join("$this->customersTable as arp", "inv.clientref", "=", "arp.logicalref")
+                ->join("$this->itemsTransactionsTable as stl", "stl.invoiceref", "=", "inv.logicalref")
+                ->join("$this->unitsTable as unt", "unt.logicalref", "=", "stl.uomref")
+                ->join("$this->itemsTable as it", "it.logicalref", "=", "stl.stockref")
+                ->join("$this->whousesTable as wh", "wh.nr", "=", "inv.sourceindex");
+            $info = $transaction->select(
+                "sf.code as safe_code",
+                "sfl.ficheno as safe_trnsaction_number",
+                "inv.ficheno as invoice_number",
+                DB::raw("CONVERT(DATE, inv.CAPIBLOCK_CREADEDDATE) as date"),
+                DB::raw("CONVERT(DATE, inv.docdate) as editing_date"),
+                DB::raw("FORMAT(inv.CAPIBLOCK_CREADEDDATE, 'HH:mm:ss') as time"),
+                "arp.code as customer_code",
+                "arp.definition_ as customer_name",
+                "inv.sourceindex as stock_number",
+                "wh.name as stock_name",
+                "sls.code as salesman_code",
+                "sls.definition_ as salesman_name",
+                "inv.grosstotal as total_amount"
             )
-            ->where("stl.invoiceref", $invoice_ref)
-            ->get();
-        return response()->json([
-            'status' => 'success',
-            'message' => 'transaction details',
-            'data' => [
-                'invoice_info' => $info,
-                'invoice_items' => $items,
-            ],
-        ], 200);
+                ->where("sfl.logicalref", $id)
+                ->first();
+            // $items = DB::table("$this->itemsTransactionsTable as stl")
+            //     ->join("$this->itemsTable as it", "it.logicalref", "=", "stl.stockref")
+            //     ->join("$this->unitsTable as unt", "unt.logicalref", "=", "stl.uomref")
+            //     ->join("$this->whousesTable as wh", "wh.nr", "=", "stl.sourceindex")
+            //     ->select(
+            //         "it.code",
+            //         "it.name",
+            //         "stl.amount",
+            //         "unt.name as unit",
+            //         "stl.price",
+            //         "stl.total",
+            //         "stl.sourceindex as stock_number",
+            //         "wh.name as stock_name"
+            //     )
+            //     ->where("stl.invoiceref", $invoice_ref)
+            //     ->first();
+            $items = DB::table("$this->stocksTransactionsTable")
+                ->select(
+                    "$this->stocksTransactionsTable.invoicelnno as line",
+                    DB::raw("COALESCE($this->itemsTable.code, '') as code"),
+                    DB::raw("COALESCE($this->itemsTable.name, '') as name"),
+                    "$this->stocksTransactionsTable.amount as quantity",
+                    "$this->stocksTransactionsTable.price",
+                    "$this->stocksTransactionsTable.total",
+                    "$this->stocksTransactionsTable.distdisc as discount",
+                    "$this->weightsTable.grossweight as weight",
+                )
+                ->leftJoin("$this->itemsTable", "$this->itemsTable.logicalref", '=', "$this->stocksTransactionsTable.stockref")
+                ->leftJoin("$this->weightsTable", function ($join) {
+                    $join->on("$this->stocksTransactionsTable.stockref", '=', "$this->weightsTable.itemref")
+                        ->where("$this->weightsTable.linenr", '=', 1);
+                })
+                ->where([
+                    "$this->stocksTransactionsTable.invoiceref" => $invoice_ref,
+                    "$this->weightsTable.linenr" => 1,
+                ])
+                ->orderby("$this->stocksTransactionsTable.invoicelnno", "asc")
+                ->get();
+            return response()->json([
+                'status' => 'success',
+                'message' => 'transaction details',
+                'data' => [
+                    'invoice_info' => $info,
+                    'invoice_items' => $items,
+                ],
+            ], 200);
+        }
     }
 
     public function collectionDetails($id)

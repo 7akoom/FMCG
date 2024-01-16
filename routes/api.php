@@ -205,6 +205,7 @@ Route::controller(InvoiceController::class)
                     });
                 Route::prefix('ware-house')
                     ->group(function () {
+                        Route::post('/invoices', 'wareHouseInvoices');
                         Route::post('/prepare/{invoiceId}', 'prepare');
                     });
                 Route::prefix('driver')
@@ -254,7 +255,8 @@ Route::controller(CollectionController::class)
             ->group(function () {
                 Route::prefix('accounting')->group(function () {
                     Route::post('/arp-transaction-collection/{SafeId}', 'accountingCurrentAccountCollections');
-                    Route::post('/newcurrentaccountpayment', 'currentAccountPayment');
+                    Route::post('/update-arp-transaction/{transactionId}', 'updateTransactionCollection');
+                    Route::post('/arp-transaction-payment/{SafeId}', 'currentAccountPayment');
                     Route::post('/transferdebt/{safeId}', 'transferDebt');
                     Route::post('/transferdues/{safeId}', 'transferDues');
                     Route::post('/create-safe-transaction/{safeId}', 'newTransactionData');
