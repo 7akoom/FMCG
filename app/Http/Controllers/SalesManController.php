@@ -43,14 +43,25 @@ class SalesManController extends Controller
     public function index(Request $request)
     {
         $position = $request->input('position');
-        $salesman = DB::table($this->salesmansTable)
-            ->select('LOGICALREF as id', 'code', 'DEFINITION_ as name', 'TELNUMBER as phone')
-            ->where(['FIRMNR' => $this->code, 'ACTIVE' => $this->isactive, 'POSITION_' => $position])->get();
+        $salesman = DB::table("$this->salesmansTable as sls")
+            ->leftjoin("$this->safesTable as safe", "safe.specode", '=', "sls.specode")
+            ->select(
+                'sls.LOGICALREF as id',
+                'sls.code',
+                'sls.DEFINITION_ as name',
+                'sls.TELNUMBER as phone',
+                'safe.code as safe_code'
+            )
+            ->where([
+                'sls.FIRMNR' => $this->code,
+                'sls.ACTIVE' => $this->isactive,
+                'sls.POSITION_' => $position,
+            ])
+            ->get();
         return response()->json([
             'status' => 'success',
             'message' => 'Salesman list',
             'data' => $salesman,
-
         ]);
     }
 
@@ -76,7 +87,7 @@ class SalesManController extends Controller
             'DEFINITION' => $request->kasa_code,
         ];
         $salesman = [
-            'CODE' => $request->salesmna_code,
+            'CODE' => $request->salesman_code,
             'NAME' => $request->salesman_name,
             'POSITION' => $request->position,
             'AUXIL_CODE' => $special_code,
@@ -162,6 +173,7 @@ class SalesManController extends Controller
                 $last_slsman_value = $last_slsman->logicalref;
                 $final = [
                     'SLSMAN_LOGICALREF' => $last_slsman_value,
+                    'SLSMAN_NAME' => $salesman['NAME'],
                     'PASSWORD' => hash::make($salesman_password),
                     'IMEI' => $salesman_imei,
                 ];
@@ -212,7 +224,7 @@ class SalesManController extends Controller
             ->select('imei')
             ->where('slsman_logicalref', $id)
             ->first();
-            if ($salesman_info && $salesman_imei) {
+        if ($salesman_info && $salesman_imei) {
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -318,69 +330,69 @@ class SalesManController extends Controller
 }
 
 
-    // public function previousorders(Request $request)
-    // {
-    //     $orders = DB::table($this->salesmansTable)
-    //         ->join($this->ordersTable, "$this->ordersTable.salesmanref", "=", 'lg_slsman.logicalref')
-    //         ->join($this->customersTable, "$this->ordersTable.clientref", "=", "$this->customersTable.logicalref")
-    //         ->select(
-    //             "$this->ordersTable.logicalref as order_id",
-    //             "$this->ordersTable.ficheno as order_number",
-    //             "$this->ordersTable.capiblock_creadeddate as order_date",
-    //             "$this->ordersTable.status as order_status",
-    //             "$this->ordersTable.nettotal as order_amount",
-    //             "$this->customersTable.definition_ as customer_name"
-    //         )
-    //         ->whereMonth("$this->ordersTable.capiblock_creadeddate", '=', now()->month)
-    //         ->where("$this->ordersTable.salesmanref", $this->salesman_id)
-    //         ->orderby("$this->ordersTable.capiblock_creadeddate", "desc")
-    //         ->get();
-    //     if ($orders->isEmpty()) {
-    //         return response()->json([
-    //             'status' => 'success',
-    //             'message' => 'There is no data',
-    //             'data' => [],
-    //         ]);
-    //     }
-    //     return response()->json([
-    //         'status' => 'success',
-    //         'message' => 'Salesman list',
-    //         'data' => $orders,
-    //     ]);
-    // }
+// public function previousorders(Request $request)
+// {
+//     $orders = DB::table($this->salesmansTable)
+//         ->join($this->ordersTable, "$this->ordersTable.salesmanref", "=", 'lg_slsman.logicalref')
+//         ->join($this->customersTable, "$this->ordersTable.clientref", "=", "$this->customersTable.logicalref")
+//         ->select(
+//             "$this->ordersTable.logicalref as order_id",
+//             "$this->ordersTable.ficheno as order_number",
+//             "$this->ordersTable.capiblock_creadeddate as order_date",
+//             "$this->ordersTable.status as order_status",
+//             "$this->ordersTable.nettotal as order_amount",
+//             "$this->customersTable.definition_ as customer_name"
+//         )
+//         ->whereMonth("$this->ordersTable.capiblock_creadeddate", '=', now()->month)
+//         ->where("$this->ordersTable.salesmanref", $this->salesman_id)
+//         ->orderby("$this->ordersTable.capiblock_creadeddate", "desc")
+//         ->get();
+//     if ($orders->isEmpty()) {
+//         return response()->json([
+//             'status' => 'success',
+//             'message' => 'There is no data',
+//             'data' => [],
+//         ]);
+//     }
+//     return response()->json([
+//         'status' => 'success',
+//         'message' => 'Salesman list',
+//         'data' => $orders,
+//     ]);
+// }
 
-    // public function salesmaninvoice(Request $request)
-    // {
-    //     $invoicetype = $request->header('invoicetype');
-    //     $invoice = DB::table($this->customersTable)
-    //         ->join("$this->invoicesTable", "$this->customersTable.logicalref", "=", "$this->invoicesTable.clientref")
-    //         ->join("$this->customersTransactionsTable", "$this->invoicesTable.logicalref", "=", "$this->customersTransactionsTable.sourcefref")
-    //         ->join('lg_slsman', "lg_slsman.logicalref", "=", "$this->invoicesTable.salesmanref")
-    //         ->select(
-    //             "$this->customersTable.code as customer_code",
-    //             "$this->customersTable.definition_ as customer_name",
-    //             "$this->invoicesTable.ficheno as invoice_number",
-    //             "$this->invoicesTable.date_ as invoice_date",
-    //             "$this->customersTransactionsTable.amount as total_amount",
-    //             "$this->invoicesTable.grosstotal as weight"
-    //         )
-    //         ->orderBy("$this->invoicesTable.date_", 'desc')
-    //         ->where(["$this->invoicesTable.trcode" => $invoicetype, 'lg_slsman.logicalref' => $this->salesman_id])
-    //         ->paginate($this->perpage);
-    //     if ($invoice->isEmpty()) {
-    //         return response()->json([
-    //             'status' => 'success',
-    //             'message' => 'There is no data',
-    //             'data' => [],
-    //         ]);
-    //     }
-    //     return response()->json([
-    //         'status' => 'success',
-    //         'message' => 'Customer list',
-    //         'data' => $invoice->items(),
-    //         'current_page' => $invoice->currentPage(),
-    //         'per_page' => $invoice->perPage(),
-    //         'last_page' => $invoice->lastPage(),
-    //         'total' => $invoice->total(),
-    //     ], 200);
-    // }
+// public function salesmaninvoice(Request $request)
+// {
+//     $invoicetype = $request->header('invoicetype');
+//     $invoice = DB::table($this->customersTable)
+//         ->join("$this->invoicesTable", "$this->customersTable.logicalref", "=", "$this->invoicesTable.clientref")
+//         ->join("$this->customersTransactionsTable", "$this->invoicesTable.logicalref", "=", "$this->customersTransactionsTable.sourcefref")
+//         ->join('lg_slsman', "lg_slsman.logicalref", "=", "$this->invoicesTable.salesmanref")
+//         ->select(
+//             "$this->customersTable.code as customer_code",
+//             "$this->customersTable.definition_ as customer_name",
+//             "$this->invoicesTable.ficheno as invoice_number",
+//             "$this->invoicesTable.date_ as invoice_date",
+//             "$this->customersTransactionsTable.amount as total_amount",
+//             "$this->invoicesTable.grosstotal as weight"
+//         )
+//         ->orderBy("$this->invoicesTable.date_", 'desc')
+//         ->where(["$this->invoicesTable.trcode" => $invoicetype, 'lg_slsman.logicalref' => $this->salesman_id])
+//         ->paginate($this->perpage);
+//     if ($invoice->isEmpty()) {
+//         return response()->json([
+//             'status' => 'success',
+//             'message' => 'There is no data',
+//             'data' => [],
+//         ]);
+//     }
+//     return response()->json([
+//         'status' => 'success',
+//         'message' => 'Customer list',
+//         'data' => $invoice->items(),
+//         'current_page' => $invoice->currentPage(),
+//         'per_page' => $invoice->perPage(),
+//         'last_page' => $invoice->lastPage(),
+//         'total' => $invoice->total(),
+//     ], 200);
+// }
