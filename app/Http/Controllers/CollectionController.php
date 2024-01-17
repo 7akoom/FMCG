@@ -840,6 +840,87 @@ class CollectionController extends Controller
         }
     }
 
+    public function updateTransferDebt($id)
+    {
+        $transaction = DB::table($this->safesTransactionsTable)->where('logicalref', $id)->first();
+        if (!$transaction) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'record not found',
+                'data' => [],
+            ], 404);
+        }
+        $customer_code = request()->input('customer_code');
+        $customer_name = $this->fetchValueFromTable($this->customersTable, 'code', $customer_code, 'definition_');
+        $data = [
+            'INTERNAL_REFERENCE' => $transaction->LOGICALREF,
+            'TYPE' => 73,
+            // 'SD_CODE' => $transaction->CARDREF,
+            // 'SD_CODE_CROSS' => $transaction->VCARDREF,
+            'SD_NUMBER_CROSS' => InvoiceNumberGenerator::generateSafeNumber($this->customerTransactionsTable),
+            "DATE" => $transaction->DATE_,
+            "HOUR" => $transaction->HOUR_,
+            "MINUTE" => $transaction->MINUTE_,
+            "NUMBER" => InvoiceNumberGenerator::generateInvoiceNumber($this->safesTransactionsTable),
+            "MASTER_TITLE" => $customer_name,
+            "DESCRIPTION" => request()->description,
+            "AMOUNT" => request()->amount,
+            "RC_XRATE" => 1,
+            "RC_AMOUNT" => request()->amount,
+            "TC_XRATE" => 1,
+            "TC_AMOUNT" => request()->amount,
+            "CURR_TRANS" => 30,
+            "CREATED_BY" => $transaction->CAPIBLOCK_CREATEDBY,
+            "DATE_CREATED" => $transaction->CAPIBLOCK_CREADEDDATE,
+            "HOUR_CREATED" => $transaction->CAPIBLOCK_CREATEDHOUR,
+            "MIN_CREATED" => $transaction->CAPIBLOCK_CREATEDMIN,
+            "SEC_CREATED" => $transaction->CAPIBLOCK_CREATEDSEC,
+            "DOC_DATE" => $transaction->DOCDATE,
+            "TIME" => $transaction->TIME_,
+            "CROSS_TC_XRATE" => 1,
+            "CROSS_TC_CURR" => 30,
+            "CROSS_TC_AMOUNT" => request()->amount,
+        ];
+
+        try {
+
+            $response = Http::withOptions([
+                'verify' => false,
+            ])
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                    'Authorization' => request()->header('authorization')
+                ])
+                ->withBody(json_encode($data), 'application/json')
+                ->put("https://10.27.0.109:32002/api/v1/safeDepositSlips/{$id}");
+            $responseData = $response->json();
+            $payment = DB::table("$this->safesTransactionsTable")
+                ->leftjoin("$this->customersViewsTable", "$this->customersViewsTable.definition_", "=", "$this->safesTransactionsTable.custtitle")
+                ->select(
+                    "$this->safesTransactionsTable.CAPIBLOCK_CREADEDDATE as date",
+                    "$this->safesTransactionsTable.CUSTTITLE as customer_name",
+                    "$this->safesTransactionsTable.FICHENO as payment_number",
+                    "$this->safesTransactionsTable.AMOUNT",
+                    // "$this->customersViewsTable.debit",
+                    // "$this->customersViewsTable.credit"
+                )
+                ->where([
+                    "$this->safesTransactionsTable.logicalref" => $responseData['INTERNAL_REFERENCE'],
+                ])
+                ->first();
+            return response()->json([
+                'status' => $response->successful() ? 'success' : 'failed',
+                'data' => $payment,
+            ], $response->status());
+        } catch (Throwable $e) {
+            return response()->json([
+                'status' => 'Payment failed',
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
     public function transferDues($id)
     {
         $safe_source = $this->fetchValueFromTable($this->safesTable, 'logicalref', $id, 'code');
@@ -897,6 +978,90 @@ class CollectionController extends Controller
             ], 422);
         }
     }
+
+    public function updateTransferDues($id)
+    {
+        $transaction = DB::table($this->safesTransactionsTable)->where('logicalref', $id)->first();
+        $destination_safe = $this->fetchValueFromTable($this->safesTable, 'logicalref', $transaction->VCARDREF, 'code');
+        $source_safe = $this->fetchValueFromTable($this->safesTable, 'logicalref', $transaction->CARDREF, 'code');
+        if (!$transaction) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'record not found',
+                'data' => [],
+            ], 404);
+        }
+        $customer_code = request()->input('customer_code');
+        $customer_name = $this->fetchValueFromTable($this->customersTable, 'code', $customer_code, 'definition_');
+        $data = [
+            'INTERNAL_REFERENCE' => $transaction->LOGICALREF,
+            'TYPE' => 73,
+            'SD_CODE' => $destination_safe,
+            'SD_CODE_CROSS' => $source_safe,
+            'SD_NUMBER_CROSS' => InvoiceNumberGenerator::generateSafeNumber($this->customerTransactionsTable),
+            "DATE" => $transaction->DATE_,
+            "HOUR" => $transaction->HOUR_,
+            "MINUTE" => $transaction->MINUTE_,
+            "NUMBER" => InvoiceNumberGenerator::generateInvoiceNumber($this->safesTransactionsTable),
+            "MASTER_TITLE" => $customer_name,
+            "DESCRIPTION" => request()->description,
+            "AMOUNT" => request()->amount,
+            "RC_XRATE" => 1,
+            "RC_AMOUNT" => request()->amount,
+            "TC_XRATE" => 1,
+            "TC_AMOUNT" => request()->amount,
+            "CURR_TRANS" => 30,
+            "CREATED_BY" => $transaction->CAPIBLOCK_CREATEDBY,
+            "DATE_CREATED" => $transaction->CAPIBLOCK_CREADEDDATE,
+            "HOUR_CREATED" => $transaction->CAPIBLOCK_CREATEDHOUR,
+            "MIN_CREATED" => $transaction->CAPIBLOCK_CREATEDMIN,
+            "SEC_CREATED" => $transaction->CAPIBLOCK_CREATEDSEC,
+            "DOC_DATE" => $transaction->DOCDATE,
+            "TIME" => $transaction->TIME_,
+            "CROSS_TC_XRATE" => 1,
+            "CROSS_TC_CURR" => 30,
+            "CROSS_TC_AMOUNT" => request()->amount,
+        ];
+
+        try {
+
+            $response = Http::withOptions([
+                'verify' => false,
+            ])
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                    'Authorization' => request()->header('authorization')
+                ])
+                ->withBody(json_encode($data), 'application/json')
+                ->put("https://10.27.0.109:32002/api/v1/safeDepositSlips/{$id}");
+            $responseData = $response->json();
+            $payment = DB::table("$this->safesTransactionsTable")
+                ->leftjoin("$this->customersViewsTable", "$this->customersViewsTable.definition_", "=", "$this->safesTransactionsTable.custtitle")
+                ->select(
+                    "$this->safesTransactionsTable.CAPIBLOCK_CREADEDDATE as date",
+                    "$this->safesTransactionsTable.CUSTTITLE as customer_name",
+                    "$this->safesTransactionsTable.FICHENO as payment_number",
+                    "$this->safesTransactionsTable.AMOUNT",
+                    // "$this->customersViewsTable.debit",
+                    // "$this->customersViewsTable.credit"
+                )
+                ->where([
+                    "$this->safesTransactionsTable.logicalref" => $responseData['INTERNAL_REFERENCE'],
+                ])
+                ->first();
+            return response()->json([
+                'status' => $response->successful() ? 'success' : 'failed',
+                'data' => $payment,
+            ], $response->status());
+        } catch (Throwable $e) {
+            return response()->json([
+                'status' => 'Payment failed',
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
     public function newTransactionData($id)
     {
         $source_safe = $this->fetchValueFromTable($this->safesTable, 'logicalref', $id, 'code');

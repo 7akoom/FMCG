@@ -257,6 +257,8 @@ Route::controller(CollectionController::class)
                     Route::post('/arp-transaction-collection/{SafeId}', 'accountingCurrentAccountCollections');
                     Route::post('/update-arp-collection/{transactionId}', 'updateTransactionCollection');
                     Route::post('/update-arp-payment/{transactionId}', 'updateTransactionCollection');
+                    Route::post('/update-debt-transaction/{transactionId}', 'updateTransferDebt');
+                    Route::post('/update-due-transaction/{transactionId}', 'updateTransferDues');
                     Route::post('/arp-transaction-payment/{SafeId}', 'currentAccountPayment');
                     Route::post('/transferdebt/{safeId}', 'transferDebt');
                     Route::post('/transferdues/{safeId}', 'transferDues');
