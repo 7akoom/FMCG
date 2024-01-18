@@ -1600,6 +1600,7 @@ class InvoiceController extends Controller
                 "$this->invoicesTable.ficheno as invoice_number",
                 "$this->invoicesTable.nettotal as total_amount",
                 "$this->invoicesTable.docode as from_p_invoice",
+                "$this->invoicesTable.trcode",
                 DB::raw("(SELECT TOP 1 CAPIBLOCK_CREADEDDATE FROM $this->invoicesTable WHERE $this->invoicesTable.clientref = $this->customersTable.logicalref ORDER BY logicalref DESC) as last_invoice_date"),
                 DB::raw("(SELECT TOP 1 CAPIBLOCK_CREADEDDATE FROM $this->customersTransactionsTable WHERE $this->customersTransactionsTable.clientref = $this->customersTable.logicalref and trcode=1 ORDER BY $this->customersTransactionsTable.logicalref DESC) as last_payment_date")
             )
