@@ -94,7 +94,8 @@ class InvoiceController extends Controller
                 "$this->invoicesTable.capiblock_creadeddate as invoice_date",
                 "$this->invoicesTable.ficheno as invoice_number",
                 "$this->invoicesTable.nettotal as total_amount",
-                "$this->invoicesTable.docode as from_p_invoice"
+                "$this->invoicesTable.docode as from_p_invoice",
+                "$this->invoicesTable.trcode"
             )
             ->where([
                 "$this->invoicesTable.grpcode" => 2,
