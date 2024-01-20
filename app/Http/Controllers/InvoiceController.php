@@ -99,10 +99,12 @@ class InvoiceController extends Controller
             )
             ->where([
                 "$this->invoicesTable.grpcode" => 2,
-                "$this->invoicesTable.trcode" => $this->transaction_code,
             ]);
         if ($this->stock_number) {
-            $invoices->where("$this->invoicesTable.sourceindex", $this->stock_number);
+            if($this->stock_number == -1){
+                $invoices->where("$this->invoicesTable.sourceindex", 0);                    
+            }else
+            $invoices->where("$this->invoicesTable.sourceindex", '=',$this->stock_number);
         }
         $this->applyFilters($invoices, [
             "$this->customersTable.code" => [
