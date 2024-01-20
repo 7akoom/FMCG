@@ -22,6 +22,7 @@ class ItemController extends Controller
     protected $customersTable;
     protected $specialcodesTable;
     protected $brandsTable;
+    protected $unitlsTable;
     protected $weightsTable;
     protected $unitsTable;
     protected $pricesTable;
@@ -51,6 +52,7 @@ class ItemController extends Controller
         $this->brandsTable = 'LG_' . $this->code . '_MARK';
         $this->weightsTable = 'LG_' . $this->code . '_ITMUNITA';
         $this->unitsTable = 'LG_' . $this->code . '_UNITSETF';
+        $this->unitlsTable = 'LG_' . $this->code . '_UNITSETL';
         $this->pricesTable = 'LG_' . $this->code . '_PRCLIST';
         $this->itemsTable = 'LG_' . $this->code . '_ITEMS';
         $this->warehousesView = 'LV_' . $this->code . '_01_STINVTOT';
@@ -93,7 +95,8 @@ class ItemController extends Controller
                 "number.convfact1 as pieces_number"
             )
             ->where([
-                "$this->itemsTable.active" => 0, "$this->itemsTable.specode2" => $this->subcategory
+                "$this->itemsTable.active" => 0,
+                "$this->itemsTable.specode2" => $this->subcategory
             ])
             ->groupBy(
                 "$this->itemsTable.logicalref",
@@ -843,4 +846,62 @@ class ItemController extends Controller
             ], 422);
         }
     }
+
+    // public function getItemDetail()
+    // {
+    //     $code = request()->input('item_code');
+    //     $customer = request()->input('customer_code');
+    //     $customer_specode = $this->fetchValueFromTable($this->customersTable, 'code', $customer, 'specode');
+    //     $item = DB::table($this->itemsTable)
+    //         ->leftjoin("$this->pricesTable", "$this->pricesTable.cardref", '=', "$this->itemsTable.logicalref")
+    //         // ->leftjoin("$this->unitlsTable", "$this->unitlsTable.unitsetref", '=', "$this->itemsTable.unitsetref")
+    //         ->select("$this->itemsTable.logicalref as id", "$this->itemsTable.code", "$this->itemsTable.name",
+    //         "$this->pricesTable.price")
+    //         ->where("$this->itemsTable.code", "LIKE", '%' . $code . '%')
+    //         ->where(["$this->pricesTable.active" => 0,"$this->pricesTable.clspecode2" => $customer_specode, ])
+    //         ->get();
+    //     return response()->json([
+    //         'message' => 'item info',
+    //         'data' => $item,
+    //         // 'item-details' => $item_details,
+    //     ]);
+    // }
+
+    public function getItemDetail()
+    {
+        $code = request()->input('item_code');
+        $customer = request()->input('customer_code');
+        $customer_specode = $this->fetchValueFromTable($this->customersTable, 'code', $customer, 'specode');
+
+        $items = DB::table($this->itemsTable)
+            ->leftJoin("$this->pricesTable", "$this->pricesTable.cardref", '=', "$this->itemsTable.logicalref")
+            ->leftJoin("$this->unitlsTable", "$this->unitlsTable.unitsetref", '=', "$this->itemsTable.unitsetref")
+            ->select(
+                "$this->itemsTable.logicalref as id",
+                "$this->itemsTable.code",
+                "$this->itemsTable.name",
+                "$this->unitlsTable.name as unit_name",
+                "$this->pricesTable.price"
+            )
+            ->where("$this->itemsTable.code", "LIKE", '%' . $code . '%')
+            ->where([
+                "$this->pricesTable.active" => 0,
+                "$this->pricesTable.clspecode2" => $customer_specode,
+            ])
+            ->get();
+
+        $itemDetails = $items->groupBy('id')->map(function ($group) {
+            return [
+                'code' => $group->first()->code,
+                'name' => $group->first()->name,
+                'prices' => $group->pluck('price', 'unit_name')->toArray(),
+            ];
+        });
+
+        return response()->json([
+            'message' => 'item info',
+            'data' => $itemDetails,
+        ]);
+    }
+
 }

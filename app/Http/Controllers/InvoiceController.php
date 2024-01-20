@@ -2040,6 +2040,14 @@ class InvoiceController extends Controller
             'last_page' => $invoicesData->lastPage(),
         ]);
     }
+
+    public function generateNumber()
+    {
+        $number = InvoiceNumberGenerator::generateInvoiceNumber($this->invoicesTable);
+        return response()->json([
+            'data' => $number
+        ]);
+    }
 }
 // public function purchaseinvoicedetails(Request $request)
 // {

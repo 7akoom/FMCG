@@ -91,7 +91,7 @@ class CustomerController extends Controller
                 'operator' => 'LIKE',
             ],
             "$this->customersView.credit" => [
-                'value' => $request->input('credit'), 
+                'value' => $request->input('credit'),
                 'operator' => $request->input('operator'),
             ],
             "$this->customersView.debit" => [
@@ -347,7 +347,9 @@ class CustomerController extends Controller
                 DB::raw("COALESCE({$this->customersLimitTable}.accrisklimit, 0) as limit")
             )
             ->where([
-                "$this->customersTable.logicalref" => $customer, "$this->salesmansTable.active" => 0, "$this->salesmansTable.firmnr" => $this->code
+                "$this->customersTable.logicalref" => $customer,
+                "$this->salesmansTable.active" => 0,
+                "$this->salesmansTable.firmnr" => $this->code
             ])
             ->get();
         if ($data->isEmpty()) {
@@ -734,4 +736,25 @@ class CustomerController extends Controller
             ], 422);
         }
     }
+
+    public function searchCustomerByCode()
+{
+    $code = request()->input('customer_code');
+    $customer = DB::table("$this->customersTable")
+        ->leftjoin("$this->payplansTable", "$this->payplansTable.logicalref", '=', "$this->customersTable.paymentref")
+        ->select(
+            "$this->customersTable.logicalref as id",
+            "$this->customersTable.code",
+            "$this->customersTable.definition_ as name",
+            DB::raw("COALESCE($this->payplansTable.code, '') as payment_plan"),
+        )
+        ->where("$this->customersTable.cardtype", 3)
+        ->where("$this->customersTable.code", "LIKE", '%' . $code . '%')
+        ->get();
+
+    return response()->json([
+        'message' => 'customer info',
+        'data' => $customer
+    ]);
+}
 }

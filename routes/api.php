@@ -33,6 +33,7 @@ Route::controller(CustomerController::class)->group(function () {
     Route::prefix('customer')->group(function () {
         Route::prefix('accounting')->group(function () {
             Route::post('/customers', 'index');
+            Route::post('/get-customer', 'searchCustomerByCode');
             Route::post('/getcustomerbycode', 'getcustomerByCode');
             Route::post('/debitandpayment', 'debitandpayment');
             // Route::post('/newcustomer', 'pendingCustomerList');
@@ -69,6 +70,7 @@ Route::controller(ItemController::class)->group(function () {
             Route::post('/item', 'finalItem');
             Route::post('/filterbybrand', 'searchbybrand');
             Route::post('/itemdetails', 'getItemDetails');
+            Route::post('/get-item-details', 'getItemDetail');
             Route::post('/scrap-slip', 'scrapSlip');
             Route::post('/whouse-transfer-notic-slip', 'wHouseTransferNoticSlip');
             Route::post('/notic-of-use-slip', 'noticOfUseSlip');
@@ -190,6 +192,9 @@ Route::controller(InvoiceController::class)
                     Route::post('/searchinvoicebynumber', 'searchinvoicebynumber');
                     Route::post('/salesreturninvoice', 'salesReturnInvoicesList');
                     Route::post('/salesreturninvoicedetails', 'salesReturnInvoiceDetails');
+
+                    Route::post('/get-number', 'generateNumber');
+
                     // Route::post('/newpurchaseinvoice', 'doPurchaseInvoice');
                     // Route::post('/purchaseinvoicedetails', 'purchaseinvoicedetails');
                     // Route::post('/purchasereturninvoices', 'purchaseReturnInvoicesList');
