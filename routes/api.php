@@ -70,6 +70,7 @@ Route::controller(ItemController::class)->group(function () {
             Route::post('/item', 'finalItem');
             Route::post('/filterbybrand', 'searchbybrand');
             Route::post('/itemdetails', 'getItemDetails');
+            Route::post('/unit-price', 'getItemPrices');
             Route::post('/get-item-details', 'getItemDetail');
             Route::post('/scrap-slip', 'scrapSlip');
             Route::post('/whouse-transfer-notic-slip', 'wHouseTransferNoticSlip');

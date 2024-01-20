@@ -898,26 +898,20 @@ class ItemController extends Controller
 
     public function getItemPrices()
     {
-        $code = request()->input('item_code');
+        $id = request()->input('item_id');
         $customer = request()->input('customer_code');
         $customer_specode = $this->fetchValueFromTable($this->customersTable, 'code', $customer, 'specode');
 
-        $items = DB::table($this->itemsTable)
-            ->leftJoin("$this->pricesTable", "$this->pricesTable.cardref", '=', "$this->itemsTable.logicalref")
-            ->leftJoin("$this->unitlsTable", "$this->unitlsTable.unitsetref", '=', "$this->itemsTable.unitsetref")
+        $items = DB::table($this->unitlsTable)
+            ->leftJoin("$this->pricesTable", "$this->pricesTable.uomref", '=', "$this->unitlsTable.logicalref")
             ->select(
-                "$this->itemsTable.logicalref as id",
-                "$this->itemsTable.code",
-                "$this->itemsTable.name",
-                "$this->unitlsTable.name as unit_name",
+                "$this->unitlsTable.logicalref as id",
+                "$this->unitlsTable.name",
                 "$this->pricesTable.price"
             )
-            ->where("$this->itemsTable.code", $code)
-            ->where([
-                "$this->pricesTable.active" => 0,
-                "$this->pricesTable.clspecode2" => $customer_specode,
-            ])
-            ->first();
+            ->where(["$this->pricesTable.clspecode2" => $customer_specode,"$this->pricesTable.active" => 0,
+            "$this->pricesTable.cardref" => $id])
+            ->get();
 
         return response()->json([
             'message' => 'item info',
