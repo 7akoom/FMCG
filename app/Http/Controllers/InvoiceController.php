@@ -101,10 +101,10 @@ class InvoiceController extends Controller
                 "$this->invoicesTable.grpcode" => 2,
             ]);
         if ($this->stock_number) {
-            if($this->stock_number == -1){
-                $invoices->where("$this->invoicesTable.sourceindex", 0);                    
-            }else
-            $invoices->where("$this->invoicesTable.sourceindex", '=',$this->stock_number);
+            if ($this->stock_number == -1) {
+                $invoices->where("$this->invoicesTable.sourceindex", 0);
+            } else
+                $invoices->where("$this->invoicesTable.sourceindex", '=', $this->stock_number);
         }
         $this->applyFilters($invoices, [
             "$this->customersTable.code" => [
@@ -2046,6 +2046,32 @@ class InvoiceController extends Controller
         $number = InvoiceNumberGenerator::generateInvoiceNumber($this->invoicesTable);
         return response()->json([
             'data' => $number
+        ]);
+    }
+
+    public function itemTypes()
+    {
+        $data = [
+            ['id' => 0, 'name' => 'item'],
+            ['id' => 2, 'name' => 'discount'],
+        ];
+
+        return response()->json([
+            'message' => 'item types',
+            'data' => $data,
+        ]);
+    }
+
+    public function invoiceTypes()
+    {
+        $data = [
+            ['id' => 3, 'name' => 'return'],
+            ['id' => 8, 'name' => 'sales'],
+        ];
+
+        return response()->json([
+            'message' => 'invoice types',
+            'data' => $data,
         ]);
     }
 }

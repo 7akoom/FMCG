@@ -175,6 +175,8 @@ Route::controller(InvoiceController::class)
                 Route::prefix('accounting')->group(function () {
                     Route::post('/invoices', 'index');
                     Route::post('/invoicedetails', 'accountingSalesmanInvoiceDetails');
+                    Route::post('/item-types', 'itemTypes');
+                    Route::post('/invoice-types', 'invoiceTypes');
 
                     Route::post('/newsalesinvoice', 'store');
                     Route::post('/newreturnsalesinvoice', 'storeReturnInvoice');
