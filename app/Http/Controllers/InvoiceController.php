@@ -1203,7 +1203,7 @@ class InvoiceController extends Controller
                 "$this->salesmansTable.logicalref" => $this->salesman_id,
             ])
             ->distinct()
-            ->get();
+            ->first();
 
         $item = DB::table("$this->stocksTransactionsTable")
             ->select(
