@@ -1201,10 +1201,10 @@ class InvoiceController extends Controller
             ->where([
                 "$this->invoicesTable.ficheno" => $invoice,
                 "$this->salesmansTable.logicalref" => $this->salesman_id,
-                "$this->stocksTransactionsTable.iocode" => 4,
             ])
             ->distinct()
-            ->first();
+            ->get();
+            dd($info);
 
         $item = DB::table("$this->stocksTransactionsTable")
             ->select(

@@ -570,8 +570,8 @@ class CustomerController extends Controller
                 DB::raw("COALESCE($this->customersLimitTable.accrisklimit, 0) as limit"),
                 DB::raw("COALESCE(
                     CONVERT(VARCHAR, (SELECT TOP 1 CAPIBLOCK_CREADEDDATE
-                                     FROM LG_888_01_INVOICE
-                                     WHERE LG_888_01_INVOICE.clientref = LG_888_CLCARD.logicalref
+                                     FROM $this->invoicesTable
+                                     WHERE $this->invoicesTable.clientref = $this->customersTable.logicalref
                                      ORDER BY logicalref DESC), 120),
                     'No invoice found'
                 ) as last_invoice_date
