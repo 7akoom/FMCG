@@ -919,8 +919,6 @@ class ItemController extends Controller
             "$this->pricesTable.clspecode2" => $customer_specode,
         ])
         ->get();
-
-    // Group items by item code and build the result array
     $result = [];
     foreach ($items as $item) {
         $itemCode = $item->code;
@@ -942,7 +940,7 @@ class ItemController extends Controller
 
     return response()->json([
         'message' => 'item info',
-        'data' => array_values($result), // Use array_values to reset array keys
+        'data' => array_values($result),
     ]);
 }
 

@@ -543,7 +543,7 @@ class SafeController extends Controller
                         "$this->safesTransactionsTable.date_",
                         "$this->safesTransactionsTable.hour_",
                         "$this->safesTransactionsTable.minute_",
-                        "sf.code",
+                        "sf.code as destination_safe",
                         "sf.name as destination_safe_name",
                         "$this->safesTransactionsTable.amount",
                         "$this->safesTransactionsTable.lineexp as safe_description",
