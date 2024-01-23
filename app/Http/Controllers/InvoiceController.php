@@ -1204,7 +1204,6 @@ class InvoiceController extends Controller
             ])
             ->distinct()
             ->get();
-            dd($info);
 
         $item = DB::table("$this->stocksTransactionsTable")
             ->select(
