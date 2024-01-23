@@ -1181,9 +1181,11 @@ class InvoiceController extends Controller
             ->join("$this->customersTable", "$this->stocksTransactionsTable.clientref", "=", "$this->customersTable.logicalref")
             ->join("$this->cutomersView", "$this->cutomersView.logicalref", "=", "$this->customersTable.logicalref")
             ->join("$this->payplansTable", "$this->payplansTable.logicalref", '=', "$this->invoicesTable.paydefref")
+            ->join("L_CAPIUSER", "L_CAPIUSER.NR", '=', "$this->invoicesTable.capiblock_createdby")
             ->select(
                 "$this->invoicesTable.capiblock_creadeddate as date",
                 "$this->invoicesTable.ficheno as number",
+                "L_CAPIUSER.NAME as created_by",
                 "$this->invoicesTable.genexp1 as approved_by",
                 "$this->invoicesTable.grosstotal as invoice_amount",
                 "$this->invoicesTable.totaldiscounts as invoice_discount",
