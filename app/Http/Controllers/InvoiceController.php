@@ -1844,9 +1844,10 @@ class InvoiceController extends Controller
         $invoices = DB::table("$this->invoicesTable")
             ->join($this->customersTable, "$this->invoicesTable.clientref", "=", "$this->customersTable.logicalref")
             ->join($this->salesmansTable, "$this->invoicesTable.salesmanref", "=", "$this->salesmansTable.logicalref")
+            ->join("L_CAPIUSER", "L_CAPIUSER.nr", "=", "$this->invoicesTable.capiblock_createdby")
             ->select(
                 "$this->invoicesTable.capiblock_creadeddate as date",
-                "$this->invoicesTable.capiblock_createdby as created_by",
+                "L_CAPIUSER.name as created_by",
                 "$this->invoicesTable.ficheno as invoice_number",
                 "$this->invoicesTable.grosstotal as amount",
                 "$this->invoicesTable.totaldiscounts as discount",
