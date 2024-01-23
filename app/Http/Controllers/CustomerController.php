@@ -292,30 +292,30 @@ class CustomerController extends Controller
     public function getPendingCustomerList()
     {
         $customer = DB::table("$this->customersTable")
-            ->join("$this->customersSalesmansRelationsTable", "$this->customersSalesmansRelationsTable.clientref", "$this->customersTable.logicalref")
-            ->join("$this->salesmansTable", "$this->customersSalesmansRelationsTable.salesmanref", "$this->salesmansTable.logicalref")
+            // ->join("$this->customersSalesmansRelationsTable", "$this->customersSalesmansRelationsTable.clientref", "$this->customersTable.logicalref")
+            // ->join("$this->salesmansTable", "$this->customersSalesmansRelationsTable.salesmanref", "$this->salesmansTable.logicalref")
             ->join("$this->customersLimitTable", "$this->customersLimitTable.clcardref", "$this->customersTable.logicalref")
-            ->join("$this->payplansTable", "$this->payplansTable.logicalref", "$this->customersTable.paymentref")
-            ->join("$this->specialcodesTable", "$this->specialcodesTable.specode", "$this->customersTable.specode2")
-            ->where(["$this->specialcodesTable.codetype" => 1, "$this->specialcodesTable.specodetype" => 26, "$this->specialcodesTable.spetyp2" => 1])
+            // ->join("$this->payplansTable", "$this->payplansTable.logicalref", "$this->customersTable.paymentref")
+            // ->join("$this->specialcodesTable", "$this->specialcodesTable.specode", "$this->customersTable.specode2")
+            // ->where(["$this->specialcodesTable.codetype" => 1, "$this->specialcodesTable.specodetype" => 26])
             ->select(
                 "$this->customersTable.logicalref as customer_id",
                 "$this->customersTable.definition_ as market_name",
                 "$this->customersTable.definition2 as customer_name",
-                "$this->salesmansTable.definition_ as salesman_name",
+                // "$this->salesmansTable.definition_ as salesman_name",
                 "$this->customersTable.telnrs1 as first_phone",
                 DB::raw("COALESCE($this->customersTable.telnrs2, '0') as secondPhone"),
                 "$this->customersTable.code",
                 "$this->customersTable.city",
                 "$this->customersTable.addr2 as zone",
                 "$this->customersTable.addr1 as address",
-                DB::raw("COALESCE($this->specialcodesTable.specode, '0') as customerType_id"),
-                DB::raw("COALESCE($this->specialcodesTable.definition_, '0') as customerType"),
-                "$this->payplansTable.logicalref as paymentPlan_id",
-                "$this->payplansTable.code as paymentPlan",
+                // DB::raw("COALESCE($this->specialcodesTable.specode, '0') as customerType_id"),
+                // DB::raw("COALESCE($this->specialcodesTable.definition_, '0') as customerType"),
+                // "$this->payplansTable.logicalref as paymentPlan_id",
+                // "$this->payplansTable.code as paymentPlan",
                 "$this->customersLimitTable.accrisklimit as limit"
             )
-            ->where("$this->customersTable.active", 2)
+            ->where(["$this->customersTable.specode5" =>  1])
             ->get();
         return response()->json([
             'status' => 'success',
@@ -687,6 +687,7 @@ class CustomerController extends Controller
             'COUNTRY' => 'iraq',
             'AUTH_CODE' => '1',
             'AUXIL_CODE2' => $request->customer_type,
+            'AUXIL_CODE5' => 1,
             'CREATED_BY' => $user_nr->nr,
             'ACC_RISK_LIMIT' => $request->limit,
         ];
