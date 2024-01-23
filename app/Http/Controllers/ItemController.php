@@ -867,34 +867,85 @@ class ItemController extends Controller
     //     ]);
     // }
 
+    // public function getItemDetail()
+    // {
+    //     $code = request()->input('item_code');
+    //     $customer = request()->input('customer_code');
+    //     $customer_specode = $this->fetchValueFromTable($this->customersTable, 'code', $customer, 'specode');
+
+    //     $items = DB::table($this->itemsTable)
+    //         ->leftJoin("$this->pricesTable", "$this->pricesTable.cardref", '=', "$this->itemsTable.logicalref")
+    //         // ->leftJoin("$this->unitlsTable", "$this->unitlsTable.unitsetref", '=', "$this->itemsTable.unitsetref")
+    //         ->select(
+    //             "$this->itemsTable.logicalref as id",
+    //             "$this->itemsTable.code",
+    //             "$this->itemsTable.name",
+    //             // "$this->unitlsTable.name as unit_name",
+    //             "$this->pricesTable.price"
+    //         )
+    //         ->where("$this->itemsTable.code", 'like', '%' . $code . '%')
+    //         ->where([
+    //             "$this->pricesTable.active" => 0,
+    //             "$this->pricesTable.clspecode2" => $customer_specode,
+    //         ])
+    //         ->get();
+
+    //     return response()->json([
+    //         'message' => 'item info',
+    //         'data' => $items,
+    //     ]);
+    // }
+
     public function getItemDetail()
-    {
-        $code = request()->input('item_code');
-        $customer = request()->input('customer_code');
-        $customer_specode = $this->fetchValueFromTable($this->customersTable, 'code', $customer, 'specode');
+{
+    $code = request()->input('item_code');
+    $customer = request()->input('customer_code');
+    $customer_specode = $this->fetchValueFromTable($this->customersTable, 'code', $customer, 'specode');
 
-        $items = DB::table($this->itemsTable)
-            ->leftJoin("$this->pricesTable", "$this->pricesTable.cardref", '=', "$this->itemsTable.logicalref")
-            ->leftJoin("$this->unitlsTable", "$this->unitlsTable.unitsetref", '=', "$this->itemsTable.unitsetref")
-            ->select(
-                "$this->itemsTable.logicalref as id",
-                "$this->itemsTable.code",
-                "$this->itemsTable.name",
-                "$this->unitlsTable.name as unit_name",
-                "$this->pricesTable.price"
-            )
-            ->where("$this->itemsTable.code", $code)
-            ->where([
-                "$this->pricesTable.active" => 0,
-                "$this->pricesTable.clspecode2" => $customer_specode,
-            ])
-            ->first();
+    $items = DB::table($this->itemsTable)
+        ->leftJoin("$this->pricesTable", "$this->pricesTable.cardref", '=', "$this->itemsTable.logicalref")
+        ->leftJoin("$this->unitlsTable", "$this->unitlsTable.unitsetref", '=', "$this->itemsTable.unitsetref")
+        ->select(
+            "$this->itemsTable.logicalref as id",
+            "$this->itemsTable.code",
+            "$this->itemsTable.name",
+            "$this->unitlsTable.logicalref as unit_id",
+            "$this->unitlsTable.name as unit_name",
+            "$this->pricesTable.price"
+        )
+        ->where("$this->itemsTable.code", 'like', '%' . $code . '%')
+        ->where([
+            "$this->pricesTable.active" => 0,
+            "$this->pricesTable.clspecode2" => $customer_specode,
+        ])
+        ->get();
 
-        return response()->json([
-            'message' => 'item info',
-            'data' => $items,
-        ]);
+    // Group items by item code and build the result array
+    $result = [];
+    foreach ($items as $item) {
+        $itemCode = $item->code;
+        if (!isset($result[$itemCode])) {
+            $result[$itemCode] = [
+                'id' => $item->id,
+                'code' => $item->code,
+                'name' => $item->name,
+                'units' => [],
+            ];
+        }
+
+        $result[$itemCode]['units'][] = [
+            'unit_id' => $item->unit_id,
+            'unit_name' => $item->unit_name,
+            'price' => $item->price,
+        ];
     }
+
+    return response()->json([
+        'message' => 'item info',
+        'data' => array_values($result), // Use array_values to reset array keys
+    ]);
+}
+
 
     public function getItemPrices()
     {
