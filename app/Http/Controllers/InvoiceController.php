@@ -1802,6 +1802,7 @@ class InvoiceController extends Controller
             ->select(
                 "$this->invoicesTable.capiblock_creadeddate as date",
                 "$this->invoicesTable.ficheno as invoice_number",
+                "$this->customersTable.definition_ as customer_name",
                 "$this->invoicesTable.grosstotal as amount",
                 "$this->invoicesTable.totaldiscounts as discount",
                 "$this->invoicesTable.nettotal as total",
