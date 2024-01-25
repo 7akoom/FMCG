@@ -315,7 +315,7 @@ class CustomerController extends Controller
                 // "$this->payplansTable.code as paymentPlan",
                 "$this->customersLimitTable.accrisklimit as limit"
             )
-            ->where(["$this->customersTable.specode5" =>  1])
+            ->where(["$this->customersTable.specode5" => 1])
             ->get();
         return response()->json([
             'status' => 'success',
@@ -609,34 +609,57 @@ class CustomerController extends Controller
     public function debitandpayment(Request $request)
     {
         $customer = $request->header('customer');
-        $results = DB::table("$this->customersTable")
+        $customer_id = DB::table("$this->customersTable")->select('logicalref')->where('code', $customer)->first();
+
+        $last_payment_date = DB::table("$this->customersTransactionsTable")
+            ->where(['clientref' => $customer_id->logicalref, 'modulenr' => 10, 'trcode' => 1])
+            ->orderByDesc('logicalref')
+            ->first();
+        $last_invoice_date = DB::table("$this->invoicesTable")
+            ->where('clientref' , $customer_id->logicalref)
+            ->orderByDesc('logicalref')
+            ->first();
+
+        $query = DB::table("$this->customersTable")
             ->leftJoin("$this->customersLimitTable", "$this->customersLimitTable.clcardref", '=', "$this->customersTable.logicalref")
             ->leftJoin("$this->payplansTable", "$this->payplansTable.logicalref", '=', "$this->customersTable.paymentref")
             ->leftJoin("$this->customersView", "$this->customersView.logicalref", '=', "$this->customersLimitTable.clcardref")
-            ->leftJoin("$this->invoicesTable", "$this->customersView.logicalref", '=', "$this->invoicesTable.clientref")
             ->select(
-                DB::raw("COALESCE($this->customersLimitTable.accrisklimit, 0) as limit"),
+                DB::raw("COALESCE($this->customersLimitTable.accrisklimit, 0) as [limit]"),
                 DB::raw("COALESCE($this->payplansTable.code, '0') as payment_plan"),
-                DB::raw("COALESCE($this->customersView.debit, 0) as debit"),
-                DB::raw("COALESCE($this->customersView.credit, 0) as credit"),
-                DB::raw("COALESCE(CONVERT(varchar(10), MAX($this->invoicesTable.date_), 120), 'No invoice found') as last_invoice_date")
+                DB::raw("ISNULL($this->customersView.debit, 0) - ISNULL($this->customersView.credit, 0) as balance"),
             )
             ->where(["$this->customersTable.code" => $customer])
             ->groupBy("$this->customersLimitTable.accrisklimit", "$this->payplansTable.code", "$this->customersView.debit", "$this->customersView.credit")
-            ->get();
-        if ($results->isEmpty()) {
+            ->first();
+
+        if (!$query) {
             return response()->json([
                 'status' => 'success',
                 'message' => 'There is no data',
                 'data' => [],
             ]);
         }
+
+        $lastPaymentDate = $last_payment_date ? \Carbon\Carbon::parse($last_payment_date->DATE_)->format('Y-m-d') : null;
+        $lastPaymentAmount = $last_payment_date ? (number_format($last_payment_date->AMOUNT, 2, '.', '')) : null;
+        $lastInvoiceDate = $last_invoice_date ? \Carbon\Carbon::parse($last_invoice_date->DATE_)->format('Y-m-d') : null;
+        $lastInvoiceAmount = $last_invoice_date ? (number_format($last_invoice_date->GROSSTOTAL, 2, '.', '')) : null;
         return response()->json([
             'status' => 'success',
             'message' => 'Customer details',
-            'data' => $results,
+            'data' => [
+                'limit' => number_format($query->limit, 2, '.', ''),
+                'payment_plan' => $query->payment_plan,
+                'balance' => number_format($query->balance, 2, '.', ''),
+                'last_payment_date' => $lastPaymentDate,
+                'last_payment_amount' => $lastPaymentAmount,
+                'last_invoice_date' => $lastInvoiceDate,
+                'last_invoice_amount' => $lastInvoiceAmount,
+            ],
         ]);
     }
+
     public function allCustomers()
     {
         $customers = DB::select("select lg_329_clcard.logicalref as customer_id,
@@ -739,23 +762,23 @@ class CustomerController extends Controller
     }
 
     public function searchCustomerByCode()
-{
-    $code = request()->input('customer_code');
-    $customer = DB::table("$this->customersTable")
-        ->leftjoin("$this->payplansTable", "$this->payplansTable.logicalref", '=', "$this->customersTable.paymentref")
-        ->select(
-            "$this->customersTable.logicalref as id",
-            "$this->customersTable.code",
-            "$this->customersTable.definition_ as name",
-            DB::raw("COALESCE($this->payplansTable.code, '') as payment_plan"),
-        )
-        ->where("$this->customersTable.cardtype", 3)
-        ->where("$this->customersTable.code", "LIKE", '%' . $code . '%')
-        ->get();
+    {
+        $code = request()->input('customer_code');
+        $customer = DB::table("$this->customersTable")
+            ->leftjoin("$this->payplansTable", "$this->payplansTable.logicalref", '=', "$this->customersTable.paymentref")
+            ->select(
+                "$this->customersTable.logicalref as id",
+                "$this->customersTable.code",
+                "$this->customersTable.definition_ as name",
+                DB::raw("COALESCE($this->payplansTable.code, '') as payment_plan"),
+            )
+            ->where("$this->customersTable.cardtype", 3)
+            ->where("$this->customersTable.code", "LIKE", '%' . $code . '%')
+            ->get();
 
-    return response()->json([
-        'message' => 'customer info',
-        'data' => $customer
-    ]);
-}
+        return response()->json([
+            'message' => 'customer info',
+            'data' => $customer
+        ]);
+    }
 }
