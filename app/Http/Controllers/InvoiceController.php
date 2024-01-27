@@ -349,7 +349,7 @@ class InvoiceController extends Controller
                 ],
                 'items' => $items
             ];
-                    Log::info('Request processed successfully', ['data' => $response]);
+                    Log::info('Request processed successfully', ['data' => $data]);
             return response()->json([
                 'status' => $response->successful() ? 'success' : 'failed',
                 'invoice' => $data,
