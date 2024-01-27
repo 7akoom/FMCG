@@ -65,6 +65,27 @@ class SalesManController extends Controller
         ]);
     }
 
+    public function allSalesman(Request $request)
+    {
+        $salesman = DB::table("$this->salesmansTable as sls")
+            ->select(
+                'sls.LOGICALREF as id',
+                'sls.code',
+                'sls.DEFINITION_ as name',
+                'sls.TELNUMBER as phone',
+            )
+            ->where([
+                'sls.FIRMNR' => $this->code,
+                'sls.ACTIVE' => $this->isactive,
+            ])
+            ->get();
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Salesman list',
+            'data' => $salesman,
+        ]);
+    }
+
     public function store(Request $request)
     {
         $user = DB::table("L_CAPIUSER")->where('name', request()->header('username'))

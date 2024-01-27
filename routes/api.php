@@ -21,6 +21,7 @@ Route::controller(SalesmanController::class)->group(function () {
     Route::prefix('salesman')->group(function () {
         Route::prefix('accounting')->group(function () {
             Route::post('/salesmans', 'index');
+            // Route::post('/salesmans', 'index');
             Route::post('/newsalesman', 'store');
             Route::post('/edit/{salesmanId}', 'edit');
             Route::post('/update/{salesmanId}', 'update');

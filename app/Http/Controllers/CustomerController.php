@@ -325,46 +325,45 @@ class CustomerController extends Controller
     }
 
     public function pendingCustomerDetails(Request $request)
-    {
-        $customer = $request->header('customer');
-        $data = DB::table("$this->customersTable")
-            ->leftjoin("$this->customersSalesmansRelationsTable", "$this->customersSalesmansRelationsTable.clientref", '=', "$this->customersTable.logicalref")
-            ->join("$this->salesmansTable", "$this->customersSalesmansRelationsTable.salesmanref", '=', "$this->salesmansTable.logicalref")
-            ->join("{$this->customersLimitTable}", "{$this->customersLimitTable}.clcardref", "=", "{$this->customersTable}.logicalref")
-            ->join("{$this->payplansTable}", "{$this->payplansTable}.logicalref", "=", "{$this->customersTable}.paymentref")
-            ->select(
-                "{$this->customersTable}.definition2 as customer_name",
-                "{$this->customersTable}.definition_ as market_name",
-                "$this->salesmansTable.definition_ as salesman_name",
-                "{$this->customersTable}.telnrs1 as first_phone",
-                "{$this->customersTable}.telnrs2 as second_phone",
-                "{$this->customersTable}.code",
-                "{$this->customersTable}.city",
-                "{$this->customersTable}.addr2 as zone",
-                "{$this->customersTable}.addr1 as address",
-                "{$this->customersTable}.specode2 as customer_type",
-                "{$this->payplansTable}.code as payment_plan",
-                DB::raw("COALESCE({$this->customersLimitTable}.accrisklimit, 0) as limit")
-            )
-            ->where([
-                "$this->customersTable.logicalref" => $customer,
-                "$this->salesmansTable.active" => 0,
-                "$this->salesmansTable.firmnr" => $this->code
-            ])
-            ->get();
-        if ($data->isEmpty()) {
-            return response()->json([
-                'status' => 'success',
-                'message' => 'There is no data',
-                'data' => [],
-            ]);
-        }
+{
+    $customer = $request->header('customer');
+    $data = DB::table("$this->customersTable")
+        // ->join("{$this->customersLimitTable}", "{$this->customersLimitTable}.clcardref", "=", "{$this->customersTable}.logicalref")
+        // ->join("{$this->payplansTable}", "{$this->payplansTable}.logicalref", "=", "{$this->customersTable}.paymentref")
+        ->select(
+            "{$this->customersTable}.definition2 as customer_name",
+            "{$this->customersTable}.definition_ as market_name",
+            "{$this->customersTable}.telnrs1 as first_phone",
+            "{$this->customersTable}.telnrs2 as second_phone",
+            "{$this->customersTable}.code",
+            "{$this->customersTable}.city",
+            "{$this->customersTable}.addr2 as zone",
+            "{$this->customersTable}.addr1 as address",
+            "{$this->customersTable}.specode2 as customer_type",
+            // "{$this->payplansTable}.code as payment_plan",
+            // DB::raw("COALESCE({$this->customersLimitTable}.accrisklimit, 0) as limit")
+        )
+        ->where([
+            "$this->customersTable.logicalref" => $customer,
+            // Add other conditions if needed
+        ])
+        ->get();
+
+    if ($data->isEmpty()) {
         return response()->json([
             'status' => 'success',
-            'message' => 'Pending customer details',
-            'data' => $data,
+            'message' => 'There is no data',
+            'data' => [],
         ]);
     }
+
+    return response()->json([
+        'status' => 'success',
+        'message' => 'Pending customer details',
+        'data' => $data,
+    ]);
+}
+
 
     public function updatePendingCustomerAccounting(Request $request, $id)
     {
