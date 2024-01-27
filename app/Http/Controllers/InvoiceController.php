@@ -186,7 +186,7 @@ class InvoiceController extends Controller
             "RC_XRATE" => 1,
             "RC_NET" => $request->net_total,
             "NOTES1" => $request->notes,
-            "DOC_NUMBER"=> $request->document_number,
+            "DOC_NUMBER" => $request->document_number,
             "PAYMENT_CODE" => $request->payment_code,
             "CREATED_BY" => $creator,
             "DATE_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
@@ -349,7 +349,7 @@ class InvoiceController extends Controller
                 ],
                 'items' => $items
             ];
-            // Log::info('Request received', ['request_data' => $request->all()]);
+                    Log::info('Request processed successfully', ['data' => $response]);
             return response()->json([
                 'status' => $response->successful() ? 'success' : 'failed',
                 'invoice' => $data,
