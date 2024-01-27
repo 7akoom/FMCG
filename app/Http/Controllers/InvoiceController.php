@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Database\Query\Builder;
+use Illuminate\Support\Facades\Log;
+
 
 class InvoiceController extends Controller
 {
@@ -173,7 +175,7 @@ class InvoiceController extends Controller
             "DATE" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
             'TIME' => TimeHelper::calculateTime(),
             "ARP_CODE" => $request->customer_code,
-            "SOURCE_WH" => 3,
+            "SOURCE_WH" => $request->store_number,
             "POST_FLAGS" => 247,
             "VAT_RATE" => 18,
             "TOTAL_DISCOUNTS" => $request->total_discounts,
@@ -184,6 +186,7 @@ class InvoiceController extends Controller
             "RC_XRATE" => 1,
             "RC_NET" => $request->net_total,
             "NOTES1" => $request->notes,
+            "DOC_NUMBER"=> $request->document_number,
             "PAYMENT_CODE" => $request->payment_code,
             "CREATED_BY" => $creator,
             "DATE_CREATED" => Carbon::now()->timezone('Asia/Baghdad')->format('Y-m-d'),
@@ -239,7 +242,7 @@ class InvoiceController extends Controller
                 "INTERNAL_REFERENCE" => 0,
                 "TYPE" => $type,
                 "MASTER_CODE" => $master_code,
-                "SOURCEINDEX" => 3,
+                "SOURCEINDEX" => $request->store_number,
                 "QUANTITY" => $quantity,
                 "PRICE" => $price,
                 "TOTAL" => $total,
@@ -298,54 +301,55 @@ class InvoiceController extends Controller
                 ])
                 ->withBody(json_encode($data), 'application/json')
                 ->post('https://10.27.0.109:32002/api/v1/salesInvoices');
-                $json_resp = $response->getBody()->getContents();
-                $resp = json_decode($json_resp, true);
-                $customer = DB::table($this->customersTable)->where('code',$resp['ARP_CODE'])->first();
-                $balance = DB::table($this->cutomersView)->where('code',$resp['ARP_CODE'])->first();
-                $stlines = DB::table("$this->stocksTransactionsTable as stline")
-    ->select(
-        'stline.logicalref as id',
-        'stline.linetype',
-        DB::raw("COALESCE(item.code, '0') as code"),
-        DB::raw("COALESCE(item.name, '0') as name"),
-        'stline.amount',
-        'stline.price',
-        'stline.total',
-        'stline.distdisc as discount',
-        'weight.grossweight as item_weight'
-    )
-    ->leftJoin("$this->itemsTable as item", "stline.stockref", '=', "item.logicalref")
-    ->leftJoin("$this->weightsTable as weight", function ($join) {
-        $join->on("stline.stockref", '=', "weight.itemref")
-            ->where('weight.unitlineref', '=', DB::raw('stline.uomref'));
-    })
-    ->join("$this->invoicesTable as invoice", "stline.invoiceref", '=', "invoice.logicalref")
-    ->where('stline.invoiceref', $resp['INTERNAL_REFERENCE'])
-    ->get();
+            $json_resp = $response->getBody()->getContents();
+            $resp = json_decode($json_resp, true);
+            $customer = DB::table($this->customersTable)->where('code', $resp['ARP_CODE'])->first();
+            $balance = DB::table($this->cutomersView)->where('code', $resp['ARP_CODE'])->first();
+            $stlines = DB::table("$this->stocksTransactionsTable as stline")
+                ->select(
+                    'stline.logicalref as id',
+                    'stline.linetype',
+                    DB::raw("COALESCE(item.code, '0') as code"),
+                    DB::raw("COALESCE(item.name, '0') as name"),
+                    'stline.amount',
+                    'stline.price',
+                    'stline.total',
+                    'stline.distdisc as discount',
+                    'weight.grossweight as item_weight'
+                )
+                ->leftJoin("$this->itemsTable as item", "stline.stockref", '=', "item.logicalref")
+                ->leftJoin("$this->weightsTable as weight", function ($join) {
+                    $join->on("stline.stockref", '=', "weight.itemref")
+                        ->where('weight.unitlineref', '=', DB::raw('stline.uomref'));
+                })
+                ->join("$this->invoicesTable as invoice", "stline.invoiceref", '=', "invoice.logicalref")
+                ->where('stline.invoiceref', $resp['INTERNAL_REFERENCE'])
+                ->get();
 
-                foreach ($stlines as $item) {
-                     $items[] = [
-                        'id' => $item->id,
-                        'type' => $item->linetype,
-                        'code' => $item->code,
-                        'name' => $item->name,
-                        'quantity' => $item->amount,
-                        'price' => $item->price,
-                        'total' => $item->total,
-                        'distdisc' => $item->discount,
-                        'weight' => $item->amount * $item->item_weight,
-                    ];
-                }
-                $data = [
-                     'info' => [
-                        'customer_code' => $resp['ARP_CODE'], 
-                        'customer_name' => $customer->DEFINITION_, 
-                        'customer_address' => $customer->ADDR1, 
-                        'invoice_number' => $resp['NUMBER'], 
-                        'customer_balance' => abs($balance->CREDIT - $balance->DEBIT) . ($balance->CREDIT - $balance->DEBIT >= 0 ? ' (CR)' : ' (DB)'),
-                     ],
-                     'items' => $items
+            foreach ($stlines as $item) {
+                $items[] = [
+                    'id' => $item->id,
+                    'type' => $item->linetype,
+                    'code' => $item->code,
+                    'name' => $item->name,
+                    'quantity' => $item->amount,
+                    'price' => $item->price,
+                    'total' => $item->total,
+                    'distdisc' => $item->discount,
+                    'weight' => $item->amount * $item->item_weight,
                 ];
+            }
+            $data = [
+                'info' => [
+                    'customer_code' => $resp['ARP_CODE'],
+                    'customer_name' => $customer->DEFINITION_,
+                    'customer_address' => $customer->ADDR1,
+                    'invoice_number' => $resp['NUMBER'],
+                    'customer_balance' => abs($balance->CREDIT - $balance->DEBIT) . ($balance->CREDIT - $balance->DEBIT >= 0 ? ' (CR)' : ' (DB)'),
+                ],
+                'items' => $items
+            ];
+            // Log::info('Request received', ['request_data' => $request->all()]);
             return response()->json([
                 'status' => $response->successful() ? 'success' : 'failed',
                 'invoice' => $data,
