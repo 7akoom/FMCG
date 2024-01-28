@@ -307,42 +307,54 @@ class InvoiceController extends Controller
                     'status' => 'failed',
                     'message' => $response['ModelState']['ValError0'],
                     'data' => []
-                ],$response->status());
+                ], $response->status());
             }
             $resp = json_decode($json_resp, true);
             $customer = DB::table($this->customersTable)->where('code', $resp['ARP_CODE'])->first();
             $balance = DB::table($this->cutomersView)->where('code', $resp['ARP_CODE'])->first();
+            $last_invoice = DB::table($this->invoicesTable)->where('logicalref', $resp['INTERNAL_REFERENCE'])->first();
             $stlines = DB::table("$this->stocksTransactionsTable as stline")
                 ->select(
-                    'stline.logicalref as id',
-                    'stline.linetype',
+                    "stline.logicalref as id",
+                    "stline.invoicelnno as item_line_number",
+                    "stline.linetype as linetype",
                     DB::raw("COALESCE(item.code, '0') as code"),
                     DB::raw("COALESCE(item.name, '0') as name"),
-                    'stline.amount',
-                    'stline.price',
-                    'stline.total',
-                    'stline.distdisc as discount',
-                    'weight.grossweight as item_weight'
+                    "stline.amount",
+                    "stline.price",
+                    "stline.total",
+                    "stline.distdisc as discount",
+                    "weights.grossweight as item_weight",
                 )
-                ->leftJoin("$this->itemsTable as item", "stline.stockref", '=', "item.logicalref")
-                ->leftJoin("$this->weightsTable as weight", function ($join) {
-                    $join->on("stline.stockref", '=', "weight.itemref")
-                        ->where('weight.unitlineref', '=', DB::raw('stline.uomref'));
+                ->leftJoin("$this->itemsTable as item", "item.logicalref", '=', "stline.stockref")
+                ->leftJoin("$this->weightsTable as weights", function ($join) {
+                    $join->on("stline.stockref", '=', "weights.itemref")
+                        ->where("weights.linenr", '=', 1);
                 })
-                ->join("$this->invoicesTable as invoice", "stline.invoiceref", '=', "invoice.logicalref")
-                ->where('stline.invoiceref', $resp['INTERNAL_REFERENCE'])
+                ->where("stline.invoiceref", '=', $resp['INTERNAL_REFERENCE'])
                 ->get();
 
+            $salesman_id = DB::table($this->salesmansTable)
+                ->where(['code' => $resp['SALESMAN_CODE'], 'firmnr' => $this->code])
+                ->select('definition_')
+                ->first();
+
+            if ($salesman_id) {
+                $salesman_name = $salesman_id->definition_;
+            } else {
+                $salesman_name = "";
+            }
             foreach ($stlines as $item) {
                 $items[] = [
                     'id' => $item->id,
+                    'item_line_number' => $item->item_line_number,
                     'type' => $item->linetype,
                     'code' => $item->code,
                     'name' => $item->name,
                     'quantity' => $item->amount,
                     'price' => $item->price,
                     'total' => $item->total,
-                    'distdisc' => $item->discount,
+                    'discount' => $item->discount,
                     'weight' => $item->amount * $item->item_weight,
                 ];
             }
@@ -352,7 +364,11 @@ class InvoiceController extends Controller
                     'customer_name' => $customer->DEFINITION_,
                     'customer_address' => $customer->ADDR1,
                     'invoice_number' => $resp['NUMBER'],
-                    'customer_balance' => abs($balance->CREDIT - $balance->DEBIT) . ($balance->CREDIT - $balance->DEBIT >= 0 ? ' (CR)' : ' (DB)'),
+                    'salesman_name' => $salesman_name,
+                    "before_discount" => $last_invoice->GROSSTOTAL,
+                    "total_discount" => $last_invoice->TOTALDISCOUNTS,
+                    "after_discount" => $last_invoice->TOTALDISCOUNTED,
+                    "notes" => $last_invoice->GENEXP1,
                 ],
                 'items' => $items
             ];
@@ -513,48 +529,60 @@ class InvoiceController extends Controller
                 ])
                 ->withBody(json_encode($data), 'application/json')
                 ->post('https://10.27.0.109:32002/api/v1/salesInvoices');
-                $json_resp = $response->getBody()->getContents();
-            if ($response->status() === 400) {
-                return response()->json([
-                    'status' => 'failed',
-                    'message' => $response['ModelState']['ValError0'],
-                    'data' => []
-                ],$response->status());
-            }
+            $json_resp = $response->getBody()->getContents();
+            // if ($response->status() === 400) {
+            //     return response()->json([
+            //         'status' => 'failed',
+            //         'message' => $response['ModelState']['ValError0'],
+            //         'data' => []
+            //     ],$response->status());
+            // }
             $resp = json_decode($json_resp, true);
             $customer = DB::table($this->customersTable)->where('code', $resp['ARP_CODE'])->first();
             $balance = DB::table($this->cutomersView)->where('code', $resp['ARP_CODE'])->first();
+            $last_invoice = DB::table($this->invoicesTable)->where('logicalref', $resp['INTERNAL_REFERENCE'])->first();
             $stlines = DB::table("$this->stocksTransactionsTable as stline")
                 ->select(
-                    'stline.logicalref as id',
-                    'stline.linetype',
+                    "stline.logicalref as id",
+                    "stline.invoicelnno as item_line_number",
+                    "stline.linetype as linetype",
                     DB::raw("COALESCE(item.code, '0') as code"),
                     DB::raw("COALESCE(item.name, '0') as name"),
-                    'stline.amount',
-                    'stline.price',
-                    'stline.total',
-                    'stline.distdisc as discount',
-                    'weight.grossweight as item_weight'
+                    "stline.amount",
+                    "stline.price",
+                    "stline.total",
+                    "stline.distdisc as discount",
+                    "weights.grossweight as item_weight",
                 )
-                ->leftJoin("$this->itemsTable as item", "stline.stockref", '=', "item.logicalref")
-                ->leftJoin("$this->weightsTable as weight", function ($join) {
-                    $join->on("stline.stockref", '=', "weight.itemref")
-                        ->where('weight.unitlineref', '=', DB::raw('stline.uomref'));
+                ->leftJoin("$this->itemsTable as item", "item.logicalref", '=', "stline.stockref")
+                ->leftJoin("$this->weightsTable as weights", function ($join) {
+                    $join->on("stline.stockref", '=', "weights.itemref")
+                        ->where("weights.linenr", '=', 1);
                 })
-                ->join("$this->invoicesTable as invoice", "stline.invoiceref", '=', "invoice.logicalref")
-                ->where('stline.invoiceref', $resp['INTERNAL_REFERENCE'])
+                ->where("stline.invoiceref", '=', $resp['INTERNAL_REFERENCE'])
                 ->get();
 
+            $salesman_id = DB::table($this->salesmansTable)
+                ->where(['code' => $resp['SALESMAN_CODE'], 'firmnr' => $this->code])
+                ->select('definition_')
+                ->first();
+
+            if ($salesman_id) {
+                $salesman_name = $salesman_id->definition_;
+            } else {
+                $salesman_name = "";
+            }
             foreach ($stlines as $item) {
                 $items[] = [
                     'id' => $item->id,
+                    'item_line_number' => $item->item_line_number,
                     'type' => $item->linetype,
                     'code' => $item->code,
                     'name' => $item->name,
                     'quantity' => $item->amount,
                     'price' => $item->price,
                     'total' => $item->total,
-                    'distdisc' => $item->discount,
+                    'discount' => $item->discount,
                     'weight' => $item->amount * $item->item_weight,
                 ];
             }
@@ -564,7 +592,11 @@ class InvoiceController extends Controller
                     'customer_name' => $customer->DEFINITION_,
                     'customer_address' => $customer->ADDR1,
                     'invoice_number' => $resp['NUMBER'],
-                    'customer_balance' => abs($balance->CREDIT - $balance->DEBIT) . ($balance->CREDIT - $balance->DEBIT >= 0 ? ' (CR)' : ' (DB)'),
+                    'salesman_name' => $salesman_name,
+                    "before_discount" => $last_invoice->GROSSTOTAL,
+                    "total_discount" => $last_invoice->TOTALDISCOUNTS,
+                    "after_discount" => $last_invoice->TOTALDISCOUNTED,
+                    "notes" => $last_invoice->GENEXP1,
                 ],
                 'items' => $items
             ];
@@ -859,6 +891,8 @@ class InvoiceController extends Controller
         ];
         $transactions = request()->input('TRANSACTIONS.items');
         foreach ($transactions as $item) {
+            $id = $item['item_id'];
+            $line_number = $item['item_line_number'];
             $type = $item['item_type'];
             $master_code = $item['item_code'];
             $quantity = $item['item_quantity'];
@@ -867,8 +901,10 @@ class InvoiceController extends Controller
             $unit_code = $item['item_unit_code'];
             $salesman_code = request()->salesman_code;
             $itemData = [
+                "INTERNAL_REFERENCE" => $id,
                 "TYPE" => $type,
                 "MASTER_CODE" => $master_code,
+                "INVOICELNNO" => $line_number,
                 "SOURCEINDEX" => 3,
                 "QUANTITY" => $quantity,
                 "PRICE" => $price,
@@ -1312,7 +1348,8 @@ class InvoiceController extends Controller
 
     public function salesinvoicedetails(Request $request)
     {
-        $invoice = $request->header('invoice');
+        $invoice = $request->header('invoice-id');
+        $clientref = $this->fetchValueFromTable($this->invoicesTable, 'logicalref', $invoice, 'clientref');
         $info = DB::table("$this->stocksTransactionsTable")
             ->join("$this->itemsTable", "$this->stocksTransactionsTable.stockref", "=", "$this->itemsTable.logicalref")
             ->join("$this->salesmansTable", "$this->stocksTransactionsTable.salesmanref", "=", "$this->salesmansTable.logicalref")
@@ -1322,44 +1359,42 @@ class InvoiceController extends Controller
             ->join("$this->cutomersView", "$this->cutomersView.logicalref", "=", "$this->customersTable.logicalref")
             ->join("$this->payplansTable", "$this->payplansTable.logicalref", '=', "$this->invoicesTable.paydefref")
             ->select(
-                "$this->invoicesTable.capiblock_creadeddate as date",
-                "$this->invoicesTable.ficheno as number",
-                "$this->invoicesTable.genexp1 as approved_by",
-                "$this->invoicesTable.grosstotal as invoice_amount",
-                "$this->invoicesTable.totaldiscounts as invoice_discount",
-                "$this->invoicesTable.nettotal as invoice_total",
-                "$this->salesmansTable.definition_ as salesman_name",
                 "$this->customersTable.code as customer_code",
                 "$this->customersTable.definition_ as customer_name",
                 "$this->customersTable.addr1 as customer_address",
-                "$this->customersTable.telnrs1 as customer_phone",
-                "$this->cutomersView.debit as customer_debit",
-                "$this->cutomersView.credit as customer_credit",
-                "$this->payplansTable.code as payment_plan",
-                "$this->invoicesTable.genexp2 as payment_type"
+                "$this->invoicesTable.ficheno as invoice_number",
+                DB::raw("COALESCE($this->invoicesTable.genexp1,' ') as notes"),
+                DB::raw("COALESCE($this->salesmansTable.definition_,'0') as salesman_name"),
+                "$this->invoicesTable.grosstotal as before_discount",
+                "$this->invoicesTable.totaldiscounts as total_discount",
+                "$this->invoicesTable.totaldiscounted as after_discount",
+
             )
-            ->where(["$this->invoicesTable.ficheno" => $invoice, "$this->stocksTransactionsTable.iocode" => 4, "$this->stocksTransactionsTable.trcode" => 8])
+            ->where(["$this->invoicesTable.logicalref" => $invoice])
             ->distinct()
             ->first();
+
         $item = DB::table("$this->stocksTransactionsTable")
-            ->join("$this->itemsTable", "$this->stocksTransactionsTable.stockref", "=", "$this->itemsTable.logicalref")
-            ->join("$this->salesmansTable", "$this->stocksTransactionsTable.salesmanref", "=", "$this->salesmansTable.logicalref")
-            ->join("$this->weightsTable", "$this->weightsTable.itemref", "=", "$this->itemsTable.logicalref")
-            ->join("$this->invoicesTable", "$this->stocksTransactionsTable.invoiceref", "=", "$this->invoicesTable.logicalref")
-            ->join("$this->customersTable", "$this->stocksTransactionsTable.clientref", "=", "$this->customersTable.logicalref")
             ->select(
-                "$this->stocksTransactionsTable.invoicelnno as line",
-                "$this->itemsTable.code as code",
-                "$this->itemsTable.name as name",
+                "$this->stocksTransactionsTable.logicalref as id",
+                "$this->stocksTransactionsTable.invoicelnno as item_line_number",
+                "$this->stocksTransactionsTable.linetype as type",
+                DB::raw("COALESCE($this->itemsTable.code, '0') as code"),
+                DB::raw("COALESCE($this->itemsTable.name, '0') as name"),
                 "$this->stocksTransactionsTable.amount as quantity",
-                "$this->stocksTransactionsTable.price as price",
-                "$this->stocksTransactionsTable.total as total",
+                "$this->stocksTransactionsTable.price",
+                "$this->stocksTransactionsTable.total",
                 "$this->stocksTransactionsTable.distdisc as discount",
-                "$this->weightsTable.grossweight as weight"
+                DB::raw("COALESCE($this->weightsTable.grossweight, '0') as weight"),
             )
-            ->where(["$this->invoicesTable.ficheno" => $invoice, "$this->weightsTable.linenr" => 1, "$this->stocksTransactionsTable.iocode" => 4, "$this->stocksTransactionsTable.trcode" => 8])
-            ->orderby("$this->stocksTransactionsTable.invoicelnno", "asc")
+            ->leftJoin("$this->itemsTable", "$this->itemsTable.logicalref", '=', "$this->stocksTransactionsTable.stockref")
+            ->leftJoin("$this->weightsTable", function ($join) {
+                $join->on("$this->stocksTransactionsTable.stockref", '=', "$this->weightsTable.itemref")
+                    ->where("$this->weightsTable.linenr", '=', 1);
+            })
+            ->where("$this->stocksTransactionsTable.invoiceref", '=', $invoice)
             ->get();
+
         if ($item->isEmpty()) {
             return response()->json([
                 'status' => 'success',
