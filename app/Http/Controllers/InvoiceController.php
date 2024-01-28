@@ -891,7 +891,6 @@ class InvoiceController extends Controller
         ];
         $transactions = request()->input('TRANSACTIONS.items');
         foreach ($transactions as $item) {
-            $id = $item['item_id'];
             $line_number = $item['item_line_number'];
             $type = $item['item_type'];
             $master_code = $item['item_code'];
@@ -901,7 +900,6 @@ class InvoiceController extends Controller
             $unit_code = $item['item_unit_code'];
             $salesman_code = request()->salesman_code;
             $itemData = [
-                "INTERNAL_REFERENCE" => $id,
                 "TYPE" => $type,
                 "MASTER_CODE" => $master_code,
                 "INVOICELNNO" => $line_number,
@@ -963,9 +961,56 @@ class InvoiceController extends Controller
                 ])
                 ->withBody(json_encode($data), 'application/json')
                 ->put("https://10.27.0.109:32002/api/v1/salesInvoices/{$id}");
+            $info = DB::table("$this->stocksTransactionsTable")
+                ->join("$this->itemsTable", "$this->stocksTransactionsTable.stockref", "=", "$this->itemsTable.logicalref")
+                ->join("$this->salesmansTable", "$this->stocksTransactionsTable.salesmanref", "=", "$this->salesmansTable.logicalref")
+                ->join("$this->weightsTable", "$this->weightsTable.itemref", "=", "$this->itemsTable.logicalref")
+                ->join("$this->invoicesTable", "$this->stocksTransactionsTable.invoiceref", "=", "$this->invoicesTable.logicalref")
+                ->join("$this->customersTable", "$this->stocksTransactionsTable.clientref", "=", "$this->customersTable.logicalref")
+                ->join("$this->cutomersView", "$this->cutomersView.logicalref", "=", "$this->customersTable.logicalref")
+                ->join("$this->payplansTable", "$this->payplansTable.logicalref", '=', "$this->invoicesTable.paydefref")
+                ->select(
+                    "$this->customersTable.code as customer_code",
+                    "$this->customersTable.definition_ as customer_name",
+                    "$this->customersTable.addr1 as customer_address",
+                    "$this->invoicesTable.ficheno as invoice_number",
+                    DB::raw("COALESCE($this->invoicesTable.genexp1,' ') as notes"),
+                    DB::raw("COALESCE($this->salesmansTable.definition_,'0') as salesman_name"),
+                    "$this->invoicesTable.grosstotal as before_discount",
+                    "$this->invoicesTable.totaldiscounts as total_discount",
+                    "$this->invoicesTable.totaldiscounted as after_discount",
+
+                )
+                ->where(["$this->invoicesTable.logicalref" => $id])
+                ->distinct()
+                ->first();
+
+            $item = DB::table("$this->stocksTransactionsTable")
+                ->select(
+                    "$this->stocksTransactionsTable.logicalref as id",
+                    "$this->stocksTransactionsTable.invoicelnno as item_line_number",
+                    "$this->stocksTransactionsTable.linetype as type",
+                    DB::raw("COALESCE($this->itemsTable.code, '0') as code"),
+                    DB::raw("COALESCE($this->itemsTable.name, '0') as name"),
+                    "$this->stocksTransactionsTable.amount as quantity",
+                    "$this->stocksTransactionsTable.price",
+                    "$this->stocksTransactionsTable.total",
+                    "$this->stocksTransactionsTable.distdisc as discount",
+                    DB::raw("COALESCE($this->weightsTable.grossweight, '0') as weight"),
+                )
+                ->leftJoin("$this->itemsTable", "$this->itemsTable.logicalref", '=', "$this->stocksTransactionsTable.stockref")
+                ->leftJoin("$this->weightsTable", function ($join) {
+                    $join->on("$this->stocksTransactionsTable.stockref", '=', "$this->weightsTable.itemref")
+                        ->where("$this->weightsTable.linenr", '=', 1);
+                })
+                ->where("$this->stocksTransactionsTable.invoiceref", '=', $id)
+                ->get();
+
             return response()->json([
                 'status' => $response->successful() ? 'success' : 'failed',
-                'invoice' => $response->json(),
+                'message' => 'Invoice updated successfully',
+                'invoice_info' => $info = (array) $info,
+                'data' => $item,
             ], $response->status());
         } catch (Throwable $e) {
             return response()->json([
@@ -1349,7 +1394,6 @@ class InvoiceController extends Controller
     public function salesinvoicedetails(Request $request)
     {
         $invoice = $request->header('invoice-id');
-        $clientref = $this->fetchValueFromTable($this->invoicesTable, 'logicalref', $invoice, 'clientref');
         $info = DB::table("$this->stocksTransactionsTable")
             ->join("$this->itemsTable", "$this->stocksTransactionsTable.stockref", "=", "$this->itemsTable.logicalref")
             ->join("$this->salesmansTable", "$this->stocksTransactionsTable.salesmanref", "=", "$this->salesmansTable.logicalref")
