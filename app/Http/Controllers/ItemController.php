@@ -901,7 +901,7 @@ class ItemController extends Controller
         $code = request()->input('item_code');
         $customer = request()->input('customer_code');
         $item_id = $this->fetchValueFromTable($this->itemsTable, 'code', $code, 'logicalref');
-        $customer_specode = $this->fetchValueFromTable($this->customersTable, 'code', $customer, 'specode');
+        $customer_specode = $this->fetchValueFromTable($this->customersTable, 'code', $customer, 'specode2');
 
         $items = DB::table($this->itemsTable)
             ->leftJoin("$this->unitlsTable", "$this->unitlsTable.unitsetref", '=', "$this->itemsTable.unitsetref")
