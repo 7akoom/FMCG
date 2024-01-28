@@ -21,7 +21,7 @@ Route::controller(SalesmanController::class)->group(function () {
     Route::prefix('salesman')->group(function () {
         Route::prefix('accounting')->group(function () {
             Route::post('/salesmans', 'index');
-            // Route::post('/salesmans', 'index');
+            Route::post('/active-salesmans', 'allSalesman');
             Route::post('/newsalesman', 'store');
             Route::post('/edit/{salesmanId}', 'edit');
             Route::post('/update/{salesmanId}', 'update');
@@ -38,13 +38,14 @@ Route::controller(CustomerController::class)->group(function () {
             Route::post('/getcustomerbycode', 'getcustomerByCode');
             Route::post('/debitandpayment', 'debitandpayment');
             // Route::post('/newcustomer', 'pendingCustomerList');
-            Route::post('/pendingcustomer', 'pendingCustomerDetails');
+            Route::post('/pendingcustomer/{id}', 'pendingCustomerDetails');
             Route::post('/pending-customer-list', 'getPendingCustomerList');
             Route::post('/updatecustomerstatus/{id}', 'updatePendingCustomerAccounting');
             Route::post('/salesmancustomers', 'accountingSalesmanCustomers');
             Route::post('/allcustomers', 'allCustomers');
             Route::post('/newcustomer', 'storeFromAccounting');
             Route::post('/addCustomerData', 'addCustomerData');
+            Route::post('/customer-types', 'customerTypes');
             Route::post('/customer/delete/{customerId}', 'destroy');
         });
         Route::prefix('salesman')->group(function () {

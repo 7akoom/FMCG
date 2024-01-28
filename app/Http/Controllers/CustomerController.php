@@ -324,50 +324,71 @@ class CustomerController extends Controller
         ], 200);
     }
 
-    public function pendingCustomerDetails(Request $request)
-{
-    $customer = $request->header('customer');
-    $data = DB::table("$this->customersTable")
-        // ->join("{$this->customersLimitTable}", "{$this->customersLimitTable}.clcardref", "=", "{$this->customersTable}.logicalref")
-        // ->join("{$this->payplansTable}", "{$this->payplansTable}.logicalref", "=", "{$this->customersTable}.paymentref")
-        ->select(
-            "{$this->customersTable}.definition2 as customer_name",
-            "{$this->customersTable}.definition_ as market_name",
-            "{$this->customersTable}.telnrs1 as first_phone",
-            "{$this->customersTable}.telnrs2 as second_phone",
-            "{$this->customersTable}.code",
-            "{$this->customersTable}.city",
-            "{$this->customersTable}.addr2 as zone",
-            "{$this->customersTable}.addr1 as address",
-            "{$this->customersTable}.specode2 as customer_type",
-            // "{$this->payplansTable}.code as payment_plan",
-            // DB::raw("COALESCE({$this->customersLimitTable}.accrisklimit, 0) as limit")
-        )
-        ->where([
-            "$this->customersTable.logicalref" => $customer,
-            // Add other conditions if needed
-        ])
-        ->get();
+    public function pendingCustomerDetails($id)
+    {
+        $data = DB::table("$this->customersTable")
+            ->join("$this->customersLimitTable", "$this->customersLimitTable.clcardref", "=", "$this->customersTable.logicalref")
+            ->leftjoin("$this->payplansTable", "$this->payplansTable.logicalref", "=", "$this->customersTable.paymentref")
+            ->select(
+                "$this->customersTable.definition2 as customer_name",
+                "$this->customersTable.definition_ as market_name",
+                "$this->customersTable.telnrs1 as first_phone",
+                "$this->customersTable.telnrs2 as second_phone",
+                "$this->customersTable.code",
+                "$this->customersTable.city",
+                "$this->customersTable.addr2 as zone",
+                "$this->customersTable.addr1 as address",
+                "$this->customersTable.specode2 as customer_type",
+                DB::raw("COALESCE({$this->payplansTable}.code,'') as payment_plan"),
+                DB::raw("COALESCE({$this->customersLimitTable}.accrisklimit, 0) as limit")
+            )
+            ->where([
+                "$this->customersTable.logicalref" => $id,
+            ])
+            ->get();
 
-    if ($data->isEmpty()) {
+        if ($data->isEmpty()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'There is no data',
+                'data' => [],
+            ]);
+        }
+
         return response()->json([
             'status' => 'success',
-            'message' => 'There is no data',
-            'data' => [],
+            'message' => 'Pending customer details',
+            'data' => $data,
         ]);
     }
 
-    return response()->json([
-        'status' => 'success',
-        'message' => 'Pending customer details',
-        'data' => $data,
-    ]);
-}
+    public function customerTypes()
+    {
+        $data = DB::table("$this->specialcodesTable")
+            ->select('specode as id', 'definition_ as name')
+            ->where(['codetype' => 1, 'specodetype' => 26, 'spetyp2' => 1])
+            ->get();
+
+        if ($data->isEmpty()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'There is no data',
+                'data' => [],
+            ]);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'customers types',
+            'data' => $data,
+        ]);
+    }
 
 
     public function updatePendingCustomerAccounting(Request $request, $id)
     {
         $custData = [
+            'CODE' => $request->customer_code,
             'TITLE2' => $request->customer_name,
             'TITLE' => $request->market_name,
             'REC_STATUS' => $request->active,
@@ -377,7 +398,7 @@ class CustomerController extends Controller
             'ADDRESS2' => $request->zone,
             'ADDRESS1' => $request->address,
             'AUXIL_CODE2' => $request->customer_type,
-            'PAYMENTREF' => $request->payment_plan,
+            'PAYMENT_CODE' => $request->payment_plan,
             'RECORD_STATUS' => $request->active,
             'ACC_RISK_LIMIT' => $request->limit,
         ];
@@ -615,7 +636,7 @@ class CustomerController extends Controller
             ->orderByDesc('logicalref')
             ->first();
         $last_invoice_date = DB::table("$this->invoicesTable")
-            ->where('clientref' , $customer_id->logicalref)
+            ->where('clientref', $customer_id->logicalref)
             ->orderByDesc('logicalref')
             ->first();
 

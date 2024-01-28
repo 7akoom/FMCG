@@ -76,7 +76,7 @@ class SalesManController extends Controller
             )
             ->where([
                 'sls.FIRMNR' => $this->code,
-                'sls.ACTIVE' => $this->isactive,
+                'sls.ACTIVE' => 0,
             ])
             ->get();
         return response()->json([
