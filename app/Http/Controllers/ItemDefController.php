@@ -133,13 +133,15 @@ class ItemDefController extends Controller
     public function groups()
     {
         $category = DB::table("$this->specialcodesTable")
-            ->leftJoin("$this->itemsTable as items", "$this->specialcodesTable.specode", '=', 'items.stgrpcode')
+            ->join("$this->itemsTable as items", "$this->specialcodesTable.specode", '=', 'items.stgrpcode')
             ->select(
                 "$this->specialcodesTable.logicalref as id",
                 "$this->specialcodesTable.specode as code",
-                DB::raw("CASE WHEN '{$this->lang}' = 'ar' THEN $this->specialcodesTable.definition_  WHEN '$this->lang' = 'en' THEN $this->specialcodesTable.definition2
-       WHEN '{$this->lang}' = 'tr' THEN $this->specialcodesTable.definition3 ELSE $this->specialcodesTable.definition_ END as name"),
-                DB::raw('COUNT(items.logicalref) as item_count')
+                DB::raw("CASE WHEN '{$this->lang}' = 'ar' THEN $this->specialcodesTable.definition_  
+                     WHEN '$this->lang' = 'en' THEN $this->specialcodesTable.definition2
+                     WHEN '{$this->lang}' = 'tr' THEN $this->specialcodesTable.definition3 
+                     ELSE $this->specialcodesTable.definition_ END as name"),
+                DB::raw("COUNT(items.logicalref) as item_count")
             )
             ->where(["$this->specialcodesTable.codetype" => 4, "$this->specialcodesTable.specodetype" => 0])
             ->groupBy("$this->specialcodesTable.logicalref", "$this->specialcodesTable.specode", "$this->specialcodesTable.definition_")
@@ -525,7 +527,7 @@ class ItemDefController extends Controller
     {
         $category = DB::table("$this->specialcodesTable")
             ->where('logicalref', $id)
-            ->value('specode');
+            ->first();
         if (!$category) {
             return response()->json([
                 'status' => 'fail',
@@ -536,7 +538,7 @@ class ItemDefController extends Controller
         $data = [
             'CODE_TYPE' => 4,
             'SPE_CODE_TYPE' => 0,
-            'CODE' => $category,
+            // 'CODE' => $category->SPECODE,
             'DEFINITION' => request()->arabic_name,
             'DEFINITION2' => request()->english_name,
             'DEFINITION3' => request()->turkish_name,
