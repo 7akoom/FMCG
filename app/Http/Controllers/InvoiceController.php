@@ -839,7 +839,7 @@ class InvoiceController extends Controller
             "DATE" => $invoice->DATE_,
             'TIME' => $invoice->TIME_,
             "ARP_CODE" => request()->customer_code,
-            "SOURCE_WH" => 3,
+            "SOURCE_WH" => request()->stock_number,
             "POST_FLAGS" => 247,
             "VAT_RATE" => 18,
             "TOTAL_DISCOUNTS" => request()->total_discounts,
@@ -903,7 +903,7 @@ class InvoiceController extends Controller
                 "TYPE" => $type,
                 "MASTER_CODE" => $master_code,
                 "INVOICELNNO" => $line_number,
-                "SOURCEINDEX" => 3,
+                "SOURCEINDEX" => request()->stock_number,
                 "QUANTITY" => $quantity,
                 "PRICE" => $price,
                 "TOTAL" => $total,
@@ -939,8 +939,9 @@ class InvoiceController extends Controller
             $PAYMENT = [
                 "INTERNAL_REFERENCE" => $payment->LOGICALREF,
                 "DATE" => $payment->DATE_,
-                "MODULENR" => 4,
-                "TRCODE" => 8,
+                "MODULENR" => $payment->MODULENR,
+                "TRCODE" => $payment->TRCODE,
+                "SIGN" => $payment->SIGN,
                 "TOTAL" => $payment->TOTAL,
                 "PROCDATE" => $payment->PROCDATE,
                 "REPORTRATE" => 1,
@@ -961,6 +962,7 @@ class InvoiceController extends Controller
                 ])
                 ->withBody(json_encode($data), 'application/json')
                 ->put("https://10.27.0.109:32002/api/v1/salesInvoices/{$id}");
+            $resp = $response->json();
             $info = DB::table("$this->stocksTransactionsTable")
                 ->join("$this->itemsTable", "$this->stocksTransactionsTable.stockref", "=", "$this->itemsTable.logicalref")
                 ->join("$this->salesmansTable", "$this->stocksTransactionsTable.salesmanref", "=", "$this->salesmansTable.logicalref")
@@ -1005,10 +1007,8 @@ class InvoiceController extends Controller
                 })
                 ->where("$this->stocksTransactionsTable.invoiceref", '=', $id)
                 ->get();
-
             return response()->json([
                 'status' => $response->successful() ? 'success' : 'failed',
-                'message' => 'Invoice updated successfully',
                 'invoice_info' => $info = (array) $info,
                 'data' => $item,
             ], $response->status());
@@ -1019,6 +1019,208 @@ class InvoiceController extends Controller
             ], 422);
         }
     }
+
+    // public function updateReturn($id)
+    // {
+    //     $invoice = DB::table($this->invoicesTable)->where('logicalref', $id)->first();
+    //     $dispatch = DB::table($this->dispatchesTable)->where('invoiceref', $id)->first();
+    //     $payment = DB::table($this->ledgerTable)->where('ficheref', $id)->first();
+    //     if (!$invoice) {
+    //         return response()->json([
+    //             'status' => 'failed',
+    //             'message' => 'Invoice is not exist',
+    //             'data' => [],
+    //         ], 404);
+    //     }
+    //     $data = [
+    //         "INTERNAL_REFERENCE" => $invoice->LOGICALREF,
+    //         "TYPE" => $invoice->TRCODE,
+    //         "DATE" => $invoice->DATE_,
+    //         'TIME' => $invoice->TIME_,
+    //         "ARP_CODE" => request()->customer_code,
+    //         "SOURCE_WH" => request()->stock_number,
+    //         "POST_FLAGS" => 247,
+    //         "VAT_RATE" => 18,
+    //         "TOTAL_DISCOUNTS" => request()->total_discounts,
+    //         "TOTAL_DISCOUNTED" => request()->after_discount,
+    //         "TOTAL_GROSS" => request()->before_discount,
+    //         "TOTAL_NET" => request()->net_total,
+    //         "TC_NET" => request()->net_total,
+    //         "RC_XRATE" => 1,
+    //         "RC_NET" => request()->net_total,
+    //         "NOTES1" => request()->notes,
+    //         "PAYMENT_CODE" => request()->payment_code,
+    //         "CREATED_BY" => $invoice->CAPIBLOCK_CREATEDBY,
+    //         "DATE_CREATED" => $invoice->CAPIBLOCK_CREADEDDATE,
+    //         "HOUR_CREATED" => $invoice->CAPIBLOCK_CREATEDHOUR,
+    //         "MIN_CREATED" => $invoice->CAPIBLOCK_CREATEDMIN,
+    //         "SEC_CREATED" => $invoice->CAPIBLOCK_CREATEDSEC,
+    //         "SALESMAN_CODE" => request()->salesman_code,
+    //         "CURRSEL_TOTALS" => 1,
+    //         "DOC_DATE" => $invoice->DOCDATE,
+    //     ];
+    //     $DISPATCHES = [
+    //         "INTERNAL_REFERENCE" => $dispatch->LOGICALREF,
+    //         "DATE" => $dispatch->DATE_,
+    //         'TIME' => $dispatch->FTIME,
+    //         "SOURCEINDEX" => request()->stock_number,
+    //         'TYPE' => $dispatch->TRCODE,
+    //         "ARP_CODE" => request()->customer_code,
+    //         "INVOICED" => 1,
+    //         "TOTLA_DISCOUNTS" => request()->total_discounts,
+    //         "TOTAL_DISCOUNTED" => request()->after_discount,
+    //         "TOTAL_GROSS" => request()->before_discount,
+    //         "TOTAL_NET" => request()->net_total,
+    //         "RC_RATE" => 1,
+    //         "RC_NET" => request()->net_total,
+    //         "PAYMENT_CODE" => request()->payment_code,
+    //         "CREATED_BY" => $dispatch->CAPIBLOCK_CREATEDBY,
+    //         "DATE_CREATED" => $dispatch->CAPIBLOCK_CREADEDDATE,
+    //         "HOUR_CREATED" => $dispatch->CAPIBLOCK_CREATEDHOUR,
+    //         "MIN_CREATED" => $dispatch->CAPIBLOCK_CREATEDMIN,
+    //         "SEC_CREATED" => $dispatch->CAPIBLOCK_CREATEDSEC,
+    //         "SALESMANCODE" => request()->salesman_code,
+    //         "CURRSEL_TOTALS" => 1,
+    //         "DEDUCTIONPART1" => 2,
+    //         "DEDUCTIONPART2" => 3,
+    //         "AFFECT_RISK" => 1,
+    //         "DISP_STATUS" => 1,
+    //         "SHIP_DATE" => $dispatch->SHIPDATE,
+    //         "SHIP_TIME" => $dispatch->SHIPTIME,
+    //         "DOC_DATE" => $dispatch->DOCDATE,
+    //         "DOC_TIME" => $dispatch->DOCTIME,
+    //     ];
+    //     $transactions = request()->input('TRANSACTIONS.items');
+    //     foreach ($transactions as $item) {
+    //         $line_number = $item['item_line_number'];
+    //         $type = $item['item_type'];
+    //         $master_code = $item['item_code'];
+    //         $quantity = $item['item_quantity'];
+    //         $price = $item['item_price'];
+    //         $total = $item['item_total'];
+    //         $unit_code = $item['item_unit_code'];
+    //         $salesman_code = request()->salesman_code;
+    //         $itemData = [
+    //             "TYPE" => $type,
+    //             "MASTER_CODE" => $master_code,
+    //             "INVOICELNNO" => $line_number,
+    //             "SOURCEINDEX" => request()->stock_number,
+    //             "QUANTITY" => $quantity,
+    //             "PRICE" => $price,
+    //             "TOTAL" => $total,
+    //             "RC_XRATE" => 1,
+    //             "COST_DISTR" => request()->total_discounts,
+    //             "DISCOUNT_DISTR" => request()->total_discounts,
+    //             "UNIT_CODE" => $unit_code,
+    //             "VAT_BASE" => $total - request()->total_discounts,
+    //             "BILLED" => 1,
+    //             "TOTAL_NET" => $total - request()->total_discounts,
+    //             "DISPATCH_NUMBER" => $dispatch->FICHENO,
+    //             "MULTI_ADD_TAX" => 0,
+    //             "EDT_CURR" => 30,
+    //             "EDT_PRICE" => $price,
+    //             "SALEMANCODE" => $salesman_code,
+    //             "AFFECT_RISK" => 1,
+    //             "FOREIGN_TRADE_TYPE" => 0,
+    //             "DISTRIBUTION_TYPE_WHS" => 0,
+    //             "DISTRIBUTION_TYPE_FNO" => 0,
+    //         ];
+    //         if ($item['item_type'] == 0) {
+    //             $itemData["UNIT_CONV1"] = 1;
+    //             $itemData["UNIT_CONV2"] = 1;
+    //         } else {
+    //             $itemData["DISCOUNT_RATE"] = (request()->total_discounts / request()->before_discount) * 100;
+    //             $itemData["DISCEXP_CALC"] = 1;
+    //             $itemData["UNIT_CONV1"] = 0;
+    //             $itemData["UNIT_CONV2"] = 0;
+    //         }
+    //         $data['TRANSACTIONS']['items'][] = $itemData;
+    //     }
+    //     if ($payment) {
+    //         $PAYMENT = [
+    //             "INTERNAL_REFERENCE" => $payment->LOGICALREF,
+    //             "DATE" => $payment->DATE_,
+    //             // "MODULENR" => $payment->MODULENR,
+    //             // "TRCODE" => $payment->TRCODE,
+    //             // "SIGN" => $payment->SIGN,
+    //             // "TOTAL" => $payment->TOTAL,
+    //             "PROCDATE" => $payment->PROCDATE,
+    //             "REPORTRATE" => 1,
+    //             "PAY_NO" => 1,
+    //             "DISCTRDELLIST" => 0,
+    //         ];
+    //         $data['PAYMENT_LIST']['items'][] = $PAYMENT;
+    //     }
+    //     $data['DISPATCHES']['items'][] = $DISPATCHES;
+    //     try {
+    //         $response = Http::withOptions([
+    //             'verify' => false,
+    //         ])
+    //             ->withHeaders([
+    //                 'Accept' => 'application/json',
+    //                 'Content-Type' => 'application/json',
+    //                 'Authorization' => request()->header('authorization')
+    //             ])
+    //             ->withBody(json_encode($data), 'application/json')
+    //             ->put("https://10.27.0.109:32002/api/v1/salesInvoices/{$id}");
+    //         $resp = $response->json();
+    //         dd($resp);
+    //         $info = DB::table("$this->stocksTransactionsTable")
+    //             ->join("$this->itemsTable", "$this->stocksTransactionsTable.stockref", "=", "$this->itemsTable.logicalref")
+    //             ->join("$this->salesmansTable", "$this->stocksTransactionsTable.salesmanref", "=", "$this->salesmansTable.logicalref")
+    //             ->join("$this->weightsTable", "$this->weightsTable.itemref", "=", "$this->itemsTable.logicalref")
+    //             ->join("$this->invoicesTable", "$this->stocksTransactionsTable.invoiceref", "=", "$this->invoicesTable.logicalref")
+    //             ->join("$this->customersTable", "$this->stocksTransactionsTable.clientref", "=", "$this->customersTable.logicalref")
+    //             ->join("$this->cutomersView", "$this->cutomersView.logicalref", "=", "$this->customersTable.logicalref")
+    //             ->join("$this->payplansTable", "$this->payplansTable.logicalref", '=', "$this->invoicesTable.paydefref")
+    //             ->select(
+    //                 "$this->customersTable.code as customer_code",
+    //                 "$this->customersTable.definition_ as customer_name",
+    //                 "$this->customersTable.addr1 as customer_address",
+    //                 "$this->invoicesTable.ficheno as invoice_number",
+    //                 DB::raw("COALESCE($this->invoicesTable.genexp1,' ') as notes"),
+    //                 DB::raw("COALESCE($this->salesmansTable.definition_,'0') as salesman_name"),
+    //                 "$this->invoicesTable.grosstotal as before_discount",
+    //                 "$this->invoicesTable.totaldiscounts as total_discount",
+    //                 "$this->invoicesTable.totaldiscounted as after_discount",
+
+    //             )
+    //             ->where(["$this->invoicesTable.logicalref" => $id])
+    //             ->distinct()
+    //             ->first();
+
+    //         $item = DB::table("$this->stocksTransactionsTable")
+    //             ->select(
+    //                 "$this->stocksTransactionsTable.logicalref as id",
+    //                 "$this->stocksTransactionsTable.invoicelnno as item_line_number",
+    //                 "$this->stocksTransactionsTable.linetype as type",
+    //                 DB::raw("COALESCE($this->itemsTable.code, '0') as code"),
+    //                 DB::raw("COALESCE($this->itemsTable.name, '0') as name"),
+    //                 "$this->stocksTransactionsTable.amount as quantity",
+    //                 "$this->stocksTransactionsTable.price",
+    //                 "$this->stocksTransactionsTable.total",
+    //                 "$this->stocksTransactionsTable.distdisc as discount",
+    //                 DB::raw("COALESCE($this->weightsTable.grossweight, '0') as weight"),
+    //             )
+    //             ->leftJoin("$this->itemsTable", "$this->itemsTable.logicalref", '=', "$this->stocksTransactionsTable.stockref")
+    //             ->leftJoin("$this->weightsTable", function ($join) {
+    //                 $join->on("$this->stocksTransactionsTable.stockref", '=', "$this->weightsTable.itemref")
+    //                     ->where("$this->weightsTable.linenr", '=', 1);
+    //             })
+    //             ->where("$this->stocksTransactionsTable.invoiceref", '=', $id)
+    //             ->get();
+    //         return response()->json([
+    //             'status' => $response->successful() ? 'success' : 'failed',
+    //             'invoice_info' => $info = (array) $info,
+    //             'data' => $item,
+    //         ], $response->status());
+    //     } catch (Throwable $e) {
+    //         return response()->json([
+    //             'status' => 'Invoice failed',
+    //             'message' => $e->getMessage(),
+    //         ], 422);
+    //     }
+    // }
 
     public function prepare($id)
     {

@@ -402,7 +402,7 @@ class ItemDefController extends Controller
 
     public function updateSubCategory($id)
     {
-        $subcategory = $this->fetchValueFromTable("$this->specialcodesTable", "LOGICALREF", $id, "DEFINITION_");
+        $subcategory = $this->fetchValueFromTable("$this->specialcodesTable", "LOGICALREF", $id, "specode");
         $global_id = $this->fetchValueFromTable("$this->specialcodesTable", "LOGICALREF", $id, "globalid");
         if (!$subcategory) {
             return response()->json([

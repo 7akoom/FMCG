@@ -186,6 +186,7 @@ Route::controller(InvoiceController::class)
                     Route::post('/bill/{orderId}', 'billOrder');
                     Route::post('/edit/{invoiceId}', 'edit');
                     Route::post('/update/{invoiceId}', 'update');
+                    // Route::post('/return-update/{invoiceId}', 'updateReturn');
                     Route::post('/destroy/{invoiceId}', 'destroy');
 
                     Route::post('/salesmaninvoices', 'salesmaninvoices');
